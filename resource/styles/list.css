@@ -1,0 +1,67 @@
+body {
+	color: #303030;
+	font-size: 11pt;
+	background-color: #F4F4F4;
+}
+
+#container {
+	border: none;
+}
+
+#results {
+	border: 3px solid #F4F4F4;
+	border-collapse:collapse;
+	font-size: 10pt;
+}
+
+#results td, th {
+	border: none;
+	padding: 2px 8px 2px 8px;
+}
+
+#results th {
+	background-color: #B8B8E0;
+	text-align: center;
+	border: 3px solid #F4F4F4;
+	font-weight: bold;
+	text-decoration: underline;
+	cursor: pointer;
+}
+
+#results tr.norm {
+	background-color: #E9E9FF;
+}
+
+#results tr.alt {
+	background-color: #DDDDFF;
+}
+
+#results tr.decoy_norm {
+	background-color: #FFE9E9;
+}
+
+#results tr.decoy_alt {
+	background-color: #FFDDDD;
+}
+
+#results tr.info {
+	font-size: 11pt;
+}
+
+#results tr.desc {
+	color: #505050;
+}
+#results span.peptide_full {
+	color: #707070;
+}
+
+#results span.peptide {
+	color: #303030;
+	font-weight: bold;
+}
+
+#results span.link {
+	text-decoration: underline;
+	cursor: pointer;
+}
+

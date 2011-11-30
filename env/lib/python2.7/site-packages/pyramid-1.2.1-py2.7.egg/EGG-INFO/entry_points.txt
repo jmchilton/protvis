@@ -1,0 +1,13 @@
+        [paste.paster_create_template]
+        pyramid_starter=pyramid.scaffolds:StarterProjectTemplate
+        pyramid_zodb=pyramid.scaffolds:ZODBProjectTemplate
+        pyramid_routesalchemy=pyramid.scaffolds:RoutesAlchemyProjectTemplate
+        pyramid_alchemy=pyramid.scaffolds:AlchemyProjectTemplate
+        [paste.paster_command]
+        pshell=pyramid.paster:PShellCommand
+        proutes=pyramid.paster:PRoutesCommand
+        pviews=pyramid.paster:PViewsCommand
+        ptweens=pyramid.paster:PTweensCommand
+        [console_scripts]
+        bfg2pyramid = pyramid.fixers.fix_bfg_imports:main
+      

@@ -1,0 +1,13 @@
+Chameleon >= 1.2.3
+Mako >= 0.3.6
+Paste > 1.7
+PasteDeploy
+PasteScript >= 1.7.4
+WebOb >= 1.0.2
+repoze.lru
+setuptools
+zope.component >= 3.6.0
+zope.interface >= 3.5.1
+zope.deprecation
+venusian >= 1.0a1
+translationstring

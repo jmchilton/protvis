@@ -1,0 +1,89 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xmlns:tal="http://xml.zope.org/namespaces/tal">
+	<head>
+		<meta http-equiv="content-type" content="text/html; charset=utf-8" />
+		<title>Processing File</title>
+		<link href="/styles/list.css" type="text/css" rel="stylesheet" />
+		<link id="themeStyles" href="/dojo/dijit/themes/claro/claro.css" type="text/css" rel="stylesheet" />
+		<script type="text/javascript" src="/dojo/dojo/dojo.js" data-dojo-config="parseOnLoad: true"></script>
+		<script type="text/javascript">
+			dojo.require("dojo.fx");
+
+			var Active = -1;
+
+			function Update() {
+				dojo.xhrGet({
+					url: "/query_get?id=${tid}",
+					load: function(res) {
+						switch (res[0]) {
+							case '0':
+								ShowMessage("uploading");
+								setTimeout("Update();", 1000);
+								break;
+
+							case '1':
+								ShowMessage("processing");
+								setTimeout("Update();", 500);
+								break;
+
+							case '2':
+								ShowMessage("done");
+								window.location = "/list/${type}/?file=${file}";
+								break;
+
+							case '9':
+							default:
+								ShowMessage("error");
+								break;
+						}
+					},
+					error: function() {
+						ShowMessage("error_net");
+						setTimeout("Update();", 2000);
+					}
+				});
+			}
+			
+			function ShowMessage(id) {
+				var ids = ["uploading", "processing", "done", "error", "error_net"]
+				if (Active < 0 || id != ids[Active]) {
+					var actions = Array(ids.length)
+					for (i = 0; i < ids.length; ++i) {
+						if (id != ids[i]) {
+							actions[i] = dojo.fx.wipeOut({ node: dojo.byId(ids[i]) });
+						} else {
+							actions[i] = dojo.fx.wipeIn({ node: dojo.byId(ids[i]) });
+							Active = i;
+						}
+					}
+					dojo.fx.combine([actions[0], actions[1], actions[2], actions[3], actions[4]]).play();
+				}
+			}
+			
+			dojo.ready(function() {
+				setTimeout("Update();", 500);
+			});
+		</script>
+	</head>
+	<body class="claro">
+		Please wait
+		<noscript>
+			Refresh this page until the server redirects.
+		</noscript>
+		<div id="uploading" class="dijitContentPaneLoading" visible="false" style="display: none;">
+			Uploading your file to the server.
+		</div>
+		<div id="processing" class="dijitContentPaneLoading" visible="false" style="display: none;">
+			Processing your file for the first time.
+		</div>
+		<div id="done" visible="false" style="display: none;">
+			Finished. Click <a href="/list/${type}/?file=${file}">here</a> if your browerser doesn't automatically redirect.
+		</div>
+		<div id="error" visible="false" style="display: none;">
+			An internal server error occured. Try refreshing the page.
+		</div>
+		<div id="error_net" visible="false" style="display: none;">
+			An error occured while contacting the server. Check your internet connection.
+		</div>
+	</body>
+</html>

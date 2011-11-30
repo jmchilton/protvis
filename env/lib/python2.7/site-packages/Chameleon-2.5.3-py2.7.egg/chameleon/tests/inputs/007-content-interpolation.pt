@@ -1,0 +1,12 @@
+<html>
+  <body>
+    ${'Hello world!'}
+    ${literal}
+    ${structure: literal.s}
+    ${"%stype 'str'%s" % (chr(60), chr(62))}
+    &&
+    ${None}
+    $leftalone
+    <div>${None}</div>
+  </body>
+</html>

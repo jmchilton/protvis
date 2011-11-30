@@ -1,0 +1,214 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xmlns:tal="http://xml.zope.org/namespaces/tal">
+	<head>
+		<meta http-equiv="content-type" content="text/html; charset=utf-8" />
+		<title>${type} Results</title>
+		<script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/dojo/1.6.0/dojo/dojo.xd.js" data-dojo-config="parseOnLoad: true"></script>
+		<script src="build_${type}.js"></script>
+		<script type="text/javascript">
+			dojo.require("dojo.fx");
+
+			function ApplyFilter(type) {
+				// Using dojo.xhrGet, as very little information is being sent
+				dojo.xhrGet({
+					// The URL of the request
+					url: "pepxml_query",
+
+					// The success callback with result from server
+					load: function(results) {
+						dojo.byId("search_hits").innerHTML = BuildResults(results);
+					},
+					// The error handler
+					error: function() {
+						dojo.byId("search_hits").innerHTML = "Query Error. Server could not be reached";
+					}
+				});
+			}
+			function ApplyFilterBasic() {
+				ApplyFilter(0);
+			}
+			function ApplyFilterAdv() {
+				ApplyFilter(1);
+			}
+
+			// When the DOM is ready....
+
+			dojo.ready(function() {
+				// Populate content initially
+				ApplyFilterBasic();
+				// Connect button
+				dojo.connect(dojo.byId("filter_apply_basic"), "onclick", ApplyFilterBasic);
+				dojo.connect(dojo.byId("filter_apply_adv"), "onclick", ApplyFilterAdv);
+
+				var WipeTargetBasic = dojo.byId("filter_basic_view");
+				var WipeTargetAdv = dojo.byId("filter_advanced_view");
+				var FadeTargetBasic = dojo.byId("filter_switch_basic_to_adv");
+				var FadeTargetAdv = dojo.byId("filter_switch_adv_to_basic");
+				var FadeTargetArrowBasic = dojo.byId("filter_switch_basic_to_adv");
+				var FadeTargetArrowAdv = dojo.byId("filter_switch_adv_to_basic");
+				var FadeTargetTitleBasic = dojo.byId("filter_title_basic");
+				var FadeTargetTitleAdv = dojo.byId("filter_title_adv");
+				dojo.connect(dojo.byId("filter_switch_basic_to_adv"), "onclick", function(evt) {
+					dojo.fx.combine([
+						dojo.fx.chain([
+							dojo.fx.wipeOut({ node: WipeTargetBasic }),
+							dojo.fx.wipeIn({ node: WipeTargetAdv })
+						]),
+						dojo.fx.chain([
+							dojo.fx.combine([
+								dojo.fadeOut({ node: FadeTargetArrowBasic }),
+								dojo.fadeOut({ node: FadeTargetTitleBasic })
+							]),
+							dojo.fx.combine([
+								dojo.fadeIn({ node: FadeTargetArrowAdv }),
+								dojo.fadeIn({ node: FadeTargetTitleAdv })
+							])
+						])
+					]).play();
+				});
+				dojo.connect(dojo.byId("filter_switch_adv_to_basic"), "onclick", function(evt) {
+					dojo.fx.combine([
+						dojo.fx.chain([
+							dojo.fx.wipeOut({ node: WipeTargetAdv }),
+							dojo.fx.wipeIn({ node: WipeTargetBasic })
+						]),
+						dojo.fx.chain([
+							dojo.fx.combine([
+								dojo.fadeOut({ node: FadeTargetArrowAdv }),
+								dojo.fadeOut({ node: FadeTargetTitleAdv })
+							]),
+							dojo.fx.combine([
+								dojo.fadeIn({ node: FadeTargetArrowBasic }),
+								dojo.fadeIn({ node: FadeTargetTitleBasic })
+							])
+						])
+					]).play();
+				});
+			});
+		</script>
+	</head>
+	<body>
+		<table>
+			<tr>
+				<td>
+					<div style="display: inline">
+						<img id="filter_switch_basic_to_adv" src="images/arrows_down_small.png" alt="More" />
+						<img id="filter_switch_adv_to_basic" style="opacity: 0;" src="images/arrows_up_small.png" alt="Less" />
+					</div>
+					<div style="display: inline">
+						<span id="filter_title_basic">Basic Search</span>
+						<span id="filter_title_adv" style="opacity: 0;">Advanced Search</span>
+					</div>
+					<div style="display: inline">
+					</div>
+				</td>
+			</tr>
+			<tr>
+				<td>
+					<div id="filter_basic_view">
+						Filter: <input type="text" id="filter_basic_string" /> <input type="button" id="filter_apply_basic" value="Filter" />
+					</div>
+					<div id="filter_advanced_view" visible="false" style="display: none;">
+						<table>
+							<tr>
+								<td>Peptide:</td>
+								<td>
+									<input type="text" id="filter_adv_peptide" />
+								</td>
+							</tr>
+							<tr>
+								<td>Protein:</td>
+								<td>
+									<input type="text" id="filter_adv_protein" />
+								</td>
+							</tr>
+							<tr>
+								<td>Calc Neutral Pep Mass:</td>
+								<td>
+									<input type="text" id="filter_adv_neutralpepmass" />
+								</td>
+								<td>
+									<select id="filter_adv_neutralpepmass_match">
+										<option value="approx" selected="selected">Approximatly Equal</option>
+										<option value="less">Less Than</option>
+										<option value="more">Greater Than</option>
+									</select>
+								</td>
+							</tr>
+							<tr>
+								<td>Mass Difference:</td>
+								<td>
+									<input type="text" id="filter_adv_massdiff" />
+								</td>
+								<td>
+									<select id="filter_adv_massdiff_match">
+										<option value="approx" selected="selected">Approximatly Equal</option>
+										<option value="less">Less Than</option>
+										<option value="more">Greater Than</option>
+									</select>
+								</td>
+							</tr>
+							<tr>
+								<td>Protein Description:</td>
+								<td>
+									<input type="text" id="filter_adv_descr" />
+								</td>
+							</tr>
+							<tr>
+								<td>Modified:</td>
+								<td>
+									<select id="filter_adv_modified">
+										<option value="any" selected="selected">Don't Care</option>
+										<option value="yes">Yes</option>
+										<option value="no">No</option>
+									</select>
+								</td>
+							</tr>
+							<tr>
+								<td>Matched Ions:</td>
+								<td>
+									<input type="text" id="filter_adv_matchedions" />
+								</td>
+								<td>
+									<select id="filter_adv_matchedions_match">
+										<option value="approx" selected="selected">Equal To</option>
+										<option value="less">Less Than</option>
+										<option value="more">Greater Than</option>
+									</select>
+								</td>
+							</tr>
+							<tr>
+								<td>Total Ions:</td>
+								<td>
+									<input type="text" id="filter_adv_totalions" />
+								</td>
+								<td>
+									<select id="filter_adv_totalions_match">
+										<option value="approx" selected="selected">Equal To</option>
+										<option value="less">Less Than</option>
+										<option value="more">Greater Than</option>
+									</select>
+								</td>
+							</tr>
+						</table>
+						<input type="button" id="filter_apply_adv" value="Filter" />
+					</div>
+				</td>
+			</tr>
+			<tr>
+				<td>
+				</td>
+			</tr>
+			<tr>
+				<td>
+					<div id="search_hits">
+					</div>
+				</td>
+			</tr>
+			<tr>
+				<td>
+				</td>
+			</tr>
+		</table>
+	</body>
+</html>
