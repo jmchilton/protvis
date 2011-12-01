@@ -10,11 +10,13 @@
 			dojo.require("dojo.fx");
 			dojo.require("dijit.Dialog");
 			dojo.require("dojo._base.connect");
+			dojo.require("dijit.DynamicTooltip");
 
 			var DetailsDialog;
 			var CurrentResults = "";
 			var CurrentAnimation = null;
 			var PendingAnimations = new Array();
+			var Tooltips = new Array();
 			var CurrentResultsID = 0;
 	
 			function BuildHeader() {
@@ -55,8 +57,10 @@
 					if (CurrentAnimation == null) {
 						CurrentAnimation = anim;
 						anim.play();
+						delete PendingAnimations;
 						PendingAnimations = new Array();
 					} else {
+						delete PendingAnimations;
 						PendingAnimations = new Array();
 						PendingAnimations.push(anim);
 					}
@@ -64,6 +68,7 @@
 					QueueAnimation(dojo.fx.wipeOut({
 						node: dojo.byId("search_hits_" + CurrentResultsID),
 						onEnd: function(n) {
+							delete Tooltips.shift();
 							dojo.byId("search_hits").removeChild(n);
 							if (PendingAnimations.length > 0) {
 								CurrentAnimation = PendingAnimations.shift();
@@ -98,8 +103,19 @@
 						cont.id = "search_hits_" + ++CurrentResultsID;
 						cont.visible = "false";
 						cont.style = "display: none";
-						cont.innerHTML = BuildResults(results);
+						results = BuildResults(results, CurrentResultsID);
+						cont.innerHTML = results[0];
 						dojo.byId("search_hits").appendChild(cont);
+						if (results.length > 1) {
+							var tt = new dijit.DynamicTooltip({
+								connectId: results[1],
+								href: "/tooltip/${type}/peptide?file=${file}&peptide=",
+								position: ["below", "above"]
+							})
+							Tooltips.push(tt);
+							delete results[1];
+						}
+						delete PendingAnimations;
 						PendingAnimations = new Array();
 						QueueAnimation(dojo.fx.wipeOut({ node: dojo.byId("searching") }));
 						QueueAnimation(dojo.fx.wipeIn({ node: cont }));
@@ -111,6 +127,7 @@
 						cont.style = "display: none";
 						dojo.byId("search_hits").innerHTML = "Query Error. Server could not be reached";
 						dojo.byId("search_hits").appendChild(cont);
+						delete PendingAnimations;
 						PendingAnimations = new Array();
 						QueueAnimation(dojo.fx.wipeOut({ node: dojo.byId("searching") }));
 						QueueAnimation(dojo.fx.wipeIn({ node: cont }));
@@ -125,14 +142,28 @@
 			function ApplyFilterAdv() {
 				ApplyFilter(1);
 			}
+			
+			function SearchPeptide(peptide) {
+				dojo.xhrGet({
+					url: "/list/${type}/peptide?file=${file}&peptide=" + peptide,
+					load: function(results) {
+						elem = dojo.byId("search_peptides")
+						elem.innerHTML = BuildPeptideResults(results);
+						dojo.fx.combine([
+							dojo.fx.wipeOut({ node: dojo.byId("search_hits") }),
+							dojo.fx.wipeIn({ node: elem })
+						]).play();
+					},
+					error: function() {
+						DetailsDialog.attr("title", "Query Results");
+						DetailsDialog.attr("content", "Query Error. Server could not be reached");
+						DetailsDialog.attr("style", "width: 300px;");
+						DetailsDialog.show();
+					}
+				});
+			}
 
 			function DisplayQuery(title, sid, qid) {
-				//DetailsDialog.attr("title", "All results for " + title);
-				DetailsDialog.attr("title", "Loading Results");
-				//DetailsDialog.attr("href", "/search/${type}/hit/?file=${file}&sid=" + sid + "&qid=" + qid);
-				DetailsDialog.attr("content", "<center><span class='dijitContentPaneLoading'>Loading results... Please wait</span></center>");
-				DetailsDialog.attr("style", "width: 500px;");
-				DetailsDialog.show();
 				dojo.xhrGet({
 					url: "/search/${type}/hit/?file=${file}&sid=" + sid + "&qid=" + qid,
 					load: function(results) {
@@ -145,15 +176,15 @@
 						DetailsDialog.attr("content", "Query Error. Server could not be reached");
 					}
 				});
+				//DetailsDialog.attr("title", "All results for " + title);
+				DetailsDialog.attr("title", "Loading Results");
+				//DetailsDialog.attr("href", "/search/${type}/hit/?file=${file}&sid=" + sid + "&qid=" + qid);
+				DetailsDialog.attr("content", "<center><span class='dijitContentPaneLoading'>Loading results... Please wait</span></center>");
+				DetailsDialog.attr("style", "width: 500px;");
+				DetailsDialog.show();
 			}
 			
 			function DisplayScore(title, sid, qid, rid, hid) {
-				//DetailsDialog.attr("title", "Scores for " + title);
-				DetailsDialog.attr("title", "Loading Scores");
-				//DetailsDialog.attr("href", "/search/${type}/score/?file=${file}&sid=" + sid + "&qid=" + qid + "&rid=" + rid + "&hid=" + hid);
-				DetailsDialog.attr("content", "<center><span class='dijitContentPaneLoading'>Loading scores... Please wait</span></center>");
-				DetailsDialog.attr("style", "width: 300px;");
-				DetailsDialog.show();
 				dojo.xhrGet({
 					url: "/search/${type}/score/?file=${file}&sid=" + sid + "&qid=" + qid + "&rid=" + rid + "&hid=" + hid,
 					load: function(scores) {
@@ -166,9 +197,12 @@
 						DetailsDialog.attr("content", "Query Error. Server could not be reached");
 					}
 				});
-			}
-			
-			function SearchPeptide(peptide) {
+				//DetailsDialog.attr("title", "Scores for " + title);
+				DetailsDialog.attr("title", "Loading Scores");
+				//DetailsDialog.attr("href", "/search/${type}/score/?file=${file}&sid=" + sid + "&qid=" + qid + "&rid=" + rid + "&hid=" + hid);
+				DetailsDialog.attr("content", "<center><span class='dijitContentPaneLoading'>Loading scores... Please wait</span></center>");
+				DetailsDialog.attr("style", "width: 300px;");
+				DetailsDialog.show();
 			}
 
 			dojo.ready(function() {
@@ -343,6 +377,8 @@
 				<td>
 					<div id="searching" style="width: 100%;" class="dijitContentPaneLoading">Searching... Please wait</div>
 					<div id="search_hits" style="width: 100%;">
+					</div>
+					<div id="search_peptides" visible="false" style="width: 100%; display: none">
 					</div>
 				</td>
 			</tr>
