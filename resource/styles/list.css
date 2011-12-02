@@ -8,39 +8,37 @@ body {
 	border: none;
 }
 
-#results {
+table {
 	border: 3px solid #F4F4F4;
 	border-collapse:collapse;
 	font-size: 10pt;
 }
 
-#results td, th {
+td, th {
 	border: none;
 	padding: 2px 8px 2px 8px;
 }
 
-#results th {
+th {
 	background-color: #B8B8E0;
 	text-align: center;
 	border: 3px solid #F4F4F4;
 	font-weight: bold;
-	text-decoration: underline;
-	cursor: pointer;
 }
 
-#results tr.norm {
+tr.norm {
 	background-color: #E9E9FF;
 }
 
-#results tr.alt {
+tr.alt {
 	background-color: #DDDDFF;
 }
 
-#results tr.decoy_norm {
+tr.decoy_norm {
 	background-color: #FFE9E9;
 }
 
-#results tr.decoy_alt {
+tr.decoy_alt {
 	background-color: #FFDDDD;
 }
 
@@ -60,7 +58,7 @@ body {
 	font-weight: bold;
 }
 
-#results span.link {
+.link {
 	text-decoration: underline;
 	cursor: pointer;
 }

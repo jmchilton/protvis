@@ -18,9 +18,47 @@
 			var PendingAnimations = new Array();
 			var Tooltips = new Array();
 			var CurrentResultsID = 0;
+			var LastFilterType = 0;
+			var CurrentPeptide = null;
+			var results_sortcol = "${sortcol}";
+			var results_sortdir = "asc";
+			var peptides_sortcol = "${sortcol}";
+			var peptides_sortdir = "asc";
 	
-			function BuildHeader() {
-				return "${head}";
+			function BuildResultsHeader() {
+				return "${head_results}";
+			}
+	
+			function BuildPeptidesHeader() {
+				return "${head_peptides}";
+			}
+			
+			function SortRestults(column) {
+				if (column == results_sortcol) {
+					if (results_sortdir == "asc") {
+						results_sortdir = "dsc";
+					} else {
+						results_sortdir = "asc";
+					}
+				} else {
+					results_sortcol = column;
+					results_sortdir = "asc";
+				}
+				ApplyFilter(LastFilterType);
+			}
+			
+			function SortPeptides(column) {
+				if (column == peptides_sortcol) {
+					if (peptides_sortdir == "asc") {
+						peptides_sortdir = "dsc";
+					} else {
+						peptides_sortdir = "asc";
+					}
+				} else {
+					peptides_sortcol = column;
+					peptides_sortdir = "asc";
+				}
+				SearchPeptide(CurrentPeptide);
 			}
 			
 			function QueueAnimation(anim) {
@@ -41,6 +79,7 @@
 			}
 
 			function ApplyFilter(type) {
+				LastFilterType = type;
 				var oldhits = dojo.byId("search_hits_" + CurrentResultsID);
 				if (oldhits == null) {
 					var anim = dojo.fx.wipeIn({
@@ -92,10 +131,11 @@
 				}
 				str = "/search/${type}/query/";
 				if (type == 0) {
-					str += "basic?file=${file}&max=50&q=" + dojo.byId("filter_basic_string").value;
+					str += "basic?file=${file}&q=" + dojo.byId("filter_basic_string").value;
 				} else {
-					str += "adv?file=${file}&max=50";
+					str += "adv?file=${file}";
 				}
+				str += "&max=50&sort=" + results_sortcol + "&order=" + results_sortdir;
 				dojo.xhrGet({
 					url: str,
 					load: function(results) {
@@ -144,11 +184,12 @@
 			}
 			
 			function SearchPeptide(peptide) {
+				CurrentPeptide = peptide;
 				dojo.xhrGet({
-					url: "/list/${type}/peptide?file=${file}&peptide=" + peptide,
+					url: "/list/${type}/peptide?file=${file}&peptide=" + peptide + "&sort=" + peptides_sortcol + "&order=" + peptides_sortdir,
 					load: function(results) {
 						elem = dojo.byId("search_peptides")
-						elem.innerHTML = BuildPeptideResults(results);
+						elem.innerHTML = "<span class='link' onclick='ReturnToResults();'>Back to all results</span>" + BuildPeptideResults(results);
 						dojo.fx.combine([
 							dojo.fx.wipeOut({ node: dojo.byId("search_hits") }),
 							dojo.fx.wipeIn({ node: elem })
@@ -203,6 +244,31 @@
 				DetailsDialog.attr("content", "<center><span class='dijitContentPaneLoading'>Loading scores... Please wait</span></center>");
 				DetailsDialog.attr("style", "width: 300px;");
 				DetailsDialog.show();
+			}
+
+			function ReturnToResults() {
+				dojo.fx.combine([
+					dojo.fx.wipeOut({
+						node: dojo.byId("search_peptides"),
+						onEnd: function(n) {
+							n.innerHTML = "";
+						}
+					}),
+					dojo.fx.wipeIn({ node: dojo.byId("search_hits") })
+				]).play();
+			}
+
+			var ResultsVisible = false;
+
+			function ToggleSpectrums() {
+				var elem = dojo.byId("spectrums");
+				if (ResultsVisible) {
+					dojo.fx.wipeOut({ node: elem, duration:7000 }).play();
+					ResultsVisible = false;
+				} else {
+					dojo.fx.wipeIn({ node: elem, duration:7000 }).play();
+					ResultsVisible = true;
+				}
 			}
 
 			dojo.ready(function() {

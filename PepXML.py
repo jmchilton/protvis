@@ -74,12 +74,13 @@ class EncodingStatus:
 	def __init__(self):
 		self.IncludedScores = 0
 		self.Peptides = {}
+		self.QueryOffset = 0
 
-	def AddPeptide(self, peptide, offset):
+	def AddPeptide(self, peptide, hit_offset):
 		try:
-			self.Peptides[peptide].append(offset)
+			self.Peptides[peptide].append([hit_offset, self.QueryOffset])
 		except:
-			self.Peptides[peptide] = [offset]
+			self.Peptides[peptide] = [[hit_offset, self.QueryOffset]]
 
 
 #Search results
@@ -296,7 +297,7 @@ class SaxHandler(xml.sax.ContentHandler):
 			"error_point": ErrorPoint,
 			"interact_summary": InteractSummary,
 			"analysis_summary": AnalysisSummary,
-			"msms_pipeline_analysis": MsmsPipelineAnalysis}
+			"msms_pipeline_analysis": MsmsPipelineAnalysis }
 
 	def startElement(self, name, attrs):
 		#try:
@@ -1264,8 +1265,6 @@ class SearchHit(TagHandler):
 				ModificationInfo.SearchAll(f, s, modification_info__count)
 			if alternative_protein__count > 0:
 				AlternativeProtein.SearchAll(f, s, alternative_protein__count)
-			if analysis_result__count > 0:
-				AnalysisResult.SearchAll(f, s, analysis_result__count)
 			s.SearchItemString("Peptide", PeptideFull)
 			if s.IsMatched():
 				Hits += 1
@@ -1799,6 +1798,7 @@ class SpectrumQuery(TagHandler):
 	def __init__(self, stream, stat, attr):
 		TRACEPOSXML(stream, "SpectrumQuery.__init__(): ")
 		self.StartPos = stream.tell()
+		stat.QueryOffset = self.StartPos
 		retention_time_sec = TryGet(attr, "retention_time_sec")
 		search_specification = TryGet(attr, "search_specification")
 		stream.write(struct.pack("=IIHB", 0, 0, 0, EncodeOptional(retention_time_sec, search_specification)))
@@ -1880,6 +1880,14 @@ class SpectrumQuery(TagHandler):
 				f.seek(struct.unpack("=I", f.read(4))[0] - 4, 1)
 			i += 1
 		return {}
+
+	@staticmethod
+	def GetHitInfoSeek(f, query, hit):
+		f.seek(query + 4 + 4 + 2 + 1)
+		spectrum = DecodeStringFromFile(f)
+		dic = SearchHit.GetInfoSeek(f, hit)
+		dic["spectrum"] = spectrum
+		return dic
 
 
 class MsmsRunSummary(TagHandler):
@@ -2176,8 +2184,8 @@ def PepXml2Bin(FileName, Dest = None):
 	for peptide, offsets in stat.Peptides.items():
 		EncodeStringToFile(Dest, peptide)
 		Dest.write(struct.pack("=H", len(offsets)))
-		for offset in offsets:
-			Dest.write(struct.pack("=I", offset))
+		for hit, query in offsets:
+			Dest.write(struct.pack("=II", hit, query))
 	Dest.close()
 
 def PepBinSearchBasic(FileName, terms):
@@ -2212,12 +2220,12 @@ def PepBinSearchPeptide(FileName, peptide):
 		pep = DecodeStringFromFile(f)
 		[occurrances] = struct.unpack("=H", f.read(2))
 		if pep == peptide:
-			offsets = struct.unpack("".join(["I" for i in xrange(occurrances)]), f.read(occurrances * 4))
-			info = [SearchHit.GetInfoSeek(f, offset) for offset in offsets]
+			offsets = [struct.unpack("II", f.read(4 + 4)) for i in xrange(occurrances)]
+			info = [SpectrumQuery.GetHitInfoSeek(f, query, hit) for hit, query in offsets]
 			f.close()
 			return [scores, info]
 		else:
-			f.seek(occurrances * 4, 1)
+			f.seek(occurrances * (4 + 4), 1)
 		peptides -= 1
 	f.close()
 	return [socres, None]

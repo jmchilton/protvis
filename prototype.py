@@ -6,7 +6,7 @@ import getsite
 from paste.httpserver import serve
 from pyramid.config import Configurator
 from pyramid.response import Response
-from pyramid.renderers import render
+from pyramid.renderers import render, render_to_response
 import binascii;
 from xml.sax.saxutils import escape
 import os
@@ -19,7 +19,8 @@ import re
 
 templates = os.path.realpath(os.path.dirname(__file__))+ "/templates/"
 converted = os.path.realpath(os.path.dirname(__file__))+ "/ConvertedFiles/"
-decoy_regex = re.compile("^decoy_.*")
+decoy_regex = re.compile(r"^decoy_.*")
+spectrum_regex = re.compile(r"(.+?)(\.mzML)?\.[0-9]+\.[0-9]+\.[0-9]+")
 threads = {}
 
 class ConverterThread(Thread):
@@ -42,19 +43,34 @@ def DecodeQuery(query):
 			dic[p] = None
 	return dic
 
+def GetFileName(request, query):
+	try:
+		fname = query["file"]
+	except:
+		raise HTTPBadRequestError()
+	if fname.find("/") >= 0:
+		raise HTTPUnauthorized()
+	return converted + fname + "." + request.matchdict["type"]
+
 def DecodeDecoy(protein):
 	if decoy_regex.match(protein.lower()) != None:
 		return "/" + protein
 	return protein
 
 def DumpPeptideResult(r, score):
-	print(r)
-	ret = " ".join([r["peptide_prev_aa"], r["peptide"], r["peptide_next_aa"], DecodeDecoy(r["protein"]), str(r["massdiff"]), str(r[score])])
-	try:
-		ret += " " + r["protein_descr"]
-	except:
-		ret += " "
-	return ret
+	if "hyperscore" in r:
+		engine = "X-Tandem"
+		engine_score = str(r["hyperscore"])
+	elif "ionscore" in r:
+		engine = "Mascot"
+		engine_score = str(r["ionscore"])
+	elif "expect" in r:
+		engine = "Omssa"
+		engine_score = str(r["expect"])
+	else:
+		engine = ""
+		engine_score = ""
+	return " ".join([r["spectrum"], str(r["massdiff"]), str(r[score]), engine, engine_score])
 
 def DumpQueryResult(res, score):
 	h = res.HitInfo
@@ -111,26 +127,24 @@ def QueryGetFileStatus(request):
 
 def DisplayList(request):
 	query = DecodeQuery(request.query_string)
-	fname = query["file"]
-	if fname.find("/") >= 0:
-		return HTTPUnauthorized()
-	fname = converted + fname + "." + request.matchdict["type"]
+	fname = GetFileName(request, query)
 	try:
 		scores = PepXML.GetAvaliableScores(fname)
 		score = PepXML.SearchEngineName(scores)
-		head = "<tr class=\\\"results_table_head\\\"><th><span onclick=\\\"Sort('peptide');\\\">Peptide</span></th><th><span onclick=\\\"Sort('protein');\\\">Protein</span></th><th><span onclick=\\\"Sort('masdiff');\\\">Mass Difference</span></th><th><span onclick=\\\"Sort('" + PepXML.DefaultSortColumn(scores) + "');\\\">" + score + "</span></th></tr>"
-		res = render(templates + "list_" + request.matchdict["type"] + ".pt", {"type": request.matchdict["type"], "file": query["file"], "head": Literal(head)}, request=request)
+		sortcol = PepXML.DefaultSortColumn(scores)
+		head_results = "<tr class=\\\"link\\\"><th><span onclick=\\\"SortRestults('peptide');\\\">Peptide</span></th><th><span onclick=\\\"SortRestults('protein');\\\">Protein</span></th><th><span onclick=\\\"SortRestults('massdiff');\\\">Mass Difference</span></th><th><span onclick=\\\"SortRestults('" + PepXML.DefaultSortColumn(scores) + "');\\\">" + score + "</span></th></tr>"
+		head_peptides = "<tr class=\\\"link\\\"><th><span onclick=\\\"SortPeptides('spectrum');\\\">Spectrum</span></th><th><span onclick=\\\"SortPeptides('massdiff');\\\">Mass Diff</span></th><th><span onclick=\\\"SortPeptides('" + sortcol + "');\\\">" + PepXML.SearchEngineName(scores) + "</span></th>";
+		if scores & 0x6C: #this is a prophet result
+			head_peptides += "<th><span onclick=\\\"SortPeptides('engine');\\\">Search Engine</span></th><th><span onclick=\\\"SortPeptides('raw');\\\">Raw Score</span></th></tr>";
+		head_peptides += "</tr>";
+		return render_to_response(templates + "list_" + request.matchdict["type"] + ".pt", {"type": request.matchdict["type"], "file": query["file"], "sortcol": sortcol, "head_results": Literal(head_results), "head_peptides": Literal(head_peptides)}, request=request)
 	except:
 		return HTTPNotFound()
-	return Response(res)
 
 def ListPeptide(request):
 	query = DecodeQuery(request.query_string)
+	fname = GetFileName(request, query)
 	try:
-		fname = query["file"]
-		if fname.find("/") >= 0:
-			return HTTPUnauthorized()
-		fname = converted + fname + "." + request.matchdict["type"]
 		[scores, results] = PepXML.PepBinSearchPeptide(fname, query["peptide"])
 		total = len(results)
 		score = PepXML.DefaultSortColumn(scores)
@@ -145,7 +159,24 @@ def ListPeptide(request):
 			else:
 				reverse = True
 		except:
-			reverse = False
+			reverse = True
+		if sortcol in ["hyperscore", "pp_prob", "ip_prob"]:
+			reverse = not reverse
+		SearchEngines = { "X-Tandem": 0, "Mascot": 0, "Omssa": 0 }
+		spectrums = {}
+		for r in results:
+			if "hyperscore" in r:
+				SearchEngines["X-Tandem"] += 1
+			elif "ionscore" in r:
+				SearchEngines["Mascot"] += 1
+			elif "expect" in r:
+				SearchEngines["Omssa"] += 1
+			spec = spectrum_regex.sub(r"\1", r["spectrum"])
+			try:
+				spectrums[spec] += 1
+			except:
+				spectrums[spec] = 1
+		spectrums = " ".join(sorted([str(v) + "/" + k for k, v in spectrums.items()], reverse = True))
 		results = sorted(results, key = lambda key: key[sortcol], reverse = reverse)
 		try:
 			start = int(query["start"])
@@ -162,16 +193,13 @@ def ListPeptide(request):
 				results = restults[start:]
 		elif limit > 0:
 			results = results[:limit]
-		return Response(" ".join([str(start), str(total)]) + "\n" + "\n".join([DumpPeptideResult(r, score) for r in results]))
+		return Response(" ".join([str(start), str(total), query["peptide"], str(SearchEngines["X-Tandem"]), str(SearchEngines["Mascot"]), str(SearchEngines["Omssa"])]) + "\n" + spectrums + "\n" + "\n".join([DumpPeptideResult(r, score) for r in results]))
 	except:
 		return HTTPBadRequest()
 
 def SearchQuery(request):
 	query = DecodeQuery(request.query_string)
-	fname = query["file"]
-	if fname.find("/") >= 0:
-		return HTTPUnauthorized()
-	fname = converted + fname + "." + request.matchdict["type"]
+	fname = GetFileName(request, query)
 	if request.matchdict["level"] == "basic":
 		[scores, TotalQueries, results] = PepXML.PepBinSearchBasic(fname, urllib.unquote(query["q"]))
 	else:
@@ -190,6 +218,8 @@ def SearchQuery(request):
 			reverse = True
 	except:
 		reverse = True
+	if sortcol in ["hyperscore", "pp_prob", "ip_prob"]:
+		reverse = not reverse
 	results = sorted(results, key = lambda key: key.HitInfo[sortcol], reverse = reverse)
 	try:
 		start = int(query["start"])
@@ -217,11 +247,8 @@ def SearchHit(request):
 
 def SearchScore(request):
 	query = DecodeQuery(request.query_string)
+	fname = GetFileName(request, query)
 	try:
-		fname = query["file"]
-		if fname.find("/") >= 0:
-			return HTTPUnauthorized()
-		fname = converted + fname + "." + request.matchdict["type"]
 		sid = int(query["sid"])
 		qid = int(query["qid"])
 		rid = int(query["rid"])
@@ -229,32 +256,38 @@ def SearchScore(request):
 	except:
 		return HTTPBadRequest()
 	[spectrum, results] = PepXML.PepBinGetScores(fname, sid, qid, rid, hid)
-	#i = 0
 	items = sorted(results.items())
-	#styles = ["norm", "alt"]
 	rows = spectrum;
+	names = {
+		"bvalue": "bvalue",
+		"expect": "expect",
+		"homologyscore": "homologyscore",
+		"hyperscore": "hyperscore",
+		"identityscore": "identityscore",
+		"ionscore": "ionscore",
+		"nextscore": "nextscore",
+		"pvalue": "pvalue",
+		"star": "star",
+		"yscore": "yscore",
+		"pp_prob": "peptideprophet",
+		"ip_prob": "interpropht",
+		"ap_prob": "asapratio",
+		"ep_prob": "xpressratio"}
 	for name, val in items:
-		#rows += "<tr class=\"" + styles[i] + "\" style=\"text-align: center;\"><td>" + name + "</td><td>" + str(val) + "</td></tr>"
-		rows += "\n" + str(val) + " " + name;
-		#i = (i + 1) % 2
+		rows += "\n" + str(val) + " " + names[name];
 	return Response(rows)
-	#res = render(templates + "search_" + request.matchdict["type"] + "_score.pt", {"spectrum": "hello world", "results": Literal(rows)}, request=request)
-	#except:
-	#	return HTTPNotFound()
-	#return Response(res)
 
 def Tooltip(request):
-		query = DecodeQuery(request.query_string)
-	#try:
-		fname = query["file"]
-		if fname.find("/") >= 0:
-			return HTTPUnauthorized()
-		fname = converted + fname + "." + request.matchdict["type"]
+	query = DecodeQuery(request.query_string)
+	fname = GetFileName(request, query)
+	try:
 		[scores, results] = PepXML.PepBinSearchPeptide(fname, query["peptide"])
-		score = "expect"#PepXML.DefaultSortColumn(scores)
-		#for r in results:
-		#	print(r)
-		#results = sorted(results, key = lambda key: key[score])
+		score = PepXML.DefaultSortColumn(scores)
+		if score == "expect":
+			reverse = False
+		else:
+			reverse = True
+		results = sorted(results, key = lambda key: key[score], reverse = reverse)
 		count = len(results)
 		shown = count
 		SearchEngines = { "X-Tandem": 0, "Mascot": 0, "Omssa": 0 }
@@ -284,7 +317,7 @@ def Tooltip(request):
 			else:
 				engine = ""
 				engine_score = ""
-			rows += "".join(["<tr class=\"", styles[i], "\" style=\"text-align: center;\"><td>", str(r["massdiff"]), "</td><td>", str(r[score]), "</td><td>", engine, "</td><td>", engine_score, "</td></tr>"])
+			rows += "".join(["<tr class=\"", styles[i], "\" style=\"text-align: center;\"><td style=\"text-align: left;\">" + r["spectrum"] + "</td><td>", str(r[score]), "</td><td>", engine, "</td><td>", engine_score, "</td></tr>"])
 			i = (i + 1) % 2
 		if count > shown:
 			disp = "Displaying best " + str(shown) + " of " + str(count) + " results"
@@ -298,9 +331,9 @@ def Tooltip(request):
 				if len(hits) > 0:
 					hits += ", "
 				hits += str(v) + " from " + k
-		return Response(disp + "<br/>" + hits + "<br/><table id=\"results\" style=\"width: 100%;\"><tr><th>Mass Difference</th><th>" + PepXML.SearchEngineName(scores) + "</th><th>Search Engine</th></th><th>Raw Score</th></tr>" + rows + "</table>")
-	#except:
-	#	return HTTPBadRequest()
+		return Response(disp + "<br/>" + hits + "<br/><table id=\"results\" style=\"width: 100%;\"><tr><th>Spectrum</th><th>" + PepXML.SearchEngineName(scores) + "</th><th>Search Engine</th></th><th>Raw Score</th></tr>" + rows + "</table>")
+	except:
+		return HTTPBadRequest()
 
 def GetResource(request, res):
 	MimeTypes = {
