@@ -76,18 +76,18 @@ function BuildPeptideResults(results) {
 	r = rows[1].split(' ');
 	spectrums = r.length;
 	i = 0;
-	specs = "<table id=\"spectrum_list\" style=\"display: none;\"><tr><th>Spectrum</th><th>Occurrences</th></tr>";
+	specs = "<div id=\"spectrum_list\" style=\"display: none;\"><table><tr><th>Spectrum</th><th>Occurrences</th></tr>";
 	while (i < spectrums) {
 		s = r[i].split('/')
 		var style = (i % 2) ? "alt" : "norm";
 		specs += "<tr class=\"" + style + "\"><td>" + s[1] + "</td><td style=\"text-align: center;\">" + s[0] + "</td></tr>";
 		++i;
 	}
-	specs += "</table>"
+	specs += "</table></div>"
 	//Header
 	r = rows[0].split(' ');
 	var disp;
-	if (rows.length == 2) {
+	if (rows.length == 3) {
 		disp = "Displaying the only occurrence of <b>" + r[2] + "</b>";
 	} else {
 		if (rows.length - 2 == r[1]) {
@@ -117,7 +117,7 @@ function BuildPeptideResults(results) {
 			}
 			disp += r[5] + " from Omssa";
 		}
-		disp += "<div class=\"link\" onclick=\"ToggleSpectrums();\">Results are from " + spectrums + " unique spectrums" + specs + "</div>"
+		disp += "<div><span class=\"link\" onclick=\"ToggleSpectrums();\">Results are from " + spectrums + " unique spectrums</span>" + specs + "</div>"
 	}
 	return "<br/>" + disp + "<br/><table border=\"1\" style=\"width: 100%;\">" + BuildPeptidesHeader() + html + "</table>";
 }

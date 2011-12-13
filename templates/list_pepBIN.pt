@@ -258,19 +258,6 @@
 				]).play();
 			}
 
-			var ResultsVisible = false;
-
-			function ToggleSpectrums() {
-				var elem = dojo.byId("spectrums");
-				if (ResultsVisible) {
-					dojo.fx.wipeOut({ node: elem, duration:7000 }).play();
-					ResultsVisible = false;
-				} else {
-					dojo.fx.wipeIn({ node: elem, duration:7000 }).play();
-					ResultsVisible = true;
-				}
-			}
-
 			dojo.ready(function() {
 				// Populate content initially
 				ApplyFilterBasic();

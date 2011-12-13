@@ -8,62 +8,9 @@ import xml.sax
 from xml.sax.saxutils import escape, unescape
 import xml.parsers.expat
 from cStringIO import StringIO
+from CommonXML import *
 
 #Util functions
-import sys;
-def TRACE(*args):
-	message = "".join([str(i) for i in args])
-	print(message)
-	return
-
-def TRACEPOS(*args):
-	#TRACE(*args)
-	return
-
-def TRACEPOSXML(stream, *args):
-	"""if type(stream) is type(StringIO()):
-		args += (str(stream.tell()), " (StringIO)")
-	else:
-		args += (str(stream.tell()),)
-	TRACE(*args)"""
-	return
-
-def TryGetAttrib(elem, attr):
-	try:
-		return elem.attrib[attr]
-	except:
-		return None
-
-def TryGet(dic, elem):
-	try:
-		return dic[elem]
-	except:
-		return None
-
-def EncodeOptional(*attrs):
-	Flags = 0
-	Bit = 1
-	for attr in attrs:
-		if attr != None:
-			Flags |= Bit
-		Bit <<= 1
-	return Flags
-
-def EncodeStringToFile(f, s):
-	l = len(s)
-	f.write(struct.pack("=H{0}s".format(l), l, str(s)))
-
-def EncodeString(f, s):
-	l = len(s)
-	return struct.pack("=H{0}s".format(l), l, str(s))
-
-def DecodeStringFromFile(f):
-	l = struct.unpack("=H", f.read(2))[0]
-	return struct.unpack("={0}s".format(l), f.read(l))[0]
-
-def EatStringFromFile(f):
-	return f.seek(struct.unpack("=H", f.read(2))[0], 1)
-
 def GetEngineCode(name):
 	if name == "interprophet":
 		return 1
@@ -115,205 +62,55 @@ class Result:
 			"   HitInfo: ", str(self.HitInfo), "\n"]
 		return "".join(fields)
 
-class SearchStatus:
-	def __init__(self, dic):
-		self.Terms = dic
-		self.Matched = {}
-		self.Results = []
-		self.TotalQueries = 0
-		
-	def copy(self):
-		dic = {}
-		for k in self.Terms:
-			dic[k] = [i for i in self.Terms[k]]
-		new = SearchStatus(dic)
-		dic = {}
-		for k in self.Matched:
-			dic[k] = [i for i in self.Matched[k]]
-		new.Matched = dic
-		new.Results = self.Results
-		return new
-
-	def IsMatched(self):
-		return len(self.Terms) == 0
-
-	def _SearchItem(self, name, value, comparator):
-		#returns:
-		# -1 if this key is not required for searhing
-		#  0 if this key was searched against the basic or specific search, but did not completly match either
-		#  1 if matched either the basic or specific search
-		phrases = None
-		key = name
-		try:
-			phrases = self.Terms[name]
-		except:
-			try:
-				phrases = self.Terms[None]
-				key = None
-			except:
-				return -1
-		i = 0
-		count = len(phrases)
-		while i < count:
-			if comparator(value, phrases[i]) != 0:
-				try:
-					self.Matched[key].append(phrases[i])
-				except:
-					self.Matched[key] = [phrases[i]]
-				del phrases[i]
-				count -= 1
-			else:
-				i += 1
-		if count == 0:
-			del self.Terms[key]
-			return 1
-		return 0
-
-	def SearchItemInt(self, name, value):
-		def CmpInt(val, s):
-			try:
-				if val == int(s):
-					return 1
-				else:
-					return 0
-			except:
-				return 0
-		return self._SearchItem(name, value, CmpInt)
-
-	def SearchItemFloat(self, name, value):
-		def Precision(s):
-			l = s.split(".")
-			if len(l) == 1:
-				l = s.split("e")
-				if len(l) > 1:
-					return -int(l[1])
-				else:
-					return 0;
-			l = l[1].split("e")
-			if len(l) > 1:
-				[frac, exp] = l
-				return len(frac) - int(exp) #works for + and - exp's
-			else:
-				return len(l[0])
-
-		def CmpFloat(val, s):
-			try:
-				f = float(s)
-				prec = Precision(s)
-				if abs(val - f) < pow(10, -prec):
-					return 1
-				else:
-					return 0
-			except:
-				return 0
-
-		return self._SearchItem(name, value, CmpFloat)
-	
-	def SearchItemString(self, name, value):
-		def CmpString(val, s):
-			try:
-				if val.upper().find(s) >= 0:
-					return 1
-				return 0
-			except:
-				return 0
-		return self._SearchItem(name, value, CmpString)
-
-def SplitPhrase(phrase):
-	return phrase.split(); #FIXME: don't split quotes
-
 
 #XML helpers
-class NullStream:
-	def tell(self):
-		return 0
-
-	def write(self, bytes):
-		#do nothing
-		return
-
-class TagHandler(object):
-	def __new__(cls, stream, *args, **kwargs):
-		obj = object.__new__(cls, *args, **kwargs)
-		obj.Stream = stream
-		return obj
-
-	def End(self):
-		return
-
-	def BeginChild(self, name):
-		raise NotImplementedError(name)
-
-	def EndChild(self):
-		return stream
-
-class Eater:
-	def End(self):
-		return
-
-	def BeginChild(self, name):
-		return NullStream()
-
-	def EndChild(self):
-		return
-
-class SaxHandler(xml.sax.ContentHandler):
+class SaxHandler(SaxHandlerBase):
 	def __init__(self, stream, stat):
-		self.Stream = stream
-		self.Stat = stat
-		self.State = []
+		SaxHandlerBase.__init__(self, stream, stat)
 		self.Handlers = {
-			"specificity": Specificity,
-			"sample_enzyme": SampleEnzyme,
+			"search_score": SearchScore,
+			"parameter": Parameter,
+			"search_hit": SearchHit,
 			"mod_aminoacid_mass": ModAminoacidMass,
 			"modification_info": ModificationInfo,
-			"alternative_protein": AlternativeProtein,
 			"search_score_summary": SearchScoreSummary,
+			"analysis_result": AnalysisResult,
+			"spectrum_query": SpectrumQuery,
+			"search_result": SearchResult,
 			"peptideprophet_result": PeptideprophetResult,
 			"interprophet_result": InterprophetResult,
 			"asapratio_result": AsapratioResult,
 			"xpressratio_result": XpressratioResult,
-			"analysis_result": AnalysisResult,
-			"search_score": SearchScore,
-			"search_hit": SearchHit,
-			"search_result": SearchResult,
-			"search_database": SearchDatabase,
-			"enzymatic_search_constraint": EnzymaticSearchConstraint,
-			"sequence_search_constraint": SequenceSearchConstraint,
-			"aminoacid_modification": AminoacidModification,
-			"terminal_modification": TerminalModification,
-			"parameter": Parameter,
-			"search_summary": SearchSummary,
-			"database_refresh_timestamp": DatabaseRefreshTimestamp,
-			"xpressratio_timestamp": XpressratioTimestamp,
-			"analysis_timestamp": AnalysisTimestamp,
-			"spectrum_query": SpectrumQuery,
-			"msms_run_summary": MsmsRunSummary,
-			"dataset_derivation": DatasetDerivation,
 			"point": Point,
-			"mixturemodel": Mixturemodel,
-			"inputfile": Inputfile,
+			"alternative_protein": AlternativeProtein,
+			"aminoacid_modification": AminoacidModification,
+			"analysis_timestamp": AnalysisTimestamp,
+			"distribution_point": DistributionPoint,
 			"roc_data_point": RocDataPoint,
 			"error_point": ErrorPoint,
-			"interact_summary": InteractSummary,
+			"inputfile": Inputfile,
+			"specificity": Specificity,
+			"search_summary": SearchSummary,
+			"search_database": SearchDatabase,
+			"sample_enzyme": SampleEnzyme,
+			"msms_run_summary": MsmsRunSummary,
+			"enzymatic_search_constraint": EnzymaticSearchConstraint,
+			"database_refresh_timestamp": DatabaseRefreshTimestamp,
+			"posmodel_distribution": PosmodelDistribution,
+     		"negmodel_distribution": NegmodelDistribution,
+     		"mixturemodel_distribution": MixturemodelDistribution,
 			"analysis_summary": AnalysisSummary,
-			"msms_pipeline_analysis": MsmsPipelineAnalysis }
+			"mixture_model": Mixturemodel,
+			"mixturemodel": Mixturemodel,
+			"interact_summary": InteractSummary,
+			"msms_pipeline_analysis": MsmsPipelineAnalysis,
+			"roc_error_data": RocErrorData,
+			"sequence_search_constraint": SequenceSearchConstraint,
+			"terminal_modification": TerminalModification,
+			"xpressratio_timestamp": XpressratioTimestamp,
+			"dataset_derivation": DatasetDerivation }
 
-	def startElement(self, name, attrs):
-		#try:
-			if len(self.State) > 0:
-				stream = self.State[-1].BeginChild(name)
-			else:
-				stream = self.Stream
-			self.State.append(self.Handlers[name](stream, self.Stat, attrs))
-		#except:
-		#	print("Ignoring unknown element '" + name + "'")
-		#	self.State.append(Eater())
-
-	def endElement(self, name):
-		stream = self.State.pop().End()
-		#State[-1].EndChild(stream) #Not used
-
+#FIXME: Implement DistributionPoint, PosmodelDistribution, NegmodelDistribution, RocErrorData
 
 
 #XML element classes
@@ -333,11 +130,11 @@ class Specificity(TagHandler):
 		min_spacing = TryGet(attr, "min_spacing")
 		no_cut = TryGet(attr, "no_cut")
 		stream.write(struct.pack("=cB", str(attr["sense"]), EncodeOptional(min_spacing, no_cut)))
-		EncodeStringToFile(stream, unescape(attr["cut"]))
+		EncodeStringToFileUnescape(stream, attr["cut"])
 		if min_spacing != None:
-			EncodeStringToFile(stream, unescape(min_spacing))
+			EncodeStringToFileUnescape(stream, min_spacing)
 		if no_cut != None:
-			EncodeStringToFile(stream, unescape(no_cut))
+			EncodeStringToFileUnescape(stream, no_cut)
 
 	#No need for end, there should be no child elements
 
@@ -375,9 +172,9 @@ class SampleEnzyme(TagHandler):
 		if description != None:
 			Flags |= 0x10
 		stream.write(struct.pack("=B", Flags))
-		EncodeStringToFile(stream, unescape(attr["name"]))
+		EncodeStringToFileUnescape(stream, attr["name"])
 		if description != None:
-			EncodeStringToFile(stream, unescape(description))
+			EncodeStringToFileUnescape(stream, description)
 		self.CountPos = stream.tell()
 		stream.write(struct.pack("=H", 0))
 		self.Specificities = 0
@@ -496,9 +293,9 @@ class AlternativeProtein(TagHandler):
 		num_tol_term = TryGet(attr, "num_tol_term")
 		protein_mw = TryGet(attr, "protein_mw")
 		stream.write(struct.pack("=B", EncodeOptional(protein_descr, num_tol_term, protein_mw)))
-		EncodeStringToFile(stream, unescape(attr["protein"]))
+		EncodeStringToFileUnescape(stream, attr["protein"])
 		if protein_descr != None:
-			EncodeStringToFile(stream, unescape(protein_descr))
+			EncodeStringToFileUnescape(stream, protein_descr)
 		if num_tol_term != None:
 			stream.write(struct.pack("=i", int(num_tol_term)))
 		if protein_mw != None:
@@ -1108,9 +905,9 @@ class SearchHit(TagHandler):
 		peptide = unescape(attr["peptide"])
 		stat.AddPeptide(peptide, self.StartPos)
 		EncodeStringToFile(stream, peptide)
-		EncodeStringToFile(stream, unescape(attr["protein"]))
+		EncodeStringToFileUnescape(stream, attr["protein"])
 		if protein_descr != None:
-			EncodeStringToFile(stream, unescape(protein_descr))
+			EncodeStringToFileUnescape(stream, protein_descr)
 		if peptide_prev_aa != None:
 			if len(peptide_prev_aa) == 0:
 				stream.write(struct.pack("=B", 0))
@@ -1130,7 +927,7 @@ class SearchHit(TagHandler):
 		if num_missed_cleavages != None:
 			stream.write(struct.pack("=i", int(num_missed_cleavages)))
 		if calc_pI != None:
-			EncodeStringToFile(stream, unescape(calc_pI))
+			EncodeStringToFileUnescape(stream, calc_pI)
 		if protein_mw != None:
 			stream.write(struct.pack("=d", protein_mw))
 		DataOffset = stream.tell()
@@ -1509,17 +1306,17 @@ class SearchDatabase(TagHandler):
 		if attr["type"] == "NA":
 			OptionalFlags |= 0x80
 		stream.write(struct.pack("=B", OptionalFlags))
-		EncodeStringToFile(stream, unescape(attr["local_path"]))
+		EncodeStringToFileUnescape(stream, attr["local_path"])
 		if URL != None:
-			EncodeStringToFile(stream, unescape(URL))
+			EncodeStringToFileUnescape(stream, URL)
 		if database_name != None:
-			EncodeStringToFile(stream, unescape(database_name))
+			EncodeStringToFileUnescape(stream, database_name)
 		if orig_database_url != None:
-			EncodeStringToFile(stream, unescape(orig_database_url))
+			EncodeStringToFileUnescape(stream, orig_database_url)
 		if database_release_date != None:
-			EncodeStringToFile(stream, unescape(database_release_date))
+			EncodeStringToFileUnescape(stream, database_release_date)
 		if database_release_identifier != None:
-			EncodeStringToFile(stream, unescape(database_release_identifier))
+			EncodeStringToFileUnescape(stream, database_release_identifier)
 		if size_in_db_entries != None:
 			stream.write(struct.pack("=i", int(size_in_db_entries)))
 		if size_of_residues != None:
@@ -1536,7 +1333,7 @@ class EnzymaticSearchConstraint(TagHandler):
 
 	def __init__(self, stream, stat, attr):
 		TRACEPOSXML(stream, "EnzymaticSearchConstraint.__init__(): ")
-		EncodeStringToFile(stream, unescape(attr["enzyme"]))
+		EncodeStringToFileUnescape(stream, attr["enzyme"])
 		stream.write(struct.pack("=ii", int(attr["max_num_internal_cleavages"]), int(attr["min_number_termini"])))
 
 class SequenceSearchConstraint(TagHandler):
@@ -1547,7 +1344,7 @@ class SequenceSearchConstraint(TagHandler):
 	"""
 
 	def __init__(self, stream, stat, attr):
-		EncodeStringToFile(stream, unescape(attr["sequence"]))
+		EncodeStringToFileUnescape(stream, attr["sequence"])
 
 class AminoacidModification(TagHandler):
 	"""
@@ -1566,23 +1363,23 @@ class AminoacidModification(TagHandler):
 
 	def __init__(self, stream, stat, attr):
 		TRACEPOSXML(stream, "AminoacidModification.__init__(): ")
-		EncodeStringToFile(stream, unescape(attr["aminoacid"]))
-		EncodeStringToFile(stream, unescape(attr["massdiff"]))
+		EncodeStringToFileUnescape(stream, attr["aminoacid"])
+		EncodeStringToFileUnescape(stream, attr["massdiff"])
 		stream.write(struct.pack("=f", float(attr["mass"])))
-		EncodeStringToFile(stream, unescape(attr["variable"]))
+		EncodeStringToFileUnescape(stream, attr["variable"])
 		peptide_terminus = TryGet(attr, "peptide_terminus")
 		symbol = TryGet(attr, "symbol")
 		binary = TryGet(attr, "binary")
 		description = TryGet(attr, "description")
 		stream.write(struct.pack("=B", EncodeOptional(peptide_terminus, symbol, binary, description)))
 		if peptide_terminus != None:
-			EncodeStringToFile(stream, unescape(peptide_terminus))
+			EncodeStringToFileUnescape(stream, peptide_terminus)
 		if symbol != None:
-			EncodeStringToFile(stream, unescape(symbol))
+			EncodeStringToFileUnescape(stream, symbol)
 		if binary != None:
-			EncodeStringToFile(stream, unescape(binary))
+			EncodeStringToFileUnescape(stream, binary)
 		if description != None:
-			EncodeStringToFile(stream, unescape(description))
+			EncodeStringToFileUnescape(stream, description)
 
 class TerminalModification(TagHandler):
 	def __init__(self, stream, stat, attr):
@@ -1601,10 +1398,10 @@ class Parameter(TagHandler):
 	def __init__(self, stream, stat, attr):
 		"""t = TryGet(attr, "value")
 		stream.write(struct.pack("=B", EncodeOptional(t)))
-		EncodeStringToFile(stream, unescape(attr["name"]))
-		EncodeStringToFile(stream, unescape(attr["value"]))
+		EncodeStringToFileUnescape(stream, attr["name"])
+		EncodeStringToFileUnescape(stream, attr["value"])
 		if t != None:
-			EncodeStringToFile(stream, unescape(t))"""
+			EncodeStringToFileUnescape(stream, t)"""
 		return
 		
 	@staticmethod
@@ -1664,12 +1461,12 @@ class SearchSummary(TagHandler):
 		self.out_data_type = TryGet(xml, "out_data_type")
 		self.out_data = TryGet(xml, "out_data")
 		self.Stream.write(struct.pack("=B", 0))
-		EncodeStringToFile(self.Stream, unescape(attr["base_name"]))
-		EncodeStringToFile(self.Stream, unescape(attr["search_engine"]))
+		EncodeStringToFileUnescape(self.Stream, attr["base_name"])
+		EncodeStringToFileUnescape(self.Stream, attr["search_engine"])
 		if self.out_data_type != None:
-			EncodeStringToFile(self.Stream, unescape(self.out_data_type))
+			EncodeStringToFileUnescape(self.Stream, self.out_data_type)
 		if self.out_data != None:
-			EncodeStringToFile(self.Stream, unescape(self.out_data))
+			EncodeStringToFileUnescape(self.Stream, self.out_data)
 		self.SearchDatabase = None
 		self.EnzymaticSearchConstraint = None
 		self.SequenceSearchConstraintCount = 0
@@ -1740,7 +1537,7 @@ class DatabaseRefreshTimestamp(TagHandler):
 	def __init__(self, stream, stat, attr):
 		"""min_num_enz_term = TryGet(attr, "min_num_enz_term")
 		stream.write(struct.pack("=B", EncodeOptional(min_num_enz_term)))
-		EncodeStringToFile(stream, unescape(attr["database"]))
+		EncodeStringToFileUnescape(stream, attr["database"])
 		stream.write(struct.pack("=i", int(min_num_enz_term)))"""
 		return
 
@@ -1783,12 +1580,12 @@ class SpectrumQuery(TagHandler):
 		DWORD search_result__offset;
 		WORD search_result__count;
 		BYTE OptionalFlags;
-		String spectrum;
 		unsigned int start_scan;
 		unsigned int end_scan;
 		float precursor_neutral_mass;
 		int assumed_charge;
 		unsigned int index;
+		String spectrum;
 		float retention_time_sec; //ONLY IF (OptionalFlags & 0x01)
 		String search_specification; //ONLY IF (OptionalFlags & 0x02)
 		SearchResult search_result[search_result__count];
@@ -1801,13 +1598,12 @@ class SpectrumQuery(TagHandler):
 		stat.QueryOffset = self.StartPos
 		retention_time_sec = TryGet(attr, "retention_time_sec")
 		search_specification = TryGet(attr, "search_specification")
-		stream.write(struct.pack("=IIHB", 0, 0, 0, EncodeOptional(retention_time_sec, search_specification)))
-		EncodeStringToFile(stream, unescape(attr["spectrum"]))
-		stream.write(struct.pack("=IIfiI", int(attr["start_scan"]), int(attr["end_scan"]), float(attr["precursor_neutral_mass"]), int(attr["assumed_charge"]), int(attr["index"])))
+		stream.write(struct.pack("=IIHBIIfiI", 0, 0, 0, EncodeOptional(retention_time_sec, search_specification)), int(attr["start_scan"]), int(attr["end_scan"]), float(attr["precursor_neutral_mass"]), int(attr["assumed_charge"]), int(attr["index"])))
+		EncodeStringToFileUnescape(stream, attr["spectrum"])
 		if retention_time_sec != None:
 			stream.write(struct.pack("=f", float(retention_time_sec)))
 		if search_specification != None:
-			EncodeStringToFile(stream, unescape(search_specification))
+			EncodeStringToFileUnescape(stream, search_specification)
 		self.ResultsPos = stream.tell()
 		self.SearchResults = 0
 
@@ -1897,10 +1693,10 @@ class MsmsRunSummary(TagHandler):
 		DWORD spectrum_query__count;
 		DWORD spectrum_query__offset;
 		DWORD OtherDataOffset;
+		BYTE OptionalFlags;
 		String base_name;
 		String raw_data_type;
 		String raw_data;
-		BYTE OptionalFlags;
 		String msManufacturer; //ONLY IF (OptionalFlags & 0x01)
 		String msModel; //ONLY IF (OptionalFlags & 0x02)
 		String msIonization; //ONLY IF (OptionalFlags & 0x04)
@@ -1916,16 +1712,15 @@ class MsmsRunSummary(TagHandler):
 	def __init__(self, stream, stat, attr):
 		TRACEPOSXML(stream, "MsmsRunSummary.__init__(): ")
 		self.StartPos = stream.tell()
-		stream.write(struct.pack("=IIII", 0, 0, 0, 0))
-		EncodeStringToFile(stream, unescape(attr["base_name"]))
-		EncodeStringToFile(stream, unescape(attr["raw_data_type"]))
-		EncodeStringToFile(stream, unescape(attr["raw_data"]))
+		stream.write(struct.pack("=IIIIB", 0, 0, 0, 0, EncodeOptional(msManufacturer, msModel, msIonization, msMassAnalyzer, msDetector)))
+		EncodeStringToFileUnescape(stream, attr["base_name"])
+		EncodeStringToFileUnescape(stream, attr["raw_data_type"])
+		EncodeStringToFileUnescape(stream, attr["raw_data"])
 		msManufacturer = TryGet(attr, "msManufacturer")
 		msModel = TryGet(attr, "msModel")
 		msIonization = TryGet(attr, "msIonization")
 		msMassAnalyzer = TryGet(attr, "msMassAnalyzer")
 		msDetector = TryGet(attr, "msDetector")
-		stream.write(struct.pack("=B", EncodeOptional(msManufacturer, msModel, msIonization, msMassAnalyzer, msDetector)))
 		if msManufacturer != None:
 			EncodeStringToFile(stream, msManufacturer)
 		if msModel != None:
@@ -2081,9 +1876,9 @@ class MsmsPipelineAnalysis(TagHandler):
 		self.Stat = stat
 		self.StartPos = stream.tell()
 		stream.write(struct.pack("=HHHH", 0, 0, 0, 0))
-		EncodeStringToFile(stream, unescape(attr["summary_xml"]))
-		EncodeStringToFile(stream, unescape(attr["date"]))
-		#EncodeStringToFile(stream, xml.attrib["summary_xml"])
+		EncodeStringToFileUnescape(stream, attr["summary_xml"])
+		EncodeStringToFileUnescape(stream, attr["date"])
+		#EncodeStringToFileUnescape(stream, xml.attrib["summary_xml"])
 		self.Runs = 0
 		self.Datasets = 0
 		self.Summaries = 0
