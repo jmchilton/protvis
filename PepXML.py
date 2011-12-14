@@ -104,13 +104,10 @@ class SaxHandler(SaxHandlerBase):
 			"mixturemodel": Mixturemodel,
 			"interact_summary": InteractSummary,
 			"msms_pipeline_analysis": MsmsPipelineAnalysis,
-			"roc_error_data": RocErrorData,
 			"sequence_search_constraint": SequenceSearchConstraint,
 			"terminal_modification": TerminalModification,
 			"xpressratio_timestamp": XpressratioTimestamp,
 			"dataset_derivation": DatasetDerivation }
-
-#FIXME: Implement DistributionPoint, PosmodelDistribution, NegmodelDistribution, RocErrorData
 
 
 #XML element classes
@@ -1322,6 +1319,26 @@ class SearchDatabase(TagHandler):
 		if size_of_residues != None:
 			stream.write(struct.pack("=i", int(size_of_residues)))
 
+class DistributionPoint(TagHandler):
+	"""
+	struct DistributionPoint {
+		flaot fvalue;
+		int obs_1_distr;
+		float model_1_pos_distr;
+		float model_1_neg_distr;
+		int obs_2_distr;
+		float model_2_pos_distr;
+		float model_2_neg_distr;
+		int obs_3_distr;
+		float model_3_pos_distr;
+		float model_3_neg_distr;
+	}
+	"""
+
+	def __init__(self, stream, stat, attr):
+		TRACEPOSXML(stream, "DistributionPoint.__init__(): ")
+		stream.write(struct.pack("=fiffiffiff", float(attr["fvalue"]), int(attr["obs_1_distr"]), float(attr["model_1_pos_distr"]), float(attr["model_1_neg_distr"]), int(attr["obs_2_distr"]), float(attr["model_2_pos_distr"]), float(attr["model_2_neg_distr"]), int(attr["obs_3_distr"]), float(attr["model_3_pos_distr"]), float(attr["model_3_neg_distr"])))
+
 class EnzymaticSearchConstraint(TagHandler):
 	"""
 	struct EnzymaticSearchConstraint {
@@ -1598,7 +1615,7 @@ class SpectrumQuery(TagHandler):
 		stat.QueryOffset = self.StartPos
 		retention_time_sec = TryGet(attr, "retention_time_sec")
 		search_specification = TryGet(attr, "search_specification")
-		stream.write(struct.pack("=IIHBIIfiI", 0, 0, 0, EncodeOptional(retention_time_sec, search_specification)), int(attr["start_scan"]), int(attr["end_scan"]), float(attr["precursor_neutral_mass"]), int(attr["assumed_charge"]), int(attr["index"])))
+		stream.write(struct.pack("=IIHBIIfiI", 0, 0, 0, EncodeOptional(retention_time_sec, search_specification), int(attr["start_scan"]), int(attr["end_scan"]), float(attr["precursor_neutral_mass"]), int(attr["assumed_charge"]), int(attr["index"])))
 		EncodeStringToFileUnescape(stream, attr["spectrum"])
 		if retention_time_sec != None:
 			stream.write(struct.pack("=f", float(retention_time_sec)))
@@ -1625,9 +1642,8 @@ class SpectrumQuery(TagHandler):
 		while i < count:
 			s = stat.copy()
 			TRACEPOS("SpectrumQuery.SearchAll(", i, "): ", f.tell())
-			[RecordSize, _, search_result__count, OptionalFlags] = struct.unpack("=IIHB", f.read(4 + 4 + 2 + 1))
+			[RecordSize, _, search_result__count, OptionalFlags, _1, _2, precursor_neutral_mass, _3, _4] = struct.unpack("=IIHBIIfiI", f.read(4 + 4 + 2 + 1 + 4 + 4 + 4 + 4 + 4))
 			spectrum = DecodeStringFromFile(f)
-			[_1, _2, precursor_neutral_mass, _3, _4] = struct.unpack("=IIfiI", f.read(4 + 4 + 4 + 4 + 4))
 			s.SearchItemFloat("NeutralMass", precursor_neutral_mass)
 			retention_time_sec = None
 			search_specification = None
@@ -1666,7 +1682,8 @@ class SpectrumQuery(TagHandler):
 			TRACEPOS("SpectrumQuery.GetScoresAll(", i, "): ", f.tell())
 			if i == qid:
 				StartPos = f.tell()
-				[RecordSize, search_result__offset, search_result__count, OptionalFlags] = struct.unpack("=IIHB", f.read(4 + 4 + 2 + 1))
+				[RecordSize, search_result__offset, search_result__count] = struct.unpack("=IIH", f.read(4 + 4 + 2))
+				f.seek(1 + 4 + 4 + 4 + 4 + 4, 1)
 				spectrum = DecodeStringFromFile(f)
 				f.seek(StartPos + search_result__offset)
 				results = SearchResult.GetScoresAll(f, search_result__count, rid, hid)
@@ -1679,7 +1696,7 @@ class SpectrumQuery(TagHandler):
 
 	@staticmethod
 	def GetHitInfoSeek(f, query, hit):
-		f.seek(query + 4 + 4 + 2 + 1)
+		f.seek(query + 4 + 4 + 2 + 1 + 4 + 4 + 4 + 4 + 4)
 		spectrum = DecodeStringFromFile(f)
 		dic = SearchHit.GetInfoSeek(f, hit)
 		dic["spectrum"] = spectrum
@@ -1712,15 +1729,15 @@ class MsmsRunSummary(TagHandler):
 	def __init__(self, stream, stat, attr):
 		TRACEPOSXML(stream, "MsmsRunSummary.__init__(): ")
 		self.StartPos = stream.tell()
-		stream.write(struct.pack("=IIIIB", 0, 0, 0, 0, EncodeOptional(msManufacturer, msModel, msIonization, msMassAnalyzer, msDetector)))
-		EncodeStringToFileUnescape(stream, attr["base_name"])
-		EncodeStringToFileUnescape(stream, attr["raw_data_type"])
-		EncodeStringToFileUnescape(stream, attr["raw_data"])
 		msManufacturer = TryGet(attr, "msManufacturer")
 		msModel = TryGet(attr, "msModel")
 		msIonization = TryGet(attr, "msIonization")
 		msMassAnalyzer = TryGet(attr, "msMassAnalyzer")
 		msDetector = TryGet(attr, "msDetector")
+		stream.write(struct.pack("=IIIIB", 0, 0, 0, 0, EncodeOptional(msManufacturer, msModel, msIonization, msMassAnalyzer, msDetector)))
+		EncodeStringToFileUnescape(stream, attr["base_name"])
+		EncodeStringToFileUnescape(stream, attr["raw_data_type"])
+		EncodeStringToFileUnescape(stream, attr["raw_data"])
 		if msManufacturer != None:
 			EncodeStringToFile(stream, msManufacturer)
 		if msModel != None:
@@ -1804,14 +1821,148 @@ class Point(TagHandler):
 		#we don't care about this
 		return
 
-class Mixturemodel(TagHandler):
+class PosmodelDistribution(TagHandler):
+	"""
+	enum Type {
+		NotSpecified
+		discrete,
+		gaussian,
+		extremevalue,
+		gamma,
+		evd
+	}
+	struct PosmodelDistribution {
+		WORD parameter__count;
+		Type type;
+		Parameter parameter[parameter__count];
+	}
+	"""
+
 	def __init__(self, stream, stat, attr):
-		#we don't care about this
-		return
+		TRACEPOSXML(stream, "PosmodelDistribution.__init__(): ")
+		Types = { None: 0, "discrete": 1, "gaussian": 2, "extremevalue": 3, "gamma": 4, "evd": 5 }
+		self.StartPos = stream.tell()
+		stream.write(struct.pack("=HB", 0, Types[TryGet(attr, "type")]))
+		self.Params = 0
+		
+	def End(self):
+		EndPos = self.Stream.tell()
+		self.Stream.seek(self.StartPos)
+		self.Stream.write(struct.pack("=H", self.Params))
+		self.Stream.seek(EndPos)
 
 	def BeginChild(self, name):
-		#We don't care about what is in this
-		return None
+		if name == "parameter":
+			self.Params = 1
+			return self.Stream
+		raise ValueError(name)
+		
+class NegmodelDistribution(TagHandler):
+	"""
+	enum Type {
+		NotSpecified
+		discrete,
+		gaussian,
+		extremevalue,
+		gamma,
+		evd
+	}
+	struct NegmodelDistribution {
+		WORD parameter__count;
+		Type type;
+		Parameter parameter[parameter__count];
+	}
+	"""
+
+	def __init__(self, stream, stat, attr):
+		TRACEPOSXML(stream, "NegmodelDistribution.__init__(): ")
+		Types = { None: 0, "discrete": 1, "gaussian": 2, "extremevalue": 3, "gamma": 4, "evd": 5 }
+		self.StartPos = stream.tell()
+		stream.write(struct.pack("=HB", 0, Types[TryGet(attr, "type")]))
+		self.Params = 0
+		
+	def End(self):
+		EndPos = self.Stream.tell()
+		self.Stream.seek(self.StartPos)
+		self.Stream.write(struct.pack("=H", self.Params))
+		self.Stream.seek(EndPos)
+
+	def BeginChild(self, name):
+		if name == "parameter":
+			self.Params = 1
+			return self.Stream
+		raise ValueError(name)
+		
+class MixturemodelDistribution(TagHandler):
+	"""
+	struct MixturemodelDistribution {
+		String name;
+		PosmodelDistribution posmodel_distribution;
+		NegmodelDistribution negmodel_distribution;
+	}
+	"""
+	
+	def __init__(self, stream, stat, attr):
+		TRACEPOSXML(stream, "MixturemodelDistribution.__init__(): ")
+		EncodeStringToFileUnescape(stream, attr["name"])
+		self.HadPos = 0
+		self.NegDist = None
+		
+	def End(self):
+		if self.HadPos == 0:
+			raise IndexError()
+		if self.NegDist != None:
+			self.Stream.write(self.NegDist.getvalue())
+
+	def BeginChild(self, name):
+		if name == "posmodel_distribution":
+			self.HadPos = 1
+			return self.Stream
+		elif name == "negmodel_distribution":
+			if self.HadPos > 0:
+				return self.Stream
+			self.NegDist = StringIO()
+			return self.NegDist
+		raise ValueError(name)
+
+class Mixturemodel(TagHandler):
+	"""
+	struct Mixturemodel {
+		WORD mixturemodel_distribution__count;
+		/*int precursor_ion_charge;
+		float prior_probability;
+		String comments;
+		String est_tot_correct;
+		String tot_num_spectra;
+		String num_iterations;*/
+		MixturemodelDistribution mixturemodel_distribution[mixturemodel_distribution__count];
+	}
+	"""
+
+	def __init__(self, stream, stat, attr):
+		TRACEPOSXML(stream, "Mixturemodel.__init__(): ")
+		self.StartPos = stream.tell()
+		stream.write(struct.pack("=H", 0))
+		"""stream.write(struct.pack("=Hif", 0, attr["precursor_ion_charge"], attr["prior_probability"]))
+		EncodeStringToFileUnescape(stream, attr["comments"])
+		EncodeStringToFileUnescape(stream, attr["est_tot_correct"])
+		EncodeStringToFileUnescape(stream, attr["tot_num_spectra"])
+		EncodeStringToFileUnescape(stream, attr["num_iterations"])"""
+		self.Models = 0
+
+	def End(self):
+		EndPos = self.Stream.tell()
+		self.Stream.seek(self.StartPos)
+		self.Stream.write(struct.pack("=H", self.Models))
+		self.Stream.seek(EndPos)
+
+	def BeginChild(self, name):
+		if name == "mixturemodel_distribution":
+			self.Models += 1
+			return self.Stream
+		if name == "point":
+			return NullStream()
+		raise ValueError(name)
 		
 class Inputfile(TagHandler):
 	def __init__(self, stream, stat, attr):
@@ -1838,22 +1989,139 @@ class InteractSummary(TagHandler):
 		return None
 
 class AnalysisSummary(TagHandler):
+	"""
+	enum EngineCode {
+		Unknown,
+		interprophet,
+		HaveVersion = 0x80
+	}
+	struct AnalysisSummary {
+		DWORD RecordSize;
+		WORD peptideprophet_summary__count;
+		WORD interact_summary__count;
+		WORD libra_summary__count;
+		WORD asapratio_summary__count;
+		WORD xpressratio_summary__count;
+		WORD inputfile__count;
+		WORD roc_data_point__count;
+		WORD error_point__count;
+		WORD mixture_model__count;
+		EngineCode analysis;
+		String time;
+		String version; //ONLY IF (EngineCode & 0x80)
+		PeptideprophetSummary peptideprophet_summary[peptideprophet_summary__count];
+		InteractSummary interact_summary[interact_summary__count];
+		LibraSummary libra_summary[libra_summary__count];
+		AsapratioSummary asapratio_summary[asapratio_summary__count];
+		XpressratioSummary xpressratio_summary[xpressratio_summary__count];
+		Inputfile inputfile[inputfile__count];
+		RocDataPoint roc_data_point[roc_data_point__count];
+		ErrorPoint error_point[error_point__count];
+		MixtureModel mixture_model[mixture_model__count];
+	}
+	"""
+
 	def __init__(self, stream, stat, attr):
-		stream.write(struct.pack("=B", GetEngineCode(attr["analysis"])))
+		version = TryGet(attr, "version")
+		self.StartPos = stream.tell()
+		stream.write(struct.pack("=IHHHHHHHHHB", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, (EncodeOptional(version) << 7) | GetEngineCode(attr["analysis"])))
+		EncodeStringToFile(stream, attr["time"])
+		if version != None:
+			EncodeStringToFile(stream, version)
+		self.Peptides = 0
+		self.Interacts = 0
+		self.Libras = 0
+		self.Asaps = 0
+		self.Xpresss = 0
+		self.Files = 0
+		self.Rocs = 0
+		self.Errors = 0
+		self.Mixtures = 0
+		self.Interact = None
+		self.Libra = None
+		self.Asap = None
+		self.Xpress = None
+		self.File = None
+		self.Roc = None
+		self.Error = None
+		self.Mixture = None
+
+	def End(self):
+		if self.Interact != None:
+			self.Stream.write(self.Interact.getvalue())
+		if self.Libra != None:
+			self.Stream.write(self.Libra.getvalue())
+		if self.Asap != None:
+			self.Stream.write(self.Asap.getvalue())
+		if self.Xpress != None:
+			self.Stream.write(self.Xpress.getvalue())
+		if self.File != None:
+			self.Stream.write(self.File.getvalue())
+		if self.Roc != None:
+			self.Stream.write(self.Roc.getvalue())
+		if self.Error != None:
+			self.Stream.write(self.Error.getvalue())
+		if self.Mixture != None:
+			self.Stream.write(self.Mixture.getvalue())
+		EndPos = self.Stream.tell()
+		self.Stream.seek(self.StartPos)
+		self.Stream.write(struct.pack("=IHHHHHHHHH", EndPos - self.StartPos, self.Peptides, self.Interacts, self.Libras, self.Asaps, self.Xpresss, self.Files, self.Rocs, self.Errors, self.Mixtures))
+		self.Stream.seek(EndPos)
 
 	def BeginChild(self, name):
-		#FIXME: Do we care about this?
-		return None
+		if name == "peptideprophet_summary":
+			self.Peptides += 1
+			return self.Stream
+		if name == "interact_summary":
+			self.Interacts += 1
+			if self.Interact == None:
+				self.Interact = StringIO()
+			return self.Interact
+		if name == "libra_summary":
+			self.Libras += 1
+			if self.Libra == None:
+				self.Libra = StringIO()
+			return self.Libra
+		if name == "asapratio_summary":
+			self.Asaps += 1
+			if self.Asap == None:
+				self.Asap = StringIO()
+			return self.Asap
+		if name == "xpressratio_summary":
+			self.Xpresss += 1
+			if self.Xpress == None:
+				self.Xpress = StringIO()
+			return self.Xpress
+		if name == "inputfile": 
+			self.Files += 1
+			if self.File == None:
+				self.File = StringIO()
+			return self.File
+		if name == "roc_data_point":
+			self.Rocs += 1
+			if self.Roc == None:
+				self.Roc = StringIO()
+			return self.Roc
+		if name == "error_point":
+			self.Errors += 1
+			if self.Error == None:
+				self.Error = StringIO()
+			return self.Error
+		if name == "mixturemodel" or name == "mixture_model":
+			self.Mixtures += 1
+			if self.Mixture == None:
+				self.Mixture = StringIO()
+			return self.Mixture
+		raise ValueError(name)
 		
 	@staticmethod
-	def SearchAll(f, dic, count):
-		"""i = 0
+	def EatAll(f, dic, count):
+		i = 0
 		while i < count:
-			print("NYI: AnalysisSummary.Search") #FIXME: Implement
+			[RecordSize] = struct.unpack(f.read(4))
+			f.seek(RecordSize - 4, 1)
 			i += 1
-		return"""
-		TRACEPOS("AnalysisSymmary.SearchAll(", i, "): ", f.tell())
-		f.read(count) #each entry is 1 byte, and we dont care what it is
+		return
 
 class MsmsPipelineAnalysis(TagHandler):
 	"""
@@ -1948,7 +2216,7 @@ def ConvertFilename(FileName):
 def IsConverted(FileName):
 	return os.path.isfile(ConvertFilename(FileName))
 
-def PepXml2Bin(FileName, Dest = None):
+def Xml2Bin(FileName, Dest = None):
 	"""
 	struct _PeptideInstance {
 		String Peptide;
@@ -2077,3 +2345,17 @@ def PrintResults(results):
 	print("Results:")
 	for r in results:
 		print(r)
+
+#HTTP server functions
+from HttpUtil import *;
+
+def DisplayList(request, query, fname):
+	scores = GetAvaliableScores(fname)
+	score = SearchEngineName(scores)
+	sortcol = DefaultSortColumn(scores)
+	head_results = "<tr class=\\\"link\\\"><th><span onclick=\\\"SortRestults('peptide');\\\">Peptide</span></th><th><span onclick=\\\"SortRestults('protein');\\\">Protein</span></th><th><span onclick=\\\"SortRestults('massdiff');\\\">Mass Difference</span></th><th><span onclick=\\\"SortRestults('" + DefaultSortColumn(scores) + "');\\\">" + score + "</span></th></tr>"
+	head_peptides = "<tr class=\\\"link\\\"><th><span onclick=\\\"SortPeptides('spectrum');\\\">Spectrum</span></th><th><span onclick=\\\"SortPeptides('massdiff');\\\">Mass Diff</span></th><th><span onclick=\\\"SortPeptides('" + sortcol + "');\\\">" + SearchEngineName(scores) + "</span></th>";
+	if scores & 0x6C: #this is a prophet result
+		head_peptides += "<th><span onclick=\\\"SortPeptides('engine');\\\">Search Engine</span></th><th><span onclick=\\\"SortPeptides('raw');\\\">Raw Score</span></th></tr>";
+	head_peptides += "</tr>";
+	return { "type": request.matchdict["type"], "file": query["file"], "sortcol": sortcol, "head_results": Literal(head_results), "head_peptides": Literal(head_peptides) }

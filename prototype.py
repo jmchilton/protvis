@@ -13,9 +13,11 @@ import os
 from threading import Thread
 from pyramid.httpexceptions import *
 import PepXML
+import ProtXML
 import tempfile
 import urllib
 import re
+from HttpUtil import *;
 
 templates = os.path.realpath(os.path.dirname(__file__))+ "/templates/"
 converted = os.path.realpath(os.path.dirname(__file__))+ "/ConvertedFiles/"
@@ -23,14 +25,20 @@ decoy_regex = re.compile(r"^decoy_.*")
 spectrum_regex = re.compile(r"(.+?)(\.mzML)?\.[0-9]+\.[0-9]+\.[0-9]+")
 threads = {}
 
+Renderers = {
+	"pepBIN": PepXML,
+	"protBIN": ProtXML,
+}
+
 class ConverterThread(Thread):
-	def __init__(self, src, dst=None):
+	def __init__(self, func, src, dst=None):
 		Thread.__init__(self)
 		self.Source = src
 		self.Dest = dst
+		self.Function = func
 
 	def run(self):
-		PepXML.PepXml2Bin(self.Source, Dest = self.Dest)
+		self.Function(self.Source, self.Dest)
 
 def DecodeQuery(query):
 	params = query.split("&")
@@ -81,13 +89,6 @@ def DumpQueryResult(res, score):
 		ret += " "
 	return ret
 
-class Literal(object):
-    def __init__(self, s):
-        self.s =s
-
-    def __html__(self):
-        return self.s
-
 def PepXml(request):
 	#f=open(binascii.unhexlify(request.matchdict["file"]), "r") #FIXME: SECURITY
 	return Response("<pre>" + escape(f.read(512 * 1024)) + "</pre>")
@@ -100,15 +101,17 @@ def Xml(request):
 def GetFile(request):
 	try:
 		extensions = {
-			"pepxml": "pepBIN"
+			"pepxml": [PepXML.Xml2Bin, "pepBIN"],
+			"protxml": [ProtXML.Xml2Bin, "protBIN"]
 		}
 		query = DecodeQuery(request.query_string)
-		ext = extensions[request.matchdict["type"].lower()]
+		info = extensions[request.matchdict["type"].lower()]
+		ext = info[1]
 		f = tempfile.NamedTemporaryFile(dir = ".", prefix = "ConvertedFiles/", suffix = "." + ext, delete = False)
-		converter = ConverterThread(binascii.unhexlify(query["file"]), f) #FIXME: Security
+		converter = ConverterThread(info[0], binascii.unhexlify(query["file"]), f) #FIXME: Security
 		converter.start()
 		threads[converter.ident] = converter
-		res = render(templates + "converting.pt", {"type": ext, "file": f.name[len(converted) : len(f.name) - 7], "tid": converter.ident}, request=request)
+		res = render(templates + "converting.pt", { "type": ext, "file": f.name[len(converted) : len(f.name) - 7], "tid": converter.ident }, request=request)
 		return Response(res)
 	except:
 		return HTTPBadRequest()
@@ -122,6 +125,8 @@ def QueryGetFileStatus(request):
 		else:
 			del threads[int(query["id"])]
 			return Response("2", content_type="application/text")
+	except HTTPException:
+		raise
 	except:
 		return Response("9", content_type="application/text")
 
@@ -129,19 +134,20 @@ def DisplayList(request):
 	query = DecodeQuery(request.query_string)
 	fname = GetFileName(request, query)
 	try:
-		scores = PepXML.GetAvaliableScores(fname)
-		score = PepXML.SearchEngineName(scores)
-		sortcol = PepXML.DefaultSortColumn(scores)
-		head_results = "<tr class=\\\"link\\\"><th><span onclick=\\\"SortRestults('peptide');\\\">Peptide</span></th><th><span onclick=\\\"SortRestults('protein');\\\">Protein</span></th><th><span onclick=\\\"SortRestults('massdiff');\\\">Mass Difference</span></th><th><span onclick=\\\"SortRestults('" + PepXML.DefaultSortColumn(scores) + "');\\\">" + score + "</span></th></tr>"
-		head_peptides = "<tr class=\\\"link\\\"><th><span onclick=\\\"SortPeptides('spectrum');\\\">Spectrum</span></th><th><span onclick=\\\"SortPeptides('massdiff');\\\">Mass Diff</span></th><th><span onclick=\\\"SortPeptides('" + sortcol + "');\\\">" + PepXML.SearchEngineName(scores) + "</span></th>";
-		if scores & 0x6C: #this is a prophet result
-			head_peptides += "<th><span onclick=\\\"SortPeptides('engine');\\\">Search Engine</span></th><th><span onclick=\\\"SortPeptides('raw');\\\">Raw Score</span></th></tr>";
-		head_peptides += "</tr>";
-		return render_to_response(templates + "list_" + request.matchdict["type"] + ".pt", {"type": request.matchdict["type"], "file": query["file"], "sortcol": sortcol, "head_results": Literal(head_results), "head_peptides": Literal(head_peptides)}, request=request)
+		t = request.matchdict["type"]
+		return render_to_response(templates + "list_" + t + ".pt", Renderers[t].DisplayList(request, query, fname), request = request)
 	except:
 		return HTTPNotFound()
 
 def ListPeptide(request):
+	class Spec:
+		def __init__(self, spectrum, count):
+			self.Spectrum = spectrum
+			self.Count = count
+
+		def __str__(self):
+			return str(self.Count) + "/" + self.Spectrum
+
 	query = DecodeQuery(request.query_string)
 	fname = GetFileName(request, query)
 	try:
@@ -176,7 +182,8 @@ def ListPeptide(request):
 				spectrums[spec] += 1
 			except:
 				spectrums[spec] = 1
-		spectrums = " ".join(sorted([str(v) + "/" + k for k, v in spectrums.items()], reverse = True))
+		sort = sorted([Spec(k, v) for k, v in spectrums.items()], reverse = True, key = lambda spec: spec.Count)
+		spectrums = " ".join([str(s) for s in sort])
 		results = sorted(results, key = lambda key: key[sortcol], reverse = reverse)
 		try:
 			start = int(query["start"])

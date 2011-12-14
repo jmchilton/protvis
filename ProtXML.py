@@ -1188,7 +1188,7 @@ def ConvertFilename(FileName):
 def IsConverted(FileName):
 	return os.path.isfile(ConvertFilename(FileName))
 
-def ProtXml2Bin(FileName, Dest = None):
+def Xml2Bin(FileName, Dest = None):
 	if Dest == None:
 		Dest = open(ConvertFilename(FileName), "w")
 	Dest.write(struct.pack("=I", 0))
@@ -1225,3 +1225,9 @@ def PrintResults(results):
 	print("Results:")
 	for r in results:
 		print(r)
+		
+#HTTP server functions
+from HttpUtil import *;
+
+def DisplayList(request, query, fname):
+	return {}

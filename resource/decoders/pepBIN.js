@@ -64,7 +64,7 @@ function BuildPeptideResults(results) {
 		++i;
 		html += [
 			"<tr class=\"info ", style, "\" style=\"text-align: center;\">",
-			"<td style=\"text-align: left;\">", r[0], "</td>", //spectrum
+			"<td style=\"text-align: left;\"><div class=\"dojoxEllipsis\">", r[0], "</div></td>", //spectrum
 			"<td>", r[1], "</td>", //massdiff
 			"<td>", r[2], "</td>", //score
 			"<td>", r[3], "</td>", //engine
@@ -119,7 +119,7 @@ function BuildPeptideResults(results) {
 		}
 		disp += "<div><span class=\"link\" onclick=\"ToggleSpectrums();\">Results are from " + spectrums + " unique spectrums</span>" + specs + "</div>"
 	}
-	return "<br/>" + disp + "<br/><table border=\"1\" style=\"width: 100%;\">" + BuildPeptidesHeader() + html + "</table>";
+	return "<br/>" + disp + "<br/><table border=\"1\" style=\"width: 100%;\">" + BuildPeptidesHeader() + html + "</table>"; // table-layout: fixed;
 }
 
 function BuildSpectrumQuery(results) {

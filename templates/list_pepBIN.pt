@@ -5,12 +5,14 @@
 		<title>${type} Results</title>
 		<link href="/styles/list.css" type="text/css" rel="stylesheet" />
 		<link id="themeStyles" href="/dojo/dijit/themes/claro/claro.css" type="text/css" rel="stylesheet" />
+		<link id="themeStyles" href="/dojo/dojox/html/resources/ellipsis.css" type="text/css" rel="stylesheet" />
 		<script type="text/javascript" src="/dojo/dojo/dojo.js" data-dojo-config="parseOnLoad: true"></script>
 		<script type="text/javascript">
 			dojo.require("dojo.fx");
 			dojo.require("dijit.Dialog");
 			dojo.require("dojo._base.connect");
 			dojo.require("dijit.DynamicTooltip");
+			dojo.require("dojox.html.ellipsis");
 
 			var DetailsDialog;
 			var CurrentResults = "";
