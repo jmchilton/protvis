@@ -432,7 +432,7 @@ class Peptide(TagHandler):
 		double nsp_adjusted_probability; //ONLY IF (OptionalFlags & 0x01)
 		double ni_adjusted_probability; //ONLY IF (OptionalFlags & 0x02)
 		double exp_sibling_ion_instances; //ONLY IF (OptionalFlags & 0x04)
-		double exp_sibling_ion_instances; //ONLY IF (OptionalFlags & 0x08)
+		double exp_sibling_ion_bin; //ONLY IF (OptionalFlags & 0x08)
 		double exp_tot_instances; //ONLY IF (OptionalFlags & 0x10)
 		double n_enzymatic_termini; //ONLY IF (OptionalFlags & 0x20)
 		double calc_neutral_pep_mass; //ONLY IF (OptionalFlags & 0x40)
@@ -449,7 +449,7 @@ class Peptide(TagHandler):
 		nsp_adjusted_probability = TryGet(attr, "nsp_adjusted_probability")
 		ni_adjusted_probability = TryGet(attr, "ni_adjusted_probability")
 		exp_sibling_ion_instances = TryGet(attr, "exp_sibling_ion_instances")
-		exp_sibling_ion_instances = TryGet(attr, "exp_sibling_ion_instances")
+		exp_sibling_ion_bin = TryGet(attr, "exp_sibling_ion_bin")
 		exp_tot_instances = TryGet(attr, "exp_tot_instances")
 		n_enzymatic_termini = TryGet(attr, "n_enzymatic_termini")
 		calc_neutral_pep_mass = TryGet(attr, "calc_neutral_pep_mass")
@@ -465,7 +465,7 @@ class Peptide(TagHandler):
 		else:
 			n_sibling_peptides_bin = int(n_sibling_peptides_bin)
 		self.StartPos = stream.tell()
-		Flags = YNBit(attr["is_nondegenerate_evidence"], 0x8000) | YNBit(attr["is_contributing_evidence"], 0x4000) | EncodeOptional(nsp_adjusted_probability, ni_adjusted_probability, exp_sibling_ion_instances, exp_sibling_ion_instances, exp_tot_instances, n_enzymatic_termini, calc_neutral_pep_mass, peptide_group_designator)
+		Flags = YNBit(attr["is_nondegenerate_evidence"], 0x8000) | YNBit(attr["is_contributing_evidence"], 0x4000) | EncodeOptional(nsp_adjusted_probability, ni_adjusted_probability, exp_sibling_ion_instances, exp_sibling_ion_bin, exp_tot_instances, n_enzymatic_termini, calc_neutral_pep_mass, peptide_group_designator)
 		stream.write(struct.pack("=HHHHIIddiiH", 0, 0, 0, 0, int(attr["charge"]), int(attr["n_enzymatic_termini"]), float(attr["initial_probability"]), weight, n_sibling_peptides_bin, int(attr["n_instances"]), Flags))
 		EncodeStringToFileUnescape(stream, attr["peptide_sequence"])
 		if nsp_adjusted_probability != None:
@@ -474,8 +474,8 @@ class Peptide(TagHandler):
 			stream.write(struct.pack("=d", float(ni_adjusted_probability)))
 		if exp_sibling_ion_instances != None:
 			stream.write(struct.pack("=d", float(exp_sibling_ion_instances)))
-		if exp_sibling_ion_instances != None:
-			stream.write(struct.pack("=d", float(exp_sibling_ion_instances)))
+		if exp_sibling_ion_bin != None:
+			stream.write(struct.pack("=d", float(exp_sibling_ion_bin)))
 		if exp_tot_instances != None:
 			stream.write(struct.pack("=d", float(exp_tot_instances)))
 		if n_enzymatic_termini != None:
