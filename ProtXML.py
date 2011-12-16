@@ -5,7 +5,6 @@
 import struct
 import os
 import xml.sax
-from xml.sax.saxutils import escape, unescape
 import xml.parsers.expat
 from cStringIO import StringIO
 from CommonXML import *
@@ -105,8 +104,8 @@ class Parameter(TagHandler):
 	
 	def __init__(self, stream, stat, attr):
 		TRACEPOSXML(stream, "Parameter.__init__(): ")
-		EncodeStringToFileUnescape(stream, attr["name"])
-		EncodeStringToFileUnescape(stream, attr["value"])
+		EncodeStringToFile(stream, attr["name"])
+		EncodeStringToFile(stream, attr["value"])
 		
 	@staticmethod
 	def SearchAll(f, stat, count):
@@ -226,21 +225,21 @@ class Annotation(TagHandler):
 		locus_link_name = TryGet(attr, "locus_link_name")
 		flybase = TryGet(attr, "flybase")
 		stream.write(struct.pack("=B", EncodeOptional(ipi_name, refseq_name, swissprot_name, ensembl_name, trembl_name, locus_link_name, flybase)))
-		EncodeStringToFileUnescape(stream, attr["protein_description"])
+		EncodeStringToFile(stream, attr["protein_description"])
 		if ipi_name != None:
-			EncodeStringToFileUnescape(stream, ipi_name)
+			EncodeStringToFile(stream, ipi_name)
 		if refseq_name != None:
-			EncodeStringToFileUnescape(stream, refseq_name)
+			EncodeStringToFile(stream, refseq_name)
 		if swissprot_name != None:
-			EncodeStringToFileUnescape(stream, swissprot_name)
+			EncodeStringToFile(stream, swissprot_name)
 		if ensembl_name != None:
-			EncodeStringToFileUnescape(stream, ensembl_name)
+			EncodeStringToFile(stream, ensembl_name)
 		if trembl_name != None:
-			EncodeStringToFileUnescape(stream, trembl_name)
+			EncodeStringToFile(stream, trembl_name)
 		if locus_link_name != None:
-			EncodeStringToFileUnescape(stream, locus_link_name)
+			EncodeStringToFile(stream, locus_link_name)
 		if flybase != None:
-			EncodeStringToFileUnescape(stream, flybase)
+			EncodeStringToFile(stream, flybase)
 		
 	@staticmethod
 	def SearchAll(f, stat, count):
@@ -284,7 +283,7 @@ class AnalysisResult(TagHandler):
 			_id = int(_id)
 		self.StartPos = stream.tell()
 		stream.write(struct.pack("=HI", 0, _id))
-		EncodeStringToFileUnescape(stream, attr["analysis"])
+		EncodeStringToFile(stream, attr["analysis"])
 		self.Infos = 0
 
 	def End(self):
@@ -314,7 +313,7 @@ class PeptideParentProtein(TagHandler):
 	
 	def __init__(self, stream, stat, attr):
 		TRACEPOSXML(stream, "PeptideParentProtein.__init__(): ")
-		EncodeStringToFileUnescape(stream, attr["protein_name"])
+		EncodeStringToFile(stream, attr["protein_name"])
 
 	@staticmethod
 	def SearchAll(f, stat, count):
@@ -338,7 +337,7 @@ class IndistinguishableProtein(TagHandler):
 		TRACEPOSXML(stream, "IndistinguishableProtein.__init__(): ")
 		self.StartPos = stream.tell()
 		stream.write(struct.pack("=H", 0))
-		EncodeStringToFileUnescape(stream, attr["protein_name"])
+		EncodeStringToFile(stream, attr["protein_name"])
 		self.Parameters = 0
 		self.Parameter = None
 
@@ -387,7 +386,7 @@ class IndistinguishablePeptide(TagHandler):
 	
 	def __init__(self, stream, stat, attr):
 		TRACEPOSXML(stream, "IndistinguishablePeptide.__init__(): ")
-		EncodeStringToFileUnescape(stream, attr["peptide_sequence"])
+		EncodeStringToFile(stream, attr["peptide_sequence"])
 		self.StartPos = stream.tell()
 		stream.write(struct.pack("=H", 0))
 		self.Modifications = 0
@@ -467,7 +466,7 @@ class Peptide(TagHandler):
 		self.StartPos = stream.tell()
 		Flags = YNBit(attr["is_nondegenerate_evidence"], 0x8000) | YNBit(attr["is_contributing_evidence"], 0x4000) | EncodeOptional(nsp_adjusted_probability, ni_adjusted_probability, exp_sibling_ion_instances, exp_sibling_ion_bin, exp_tot_instances, n_enzymatic_termini, calc_neutral_pep_mass, peptide_group_designator)
 		stream.write(struct.pack("=HHHHIIddiiH", 0, 0, 0, 0, int(attr["charge"]), int(attr["n_enzymatic_termini"]), float(attr["initial_probability"]), weight, n_sibling_peptides_bin, int(attr["n_instances"]), Flags))
-		EncodeStringToFileUnescape(stream, attr["peptide_sequence"])
+		EncodeStringToFile(stream, attr["peptide_sequence"])
 		if nsp_adjusted_probability != None:
 			stream.write(struct.pack("=d", float(nsp_adjusted_probability)))
 		if ni_adjusted_probability != None:
@@ -483,7 +482,7 @@ class Peptide(TagHandler):
 		if calc_neutral_pep_mass != None:
 			stream.write(struct.pack("=d", float(calc_neutral_pep_mass)))
 		if peptide_group_designator != None:
-			EncodeStringToFileUnescape(stream, peptide_group_designator)
+			EncodeStringToFile(stream, peptide_group_designator)
 		self.Modifications = 0
 		self.Parameters = 0
 		self.Parents = 0
@@ -599,18 +598,18 @@ class Protein(TagHandler):
 		pct_spectrum_ids = TryGet(attr, "pct_spectrum_ids")
 		self.Flags = EncodeOptional(percent_coverage, total_number_peptides, subsuming_protein_entry, pct_spectrum_ids)#, unique_stripped_peptides)
 		stream.write(struct.pack("=BHHHHdi", 0, 0, 0, 0, 0, float(attr["probability"]), int(attr["n_indistinguishable_proteins"])))
-		EncodeStringToFileUnescape(stream, attr["protein_name"])
-		EncodeStringToFileUnescape(stream, attr["group_sibling_id"])
+		EncodeStringToFile(stream, attr["protein_name"])
+		EncodeStringToFile(stream, attr["group_sibling_id"])
 		if percent_coverage != None:
 			stream.write(struct.pack("=d", float(percent_coverage)))
 		if total_number_peptides != None:
 			stream.write(struct.pack("=i", int(total_number_peptides)))
 		if subsuming_protein_entry != None:
-			EncodeStringToFileUnescape(stream, subsuming_protein_entry)
+			EncodeStringToFile(stream, subsuming_protein_entry)
 		if pct_spectrum_ids != None:
-			EncodeStringToFileUnescape(stream, pct_spectrum_ids)
+			EncodeStringToFile(stream, pct_spectrum_ids)
 		#if unique_stripped_peptides != None:
-		#	EncodeStringToFileUnescape(stream, unique_stripped_peptides)
+		#	EncodeStringToFile(stream, unique_stripped_peptides)
 		self.Results = 0
 		self.Proteins = 0
 		self.Peptides = 0
@@ -712,9 +711,9 @@ class ProteinGroup(TagHandler):
 		self.StartPos = stream.tell() + 8
 		pseudo_name = TryGet(attr, "pseudo_name")
 		stream.write(struct.pack("=dHB", float(attr["probability"]), 0, EncodeOptional(pseudo_name)))
-		EncodeStringToFileUnescape(stream, attr["group_number"])
+		EncodeStringToFile(stream, attr["group_number"])
 		if pseudo_name != None:
-			EncodeStringToFileUnescape(stream, pseudo_name)
+			EncodeStringToFile(stream, pseudo_name)
 		self.Proteins = 0
 
 	def End(self):
@@ -768,11 +767,11 @@ class NspDistribution(TagHandler):
 		if nsp_lower_bound_incl != None:
 			stream.write(struct.pack("=d", float(nsp_lower_bound_incl)))
 		if nsp_upper_bound_excl != None:
-			EncodeStringToFileUnescape(stream, nsp_upper_bound_excl)
+			EncodeStringToFile(stream, nsp_upper_bound_excl)
 		if nsp_lower_bound_excl != None:
 			stream.write(struct.pack("=d", float(nsp_lower_bound_excl)))
 		if nsp_upper_bound_incl != None:
-			EncodeStringToFileUnescape(stream, nsp_upper_bound_incl)
+			EncodeStringToFile(stream, nsp_upper_bound_incl)
 		if alt_pos_to_neg_ratio != None:
 			stream.write(struct.pack("=d", float(alt_pos_to_neg_ratio)))
 
@@ -803,11 +802,11 @@ class NiDistribution(TagHandler):
 		if ni_lower_bound_incl != None:
 			stream.write(struct.pack("=d", float(ni_lower_bound_incl)))
 		if ni_upper_bound_excl != None:
-			EncodeStringToFileUnescape(ni_upper_bound_excl)
+			EncodeStringToFile(ni_upper_bound_excl)
 		if ni_lower_bound_excl != None:
 			stream.write(struct.pack("=d", float(ni_lower_bound_excl)))
 		if ni_upper_bound_incl != None:
-			EncodeStringToFileUnescape(ni_upper_bound_incl)
+			EncodeStringToFile(ni_upper_bound_incl)
 		if alt_pos_to_neg_ratio != None:
 			stream.write(struct.pack("=d", float(alt_pos_to_neg_ratio)))
 
@@ -822,7 +821,7 @@ class NspInformation(TagHandler):
 
 	def __init__(self, stream, stat, attr):
 		TRACEPOSXML(stream, "NspInformation.__init__(): ")
-		EncodeStringToFileUnescape(stream, attr["neighboring_bin_smoothing"])
+		EncodeStringToFile(stream, attr["neighboring_bin_smoothing"])
 		self.StartPos = stream.tell()
 		stream.write(struct.pack("=H", 0))
 		self.Distributions = 0
@@ -849,7 +848,7 @@ class NiInformation(TagHandler):
 	"""
 	def __init__(self, stream, stat, attr):
 		TRACEPOSXML(stream, "NiInformation.__init__(): ")
-		#EncodeStringToFileUnescape(stream, attr["neighboring_bin_smoothing"])
+		#EncodeStringToFile(stream, attr["neighboring_bin_smoothing"])
 		self.StartPos = stream.tell()
 		stream.write(struct.pack("=H", 0))
 		self.Distributions = 0
@@ -910,11 +909,11 @@ class ProteinprophetDetails(TagHandler):
 		run_options = TryGet(attr, "run_options")
 		stream.write(struct.pack("=IH", 0, 0))
 		stream.write(struct.pack("=B", YNBit(attr["occam_flag"], 0x80) | YNBit(attr["groups_flag"], 0x40) | YNBit(attr["degen_flag"], 0x20) | YNBit(attr["nsp_flag"], 0x10) | EncodeOptional(run_options)))
-		EncodeStringToFileUnescape(stream, attr["initial_peptide_wt_iters"])
-		EncodeStringToFileUnescape(stream, attr["final_peptide_wt_iters"])
-		EncodeStringToFileUnescape(stream, attr["nsp_distribution_iters"])
+		EncodeStringToFile(stream, attr["initial_peptide_wt_iters"])
+		EncodeStringToFile(stream, attr["final_peptide_wt_iters"])
+		EncodeStringToFile(stream, attr["nsp_distribution_iters"])
 		if run_options != None:
-			EncodeStringToFileUnescape(stream, attr["run_options"])
+			EncodeStringToFile(stream, attr["run_options"])
 		self.Filters = 0
 		self.NI = None
 		self.Filter = None
@@ -976,9 +975,9 @@ class ProgramDetails(TagHandler):
 	"""
 	def __init__(self, stream, stat, attr):
 		TRACEPOSXML(stream, "ProgramDetails.__init__(): ")
-		EncodeStringToFileUnescape(stream, attr["analysis"])
-		EncodeStringToFileUnescape(stream, attr["time"])
-		#EncodeStringToFileUnescape(stream, attr["version"])
+		EncodeStringToFile(stream, attr["analysis"])
+		EncodeStringToFile(stream, attr["time"])
+		#EncodeStringToFile(stream, attr["version"])
 		stream.write(struct.pack("=H", 0))
 		self.StartPos = stream.tell()
 		self.Details = 0
@@ -1013,9 +1012,9 @@ class DataFilter(TagHandler):
 	
 	def __init__(self, stream, stat, attr):
 		TRACEPOSXML(stream, "DataFilter.__init__(): ")
-		EncodeStringToFileUnescape(stream, attr["number"])
-		EncodeStringToFileUnescape(stream, attr["parent_file"])
-		EncodeStringToFileUnescape(stream, attr["description"])
+		EncodeStringToFile(stream, attr["number"])
+		EncodeStringToFile(stream, attr["parent_file"])
+		EncodeStringToFile(stream, attr["description"])
 
 class DatasetDerivation(TagHandler):
 	"""
@@ -1028,7 +1027,7 @@ class DatasetDerivation(TagHandler):
 	
 	def __init__(self, stream, stat, attr):
 		TRACEPOSXML(stream, "DatasetDerivation.__init__(): ")
-		EncodeStringToFileUnescape(stream, attr["generation_no"])
+		EncodeStringToFile(stream, attr["generation_no"])
 		stream.write(struct.pack("=H", 0))
 		self.StartPos = stream.tell()
 		self.Filters = 0
@@ -1090,22 +1089,22 @@ class ProteinSummaryHeader(TagHandler):
 		source_file_xtn = TryGet(attr, "source_file_xtn")
 		total_no_spectrum_ids = TryGet(attr, "total_no_spectrum_ids")
 		stream.write(struct.pack("=ddddiiiiiB", float(attr["min_peptide_probability"]), float(attr["min_peptide_probability"]), float(attr["num_predicted_correct_prots"]), float(attr["initial_min_peptide_prob"]), int(attr["num_input_1_spectra"]), int(attr["num_input_2_spectra"]), int(attr["num_input_3_spectra"]), int(attr["num_input_4_spectra"]), int(attr["num_input_5_spectra"]), EncodeOptional(win_cyg_reference_database, residue_substitution_list, organism, win_cyg_source_files, source_file_xtn, total_no_spectrum_ids)))
-		EncodeStringToFileUnescape(stream, attr["reference_database"])
-		EncodeStringToFileUnescape(stream, attr["source_files"])
-		EncodeStringToFileUnescape(stream, attr["source_files_alt"])
-		EncodeStringToFileUnescape(stream, attr["sample_enzyme"])
+		EncodeStringToFile(stream, attr["reference_database"])
+		EncodeStringToFile(stream, attr["source_files"])
+		EncodeStringToFile(stream, attr["source_files_alt"])
+		EncodeStringToFile(stream, attr["sample_enzyme"])
 		if win_cyg_reference_database != None:
-			EncodeStringToFileUnescape(stream, win_cyg_reference_database)
+			EncodeStringToFile(stream, win_cyg_reference_database)
 		if residue_substitution_list != None:
-			EncodeStringToFileUnescape(stream, residue_substitution_list)
+			EncodeStringToFile(stream, residue_substitution_list)
 		if organism != None:
-			EncodeStringToFileUnescape(stream, organism)
+			EncodeStringToFile(stream, organism)
 		if win_cyg_source_files != None:
-			EncodeStringToFileUnescape(stream, win_cyg_source_files)
+			EncodeStringToFile(stream, win_cyg_source_files)
 		if source_file_xtn != None:
-			EncodeStringToFileUnescape(stream, source_file_xtn)
+			EncodeStringToFile(stream, source_file_xtn)
 		if total_no_spectrum_ids != None:
-			EncodeStringToFileUnescape(stream, total_no_spectrum_ids)
+			EncodeStringToFile(stream, total_no_spectrum_ids)
 
 	def BeginChild(self, name):
 		if name == "program_details":
@@ -1131,7 +1130,7 @@ class ProteinSummary(TagHandler):
 		self.Stat = stat
 		self.StartPos = stream.tell()
 		stream.write(struct.pack("=HHH", 0, 0, 0))
-		EncodeStringToFileUnescape(stream, unescape(attr["summary_xml"]))
+		EncodeStringToFile(stream, attr["summary_xml"])
 		self.Groups = 0
 		self.Datasets = 0
 		self.Summaries = 0
