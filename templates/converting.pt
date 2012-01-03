@@ -3,9 +3,9 @@
 	<head>
 		<meta http-equiv="content-type" content="text/html; charset=utf-8" />
 		<title>Processing File</title>
-		<link href="/styles/list.css" type="text/css" rel="stylesheet" />
-		<link id="themeStyles" href="/dojo/dijit/themes/claro/claro.css" type="text/css" rel="stylesheet" />
-		<script type="text/javascript" src="/dojo/dojo/dojo.js" data-dojo-config="parseOnLoad: true"></script>
+		<link href="/res/styles/list.css" type="text/css" rel="stylesheet" />
+		<link id="themeStyles" href="/res/dojo/dijit/themes/claro/claro.css" type="text/css" rel="stylesheet" />
+		<script type="text/javascript" src="/res/dojo/dojo/dojo.js" data-dojo-config="parseOnLoad: true"></script>
 		<script type="text/javascript">
 			dojo.require("dojo.fx");
 
@@ -45,7 +45,7 @@
 			}
 			
 			function ShowMessage(id) {
-				var ids = ["uploading", "processing", "done", "error", "error_net"]
+				var ids = ["pending", "uploading", "processing", "done", "error", "error_net"]
 				if (Active < 0 || id != ids[Active]) {
 					var actions = Array(ids.length)
 					for (i = 0; i < ids.length; ++i) {
@@ -70,10 +70,13 @@
 		<noscript>
 			Refresh this page until the server redirects.
 		</noscript>
-		<div id="uploading" class="dijitContentPaneLoading" visible="false" style="display: none;">
+		<div id="pending" class="dijitContentPaneLoading">
+			Pending...
+		</div>
+		<div id="uploading" class="dijitContentPaneLoading" style="display: none;">
 			Uploading your file to the server.
 		</div>
-		<div id="processing" class="dijitContentPaneLoading" visible="false" style="display: none;">
+		<div id="processing" class="dijitContentPaneLoading" style="display: none;">
 			Processing your file for the first time.
 		</div>
 		<div id="done" visible="false" style="display: none;">

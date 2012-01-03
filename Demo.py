@@ -12,32 +12,69 @@ from xml.sax.saxutils import escape
 import os
 from threading import Thread, Lock
 from pyramid.httpexceptions import *
-import PepXML
-import ProtXML
 import tempfile
 import urllib
 import re
-from HttpUtil import *;
+from HttpUtil import *
+import Reference
+import config
+import struct
+from CommonXML import EncodeStringToFile
+import ProtXML, PepXML
 
 templates = os.path.realpath(os.path.dirname(__file__))+ "/templates/"
 converted = os.path.realpath(os.path.dirname(__file__))+ "/ConvertedFiles/"
-decoy_regex = re.compile(r"^decoy_.*")
-spectrum_regex = re.compile(r"(.+?)(\.mzML)?\.[0-9]+\.[0-9]+\.[0-9]+")
+decoy_regex = re.compile(config.DecoyRegex)
+spectrum_regex = re.compile(config.SpectrumRegex)
 
 Renderers = {
 	"pepBIN": PepXML,
 	"protBIN": ProtXML,
 }
 
+class JobManager:
+	def __init__(self):
+		self.Jobs = {}
+		self.NextJobID = 0
+		self.ThreadsLock = Lock()
+
+	def Add(self, threads):
+		self.ThreadsLock.acquire()
+		jobid = self.NextJobID
+		self.NextJobID += 1
+		self.Jobs[jobid] = threads
+		self.ThreadsLock.release()
+		return jobid
+
+	def QueryStatus(self, jobid):
+		self.ThreadsLock.acquire()
+		try:
+			threads = self.Jobs[jobid]
+			self.ThreadsLock.release()
+		except:
+			self.ThreadsLock.release()
+			raise
+		alive = 0
+		for t in threads:
+			if t.isAlive():
+				alive += 1
+		if alive == 0:
+			#self.ThreadsLock.acquire()
+			del self.Jobs[jobid]
+			#self.ThreadsLock.release()
+		return alive
+
+Jobs = JobManager()
+
 class ConverterThread(Thread):
-	def __init__(self, func, src, dst=None):
+	def __init__(self, mod, src, dst=None):
 		Thread.__init__(self)
 		self.Source = src
 		self.Dest = dst
-		self.Function = func
+		self.Module = mod
 
 	def run(self):
-		self.Function(self.Source, self.Dest)
+		self.Module.ToBinary(self.Source, open(self.Dest, "w"))
 
 def DecodeQuery(query):
 	params = query.split("&")
@@ -90,12 +127,12 @@ def DumpQueryResult(res, score):
 
 def PepXml(request):
 	#f=open(binascii.unhexlify(request.matchdict["file"]), "r") #FIXME: SECURITY
-	return Response("<pre>" + escape(f.read(512 * 1024)) + "</pre>")
+	return Response("<pre>" + escape(f.read(512 * 1024)) + "</pre>", request=request)
 	#return Response(request.matchdict.keys())
 
 def Xml(request):
 	#f=open(binascii.unhexlify(request.matchdict["file"]), "r") #FIXME: SECURITY
-	return Response(f.read(), content_type="application/xml")
+	return Response(f.read(), content_type="application/xml", request=request)
 
 def DisplayList(request):
 	query = DecodeQuery(request.query_string)
@@ -217,7 +254,7 @@ def SearchQuery(request):
 
 def SearchHit(request):
 	query = DecodeQuery(request.query_string)
-	return Response("search hit")
+	return Response("search hit", request=request)
 
 def SearchScore(request):
 	query = DecodeQuery(request.query_string)
@@ -249,7 +286,7 @@ def SearchScore(request):
 		"ep_prob": "xpressratio"}
 	for name, val in items:
 		rows += "\n" + str(val) + " " + names[name];
-	return Response(rows)
+	return Response(rows, request=request)
 
 def Tooltip(request):
 	query = DecodeQuery(request.query_string)
@@ -309,66 +346,75 @@ def Tooltip(request):
 	except:
 		return HTTPBadRequest()
 
+def Upload(request):
+	#uploading from a remote server
+	return HTTPBadRequest()
+
 def Convert(request):
 	#for when this is running on the same server as galaxy
 	#just use the local files directly
 	try:
 		query = DecodeQuery(request.query_string)
 		data = tempfile.NamedTemporaryFile(dir = ".", prefix = "ConvertedFiles/", delete = False)
-		files = query["files"].split(";")
-		data.write(struct.pack("=I", len(files)))
-		data.seek(len(files) * 4, 1)
-		offsets = range(len(files))
-		threads = range(len(files))
-		for i in threads:
-			f = files[i].split(":")
+		referencers = { "protxml": Reference.LoadChainProt, "pepxml": Reference.LoadChainPep, "mgf": Reference.LoadChainMgf, "mzml": Reference.LoadChainMzml }
+		files = referencers[query["type"]](binascii.unhexlify(query["file"])).Items()
+		print files
+		fs = len(files)
+		#Build the index file
+		data.write(struct.pack("=I", fs))
+		data.seek(fs * 4, 1)
+		offsets = range(fs)
+		for i in offsets:
 			offsets[i] = data.tell()
-			data.write(binascii.unhexlify(f[1]))
-			files[i] = [f[0], binascii.unhexlify(f[1])]
-			t = ConverterThread(f[0], binascii.unhexlify(query["file"]), data.name) #FIXME: Security
+			EncodeStringToFile(data, data.name + "_" + str(i))
+		data.seek(4)
+		for o in offsets:
+			data.write(struct.pack("=I", o))
+		data.close()
+		#Now generate all the data files
+		MzMl = None #FIXME: delete when there is an MzMl module
+		Mgf = None #FIXME: delete when there is an Mgf module
+		modules = { Reference.FileType.MZML: MzMl,
+			Reference.FileType.MGF: Mgf,
+			Reference.FileType.PEPXML: PepXML, Reference.FileType.PEPXML_MASCOT: PepXML, Reference.FileType.PEPXML_OMSSA: PepXML, Reference.FileType.PEPXML_XTANDEM: PepXML, Reference.FileType.PEPXML_COMPARE: PepXML, Reference.FileType.PEPXML_PEPTIDEPROPHET: PepXML, Reference.FileType.PEPXML_INTERPROPHET: PepXML,
+			Reference.FileType.PROTXML: ProtXML, Reference.FileType.PROTXML_PROTEINPROPHET: ProtXML
+		}
+		threads = range(fs)
+		for i in threads:
+			f = files[i]
+			t = ConverterThread(modules[f[1]], f[0], data.name + "_" + str(i)) #FIXME: Security
 			t.start()
 			threads[i] = t
-		data.seek(4)
-		data.write("".join([struct.pack("=I", o) for o in offsets]))
-		data.close()
-		ThreadsLock.acquire()
-		jobid = JobsTotal
-		JobsTotal += 1
-		threads[jobid] = threads
-		ThreadsLock.release()
-		return render_to_response(templates + "upload.pt", { "type": ext, "file": data.name[len(converted):], "jobid": jobid }, request=request)
+		jobid = Jobs.Add(threads)
+		return render_to_response(templates + "upload.pt", { "file": data.name[len(converted):], "jobid": jobid }, request=request)
 	except:
 		return HTTPBadRequest()
-
-def Upload(request):
-	#uploading from a remote server
-	return HTTPBadRequest()
 
 def QueryInitStatus(request):
 	try:
 		query = DecodeQuery(request.query_string)
-		_id = int(query["id"])
-		threads = Threads[_id]
-		alive = 0
-		for t in threads:
-			if t.isAlive():
-				alive += 1
-		if alive == 0:
-			del threads[_id]
-		return Response(str(alive), content_type="application/text")
+		alive = Jobs.QueryStatus(int(query["id"]))
+		return Response(str(alive) + "\r\n", request=request)
 	except HTTPException:
 		raise
 	except:
-		return Response("-", content_type="application/text")
+		return Response("-", request=request)
 
-def GetResource(request, res):
+def View(request):
+	try:
+		query = DecodeQuery(request.query_string)
+		return render_to_response(templates + "dataview.pt", { "file": query["file"] }, request=request)
+	except:
+		return HTTPBadRequest()
+
+def GetResource(request):
 	MimeTypes = {
 		"png": "image/png",
 		"gif": "image/gif",
 		"js": "text/javascript",
 		"css": "text/css" }
 	try:
-		f = open("resource/" + res + "/" + request.matchdict["file"], "r")
+		f = open("res/" + request.matchdict["file"], "r")
 		res = Response(f.read(), content_type=MimeTypes[os.path.splitext(request.matchdict["file"])[1][1:]])
 		f.close()
 	except:
@@ -390,7 +436,7 @@ if __name__ == "__main__":
 	config.add_route("upload", "/init")
 	config.add_route("convert", "/init_local")
 	config.add_route("query_init", "/query_init")
-	config.add_route("view", "/view/{file:.+}")
+	config.add_route("view", "/view")
 	config.add_route("res", "/res/{file:.+}")
 	config.add_view(DisplayList, route_name="list")
 	config.add_view(ListPeptide, route_name="list_peptide")
@@ -398,9 +444,10 @@ if __name__ == "__main__":
 	config.add_view(SearchHit, route_name="search_hit")
 	config.add_view(SearchScore, route_name="search_score")
 	config.add_view(Tooltip, route_name="tooltip")
+	config.add_view(Upload, route_name="upload")
 	config.add_view(Convert, route_name="convert")
 	config.add_view(QueryInitStatus, route_name="query_init")
-	config.add_view(Upload, route_name="upload")
+	config.add_view(View, route_name="view")
 	config.add_view(GetResource, route_name="res")
 	app = config.make_wsgi_app()
 	serve(app, host="127.0.0.1", port=8000)

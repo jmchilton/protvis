@@ -103,6 +103,8 @@ class SaxHandler(SaxHandlerBase):
 			"mixture_model": Mixturemodel,
 			"mixturemodel": Mixturemodel,
 			"interact_summary": InteractSummary,
+			"roc_error_data": RocErrorData,
+			"peptideprophet_summary": PeptideprophetSummary,
 			"msms_pipeline_analysis": MsmsPipelineAnalysis,
 			"sequence_search_constraint": SequenceSearchConstraint,
 			"terminal_modification": TerminalModification,
@@ -861,7 +863,7 @@ class SearchHit(TagHandler):
 		char peptide_prev_aa; //ONLY IF (OptionalFlags & 0x02)
 		char peptide_next_aa; //ONLY IF (OptionalFlags & 0x04)
 		BYTE num_matched_ions; //ONLY IF (OptionalFlags & 0x08)
-		BYTE tot_num_ions; //ONLY IF (OptionalFlags & 0x10)
+		DWORD cs; //ONLY IF (OptionalFlags & 0x10)
 		//BYTE is_rejected;
 		//WORD hit_rank;
 		int num_tol_term; //ONLY IF (OptionalFlags & 0x20)
@@ -918,7 +920,7 @@ class SearchHit(TagHandler):
 		if num_matched_ions != None:
 			stream.write(struct.pack("=B", int(num_matched_ions)))
 		if tot_num_ions != None:
-			stream.write(struct.pack("=B", int(tot_num_ions)))
+			stream.write(struct.pack("=I", int(tot_num_ions)))
 		if num_tol_term != None:
 			stream.write(struct.pack("=i", int(num_tol_term)))
 		if num_missed_cleavages != None:
@@ -1039,7 +1041,7 @@ class SearchHit(TagHandler):
 				[num_matched_ions] = struct.unpack("=B", f.read(1))
 				#FIXME: Check?
 			if OptionalFlags & 0x10:
-				[tot_num_ions] = struct.unpack("=B", f.read(1))
+				[tot_num_ions] = struct.unpack("=I", f.read(4))
 				#FIXME: Check?
 			if OptionalFlags & 0x20:
 				[num_tol_term] = struct.unpack("=i", f.read(4))
@@ -1123,7 +1125,7 @@ class SearchHit(TagHandler):
 		if OptionalFlags & 0x08:
 			[dic["num_matched_ions"]] = struct.unpack("=B", f.read(1))
 		if OptionalFlags & 0x10:
-			[dic["tot_num_ions"]] = struct.unpack("=B", f.read(1))
+			[dic["tot_num_ions"]] = struct.unpack("=I", f.read(4))
 		if OptionalFlags & 0x20:
 			[dic["num_tol_term"]] = struct.unpack("=i", f.read(4))
 		if OptionalFlags & 0x40:
@@ -1807,7 +1809,7 @@ class MsmsRunSummary(TagHandler):
 
 class DatasetDerivation(TagHandler):
 	def __init__(self, stream, stat, attr):
-		raise NotImplementedError("DatasetDerivation")
+		return
 		
 	@staticmethod
 	def SearchAll(f, dic, count):
@@ -1840,7 +1842,7 @@ class PosmodelDistribution(TagHandler):
 
 	def __init__(self, stream, stat, attr):
 		TRACEPOSXML(stream, "PosmodelDistribution.__init__(): ")
-		Types = { None: 0, "discrete": 1, "gaussian": 2, "extremevalue": 3, "gamma": 4, "evd": 5 }
+		Types = { None: 0, "discrete": 1, "gaussian": 2, "extremevalue": 3, "gamma": 4, "evd": 5, "non-parametric": 6 }
 		self.StartPos = stream.tell()
 		stream.write(struct.pack("=HB", 0, Types[TryGet(attr, "type")]))
 		self.Params = 0
@@ -1876,7 +1878,7 @@ class NegmodelDistribution(TagHandler):
 
 	def __init__(self, stream, stat, attr):
 		TRACEPOSXML(stream, "NegmodelDistribution.__init__(): ")
-		Types = { None: 0, "discrete": 1, "gaussian": 2, "extremevalue": 3, "gamma": 4, "evd": 5 }
+		Types = { None: 0, "discrete": 1, "gaussian": 2, "extremevalue": 3, "gamma": 4, "evd": 5, "non-parametric": 6 }
 		self.StartPos = stream.tell()
 		stream.write(struct.pack("=HB", 0, Types[TryGet(attr, "type")]))
 		self.Params = 0
@@ -1986,7 +1988,25 @@ class InteractSummary(TagHandler):
 
 	def BeginChild(self, name):
 		#we don't care about this
-		return None
+		return NullStream()
+
+class RocErrorData(TagHandler):
+	def __init__(self, stream, stat, attr):
+		#we don't care about this
+		return
+
+	def BeginChild(self, name):
+		#we don't care about this
+		return NullStream()
+
+class PeptideprophetSummary(TagHandler):
+	def __init__(self, stream, stat, attr):
+		#we don't care about this
+		return
+
+	def BeginChild(self, name):
+		#we don't care about this
+		return NullStream()
 
 class AnalysisSummary(TagHandler):
 	"""
@@ -1997,7 +2017,7 @@ class AnalysisSummary(TagHandler):
 	}
 	struct AnalysisSummary {
 		DWORD RecordSize;
-		WORD peptideprophet_summary__count;
+		//WORD peptideprophet_summary__count;
 		WORD interact_summary__count;
 		WORD libra_summary__count;
 		WORD asapratio_summary__count;
@@ -2216,7 +2236,7 @@ def ConvertFilename(FileName):
 def IsConverted(FileName):
 	return os.path.isfile(ConvertFilename(FileName))
 
-def Xml2Bin(FileName, Dest = None):
+def ToBinary(FileName, Dest = None):
 	"""
 	struct _PeptideInstance {
 		String Peptide;

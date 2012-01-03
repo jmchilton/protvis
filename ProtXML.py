@@ -1188,7 +1188,7 @@ def ConvertFilename(FileName):
 def IsConverted(FileName):
 	return os.path.isfile(ConvertFilename(FileName))
 
-def Xml2Bin(FileName, Dest = None):
+def ToBinary(FileName, Dest = None):
 	if Dest == None:
 		Dest = open(ConvertFilename(FileName), "w")
 	Dest.write(struct.pack("=I", 0))

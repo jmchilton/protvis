@@ -2,13 +2,52 @@ import binascii
 import os
 import xml.sax
 import xml.parsers.expat
+import config;
 
-GalaxyPath = "/".join(os.path.abspath(__file__).split("/")[:-3]) + "/"
-IncludedFiles = {}
+GalaxyPath = config.GalaxyRoot + "/database/files/"
 
-def Echo(x):
-	return x
-binascii.hexlify = Echo
+class IncludedFile:
+	class FileInfo:
+		def __init__(self, t, index, level):
+			self.Type = t
+			self.Index = index
+			self.Level = level
+
+		def Refernece(self, index, level):
+			if (level > self.Level):
+				self.Level = level
+				self.Index = index
+				return True
+			return False
+
+	def __init__(self, fname, ftype):
+		self.Files = { fname: IncludedFile.FileInfo(ftype, 0, 0) }
+		self.Counter = 1
+		self.Level = 0
+
+	def Add(self, fname, ftype):
+		self.Files[fname] = IncludedFile.FileInfo(ftype, self.Counter, self.Level)
+		self.Counter += 1
+
+	def Get(self, fname):
+		f = self.Files[fname]
+		if (f.Reference(self.Counter, self.Level)):
+			self.Counter += 1
+		return f
+
+	def Set(self, fname, ftype):
+		self.Files[fname].Type = ftype
+
+	def StepIn(self):
+		self.Level += 1
+
+	def StepOut(self):
+		self.Level -= 1
+
+	def Items(self):
+		files = [[f, t] for f, t in self.Files.items()]
+		files = sorted(files, key=lambda flist: flist[1].Index, reverse=True)
+		return [[f, t.Type] for f, t in files]
 
 class SaxHandler(xml.sax.ContentHandler):
 	def __init__(self, elems, handler):
@@ -86,7 +125,7 @@ class FileType:
 			return FileType.MGF
 		return FileType.UNKNOWN
 
-def ValidateFilename(fname, exts = None):
+def ValidateFilename(IncludedFiles, fname, exts = None):
 	class ValidFile:
 		def __init__(self, Name, Type, Exists):
 			self.Name = Name
@@ -100,16 +139,16 @@ def ValidateFilename(fname, exts = None):
 	ext = []
 	while f == None:
 		try:
-			t = IncludedFiles[fname]
+			t = IncludedFiles.Get(fname)
 			_t = FileType.FromExtensions(ext)
 			if _t > t:
 				t = _t
-				IncludedFiles[fname] = _t
+				IncludedFiles.Set(fname, _t)
 			return ValidFile(fname, t, True)
 		except:
 			if os.path.exists(fname):
 				t = FileType.FromExtensions(ext)
-				IncludedFiles[fname] = t
+				IncludedFiles.Add(fname, t)
 				return ValidFile(fname, t, False)
 			else:
 				if exts == None:
@@ -125,13 +164,16 @@ def ValidateFilename(fname, exts = None):
 				else:
 					raise IOError(fname)
 
-def MzmlReferences(fname):
-	return
+def MzmlReferences(fname, IncludedFiles):
+	IncludedFiles.StepIn()
+	IncludedFiles.StepOut()
 
-def MgfReferences(fname):
-	return
+def MgfReferences(fname, IncludedFiles):
+	IncludedFiles.StepIn()
+	IncludedFiles.StepOut()
 
-def PepReferences(fname):
+def PepReferences(fname, IncludedFiles):
+	IncludedFiles.StepIn()
 	files = []
 	def _HandleProtFind(name, attr):
 		if name == "msms_run_summary":
@@ -163,16 +205,22 @@ def PepReferences(fname):
 			files.append([attr["name"], FileType.UNKNOWN])
 	SearchXml(fname, ["msms_run_summary", "inputfile"], _HandleProtFind)
 	for f in files:
-		info = ValidateFilename(f[0], ["mzml", "mzxml", "mgf", "pepxml", "pep", "xml"])
-		if info.Type == FileType.PEPXML:
-			IncludedFiles[fname] = FileType.PEPXML_COMPARE
-		t = info.Type
-		if f[1] != FileType.UNKNOWN:
-			t = f[1]
-		if not info.Exists:
-			_References(t, info.Name)
+		try:
+			info = ValidateFilename(IncludedFiles, f[0], ["mzml", "mzxml", "mgf", "pepxml", "pep", "xml"])
+			if info.Type == FileType.PEPXML:
+				IncludedFiles.Set(fname, FileType.PEPXML_COMPARE)
+			t = info.Type
+			if f[1] != FileType.UNKNOWN:
+				t = f[1]
+				IncludedFiles.Set(info.Name, f[1])
+			if not info.Exists:
+				_References(t, info.Name, IncludedFiles)
+		except:
+			print("Can't open referenced file: " + f[0])
+	IncludedFiles.StepOut()
 
-def ProtReferences(fname):
+def ProtReferences(fname, IncludedFiles):
+	IncludedFiles.StepIn()
 	files = []
 	def _HandleProtFind(name, attr):
 		files.append(attr["source_files"]) #FIXME: this is a plural, how are the names seperated?
@@ -180,11 +228,16 @@ def ProtReferences(fname):
 		raise StopIteration()
 	SearchXml(fname, ["protein_summary_header"], _HandleProtFind)
 	for f in files:
-		info = ValidateFilename(f, ["pepxml", "pep", "xml"])
-		if not info.Exists:
-			PepReferences(info.Name)
+		try:
+			info = ValidateFilename(IncludedFiles, f, ["pepxml", "pep", "xml"])
+			#IncludedFiles.Add(info.Name, FileType.PEPXML)
+			if not info.Exists:
+				PepReferences(info.Name, IncludedFiles)
+		except:
+			print("Can't open referenced file: " + f)
+	IncludedFiles.StepOut()
 
-def _References(t, fname):
+def _References(t, fname, IncludedFiles):
 	switch = {
 		FileType.MZML: MzmlReferences,
 		FileType.MGF: MgfReferences,
@@ -200,28 +253,33 @@ def _References(t, fname):
 	try:
 		func = switch[t]
 	except:
-		return "aux=" + binascii.hexlify(fname)
-	return func(fname)
-
-def Build():
-	return "files=" + ";".join([FileType.Name(t) + ":" + binascii.hexlify(f) for f, t in IncludedFiles.items()])
+		return
+	return func(fname, IncludedFiles)
 
 def LoadChainProt(fname):
-	IncludedFiles[fname] = FileType.PROTXML
-	ProtReferences(fname)
-	return Build()
+	if not os.path.abspath(fname).startswith(GalaxyPath):
+		raise ValueError(fname)
+	IncludedFiles = IncludedFile(fname, FileType.PROTXML)
+	ProtReferences(fname, IncludedFiles)
+	return IncludedFiles
 
 def LoadChainPep(fname):
-	IncludedFiles[fname] = FileType.PEPXML
-	PepReferences(fname)
-	return Build()
+	if not os.path.abspath(fname).startswith(GalaxyPath):
+		raise ValueError(fname)
+	IncludedFiles = IncludedFile(fname, FileType.PEPXML)
+	PepReferences(fname, IncludedFiles)
+	return IncludedFiles
 
 def LoadChainMgf(fname):
-	IncludedFiles[fname] = FileType.MGF
-	MgfReferences(fname)
-	return Build()
+	if not os.path.abspath(fname).startswith(GalaxyPath):
+		raise ValueError(fname)
+	IncludedFiles = IncludedFile(fname, FileType.MGF)
+	MgfReferences(fname, IncludedFiles)
+	return IncludedFiles
 
 def LoadChainMzml(fname):
-	IncludedFiles[fname] = FileType.MZML
-	MzmlReferences(fname)
-	return Build()
+	if not os.path.abspath(fname).startswith(GalaxyPath):
+		raise ValueError(fname)
+	IncludedFiles = IncludedFile(fname, FileType.MZML)
+	MzmlReferences(fname, IncludedFiles)
+	return IncludedFiles
