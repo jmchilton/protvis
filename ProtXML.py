@@ -1198,7 +1198,7 @@ def ToBinary(FileName, Dest = None):
 	parser.parse(open(FileName, "r"))
 	Dest.close()
 
-def ProtBinSearchBasic(FileName, terms):
+def SearchBasic(FileName, terms):
 	f = open(FileName, "r")
 	f.seek(4) #skip the peptide index offset
 	stat = SearchStatus({ None: SplitPhrase(terms.upper()) })
@@ -1207,7 +1207,7 @@ def ProtBinSearchBasic(FileName, terms):
 	PrintResults(stat.Results)
 	return stat.Results
 
-def ProtBinSearchAdvanced(FileName, terms_dict):
+def SearchAdvanced(FileName, terms_dict):
 	f = open(FileName, "r")
 	f.seek(4) #skip the peptide index offset
 	terms = {}
@@ -1224,9 +1224,3 @@ def PrintResults(results):
 	print("Results:")
 	for r in results:
 		print(r)
-		
-#HTTP server functions
-from HttpUtil import *;
-
-def DisplayList(request, query, fname):
-	return {}

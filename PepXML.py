@@ -2270,7 +2270,7 @@ def ToBinary(FileName, Dest = None):
 			Dest.write(struct.pack("=II", hit, query))
 	Dest.close()
 
-def PepBinSearchBasic(FileName, terms):
+def SearchBasic(FileName, terms):
 	f = open(FileName, "r")
 	f.seek(4) #skip the peptide index offset
 	stat = SearchStatus({ None: SplitPhrase(terms.upper()) })
@@ -2279,7 +2279,7 @@ def PepBinSearchBasic(FileName, terms):
 	#PrintResults(stat.Results)
 	return [scores, stat.TotalQueries, stat.Results]
 
-def PepBinSearchAdvanced(FileName, terms_dict):
+def SearchAdvanced(FileName, terms_dict):
 	f = open(FileName, "r")
 	f.seek(4) #skip the peptide index offset
 	terms = {}
@@ -2291,7 +2291,7 @@ def PepBinSearchAdvanced(FileName, terms_dict):
 	#PrintResults(stat.Results)
 	return [scores, stat.TotalQueries, stat.Results]
 
-def PepBinSearchPeptide(FileName, peptide):
+def SearchPeptide(FileName, peptide):
 	f = open(FileName, "r")
 	[PeptideIndexOffset] = struct.unpack("=I", f.read(4))
 	scores = MsmsPipelineAnalysis.GetAvaliableScores(f)
@@ -2312,7 +2312,7 @@ def PepBinSearchPeptide(FileName, peptide):
 	f.close()
 	return [socres, None]
 
-def PepBinGetScores(FileName, sid, qid, rid, hid):
+def GetScores(FileName, sid, qid, rid, hid):
 	f = open(FileName, "r")
 	f.seek(4) #skip the peptide index offset
 	results = MsmsPipelineAnalysis.GetScores(f, sid, qid, rid, hid)
