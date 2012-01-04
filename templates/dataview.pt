@@ -1,0 +1,238 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xmlns:tal="http://xml.zope.org/namespaces/tal">
+	<head>
+		<meta http-equiv="content-type" content="text/html; charset=utf-8" />
+		<title>Results</title>
+		<link href="/res/styles/list.css" type="text/css" rel="stylesheet" />
+		<link id="themeStyles" href="/res/dojo/dijit/themes/claro/claro.css" type="text/css" rel="stylesheet" />
+		<link id="themeStyles" href="/res/dojo/dojox/html/resources/ellipsis.css" type="text/css" rel="stylesheet" />
+		<script type="text/javascript" src="/res/dojo/dojo/dojo.js" data-dojo-config="parseOnLoad: true"></script>
+		<script type="text/javascript">
+			dojo.require("dojo.fx");
+			dojo.require("dijit.Dialog");
+			dojo.require("dojo._base.connect");
+			dojo.require("dijit.DynamicTooltip");
+			dojo.require("dojox.html.ellipsis");
+
+			var DetailsDialog;
+			var CurrentResults = "";
+			var CurrentAnimation = null;
+			var PendingAnimations = new Array();
+			var Tooltips = new Array();
+			var CurrentResultsID = 0;
+			var CurrentPeptide = null;
+			
+			function QueueAnimation(anim) {
+				dojo.connect(anim, "onEnd", function() {
+					if (PendingAnimations.length > 0) {
+						CurrentAnimation = PendingAnimations.shift();
+						CurrentAnimation.play();
+					} else {
+						CurrentAnimation = null;
+					}
+				});
+				if (CurrentAnimation == null) {
+					CurrentAnimation = anim;
+					anim.play();
+				} else {
+					PendingAnimations.push(anim);
+				}
+			}
+
+			function ApplyFilter() {
+				var oldhits = dojo.byId("search_hits_" + CurrentResultsID);
+				if (oldhits == null) {
+					var anim = dojo.fx.wipeIn({
+						node: dojo.byId("searching"),
+						onEnd: function() {
+							if (PendingAnimations.length > 0) {
+								CurrentAnimation = PendingAnimations.shift();
+								CurrentAnimation.play();
+							} else {
+								CurrentAnimation = null;
+							}
+						}
+					});
+					if (CurrentAnimation == null) {
+						CurrentAnimation = anim;
+						anim.play();
+						delete PendingAnimations;
+						PendingAnimations = new Array();
+					} else {
+						delete PendingAnimations;
+						PendingAnimations = new Array();
+						PendingAnimations.push(anim);
+					}
+				} else {
+					QueueAnimation(dojo.fx.wipeOut({
+						node: dojo.byId("search_hits_" + CurrentResultsID),
+						onEnd: function(n) {
+							delete Tooltips.shift();
+							dojo.byId("search_hits").removeChild(n);
+							if (PendingAnimations.length > 0) {
+								CurrentAnimation = PendingAnimations.shift();
+								CurrentAnimation.play();
+							} else {
+								CurrentAnimation = dojo.fx.wipeIn({
+									node: dojo.byId("searching"),
+									onEnd: function() {
+										if (PendingAnimations.length > 0) {
+											CurrentAnimation = PendingAnimations.shift();
+											CurrentAnimation.play();
+										} else {
+											CurrentAnimation = null;
+										}
+									}
+								});
+								CurrentAnimation.play();
+							}
+						}
+					}));
+				}
+				dojo.xhrGet({
+					url: "/results?file=${file}&q=" + dojo.byId("filter").value + "&max=50&sort=" + t["sort_col"] + "&order=" + t["sort_asc"],
+					load: function(results) {
+						var cont = document.createElement("div");
+						cont.id = "search_hits_" + ++CurrentResultsID;
+						cont.visible = "false";
+						cont.style = "display: none";
+						results = BuildResults(results, CurrentResultsID);
+						cont.innerHTML = results[0];
+						dojo.byId("search_hits").appendChild(cont);
+						if (results.length > 1) {
+							var tt = new dijit.DynamicTooltip({
+								connectId: results[1],
+								href: "/tooltip/${type}/peptide?file=${file}&peptide=",
+								position: ["below", "above"]
+							})
+							Tooltips.push(tt);
+							delete results[1];
+						}
+						delete PendingAnimations;
+						PendingAnimations = new Array();
+						QueueAnimation(dojo.fx.wipeOut({ node: dojo.byId("searching") }));
+						QueueAnimation(dojo.fx.wipeIn({ node: cont }));
+					},
+					error: function() {
+						var cont = document.createElement("div");
+						cont.id = "search_hits_" + ++CurrentResultsID;
+						cont.visible = "false";
+						cont.style = "display: none";
+						dojo.byId("search_hits").innerHTML = "Query Error. Server could not be reached";
+						dojo.byId("search_hits").appendChild(cont);
+						delete PendingAnimations;
+						PendingAnimations = new Array();
+						QueueAnimation(dojo.fx.wipeOut({ node: dojo.byId("searching") }));
+						QueueAnimation(dojo.fx.wipeIn({ node: cont }));
+					}
+				});
+			}
+			
+			function SearchPeptide(peptide) {
+				CurrentPeptide = peptide;
+				dojo.xhrGet({
+					url: "/list/${type}/peptide?file=${file}&peptide=" + peptide + "&sort=" + peptides_sortcol + "&order=" + peptides_sortdir,
+					load: function(results) {
+						elem = dojo.byId("search_peptides")
+						elem.innerHTML = "<span class='link' onclick='ReturnToResults();'>Back to all results</span>" + BuildPeptideResults(results);
+						dojo.fx.combine([
+							dojo.fx.wipeOut({ node: dojo.byId("search_hits") }),
+							dojo.fx.wipeIn({ node: elem })
+						]).play();
+					},
+					error: function() {
+						DetailsDialog.attr("title", "Query Results");
+						DetailsDialog.attr("content", "Query Error. Server could not be reached");
+						DetailsDialog.attr("style", "width: 300px;");
+						DetailsDialog.show();
+					}
+				});
+			}
+
+			function DisplayQuery(title, sid, qid) {
+				dojo.xhrGet({
+					url: "/search/${type}/hit/?file=${file}&sid=" + sid + "&qid=" + qid,
+					load: function(results) {
+						ret = BuildSpectrumQuery(results);
+						DetailsDialog.attr("title", "Results For " + ret[0]);
+						DetailsDialog.attr("content", ret[1]);
+					},
+					error: function() {
+						DetailsDialog.attr("title", "Query Results");
+						DetailsDialog.attr("content", "Query Error. Server could not be reached");
+					}
+				});
+				//DetailsDialog.attr("title", "All results for " + title);
+				DetailsDialog.attr("title", "Loading Results");
+				//DetailsDialog.attr("href", "/search/${type}/hit/?file=${file}&sid=" + sid + "&qid=" + qid);
+				DetailsDialog.attr("content", "<center><span class='dijitContentPaneLoading'>Loading results... Please wait</span></center>");
+				DetailsDialog.attr("style", "width: 500px;");
+				DetailsDialog.show();
+			}
+			
+			function DisplayScore(title, sid, qid, rid, hid) {
+				dojo.xhrGet({
+					url: "/search/${type}/score/?file=${file}&sid=" + sid + "&qid=" + qid + "&rid=" + rid + "&hid=" + hid,
+					load: function(scores) {
+						ret = BuildScores(scores);
+						DetailsDialog.attr("title", "Scores For " + ret[0]);
+						DetailsDialog.attr("content", ret[1]);
+					},
+					error: function() {
+						DetailsDialog.attr("title", "Hit Scores");
+						DetailsDialog.attr("content", "Query Error. Server could not be reached");
+					}
+				});
+				//DetailsDialog.attr("title", "Scores for " + title);
+				DetailsDialog.attr("title", "Loading Scores");
+				//DetailsDialog.attr("href", "/search/${type}/score/?file=${file}&sid=" + sid + "&qid=" + qid + "&rid=" + rid + "&hid=" + hid);
+				DetailsDialog.attr("content", "<center><span class='dijitContentPaneLoading'>Loading scores... Please wait</span></center>");
+				DetailsDialog.attr("style", "width: 300px;");
+				DetailsDialog.show();
+			}
+
+			function ReturnToResults() {
+				dojo.fx.combine([
+					dojo.fx.wipeOut({
+						node: dojo.byId("search_peptides"),
+						onEnd: function(n) {
+							n.innerHTML = "";
+						}
+					}),
+					dojo.fx.wipeIn({ node: dojo.byId("search_hits") })
+				]).play();
+			}
+
+			dojo.ready(function() {
+				// Populate content initially
+				ApplyFilter();
+				DetailsDialog = new dijit.Dialog({ style: "width: 400px" });
+			});
+		</script>
+		<script type="text/javascript" src="/res/scripts/main.js"></script>
+	</head>
+	<body class="claro">
+		<table id="container" style="width: 100%;">
+			<tr>
+				<td>
+					<form id="filter_basic_view" onsubmit="ApplyFilter(); return false;">
+						Filter: <input type="text" id="filter" />&nbsp;<input type="submit" value="Filter" />
+					</form>
+				</td>
+			</tr>
+			<tr>
+				<td>
+				</td>
+			</tr>
+			<tr>
+				<td>
+					<div id="searching" style="width: 100%;" class="dijitContentPaneLoading">Searching... Please wait</div>
+					<div id="search_hits" style="width: 100%;">
+					</div>
+					<div id="search_peptides" visible="false" style="width: 100%; display: none">
+					</div>
+				</td>
+			</tr>
+		</table>
+	</body>
+</html>

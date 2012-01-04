@@ -1,0 +1,10 @@
+<br/>
+<div>
+	<span class="link" onclick="ToggleSpectrums();">Results are from ${count} unique spectrums</span>
+	<div id="spectrum_list" style="display: none;">
+		<table>
+			<tr><th>Spectrum</th><th>Occurrences</th></tr>
+			<span tal:omit-tag="" tal:repeat="row spectrums"><tr class="row0" tal:attributes="class string:info row${repeat.row.odd}"><td tal:content="row.Spectrum">peptide</td><td tal:content="row.Count" style="text-align:center;">count</td></tr></span>
+		</table>
+	</div>
+</div>

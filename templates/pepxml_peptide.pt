@@ -1,0 +1,10 @@
+<br/>
+<tal:if condition="python: info['total'] == 1">Displaying the only occurrence of <b>${info.peptide}</b></tal:if>
+<tal:if condition="python: info['total'] > 1 and info['total'] == len(peptides)">Displaying all ${info.total} occurrences of <b>${info.peptide}</b></tal:if>
+<tal:if condition="python: info['total'] > len(peptides)">Displaying ${info.start}-${info.end} of ${info.total} occurrences of <b>${info.peptide}</b></tal:if>
+<br/>
+<table id="peptides" style="width:100%;" border="1">
+	<tr><span tal:omit-tag="" tal:repeat="col columns"><th id="peptides_column_${col.name}" onclick="TableManager.Sort('peptides','${col.name}');" tal:attributes="class python: 'sort' + test(sortcol==col.name, test(sortdsc, ' sort_dsc', 'sort_asc'), '')">${col.title}</th></span></tr>
+	<span tal:omit-tag="" tal:repeat="row peptides"><tr class="row0" tal:attributes="class string:info row${repeat.row.odd}"><span tal:omit-tag="" tal:repeat="col columns"><td tal:content="row[col.name]"></td></span></tr></span>
+</table>
+<script>TableManager.Add("peptides", "${sortcol}");</script>

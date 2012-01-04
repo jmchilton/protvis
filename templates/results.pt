@@ -1,0 +1,12 @@
+<tal:if condition="python: len(results) == 0">None of the ${info.total} queries matched your filter</tal:if>
+<tal:else condition="python: len(results) > 0">
+	<tal:if condition="python: info['total'] == 1">Displaying the only result</tal:if>
+	<tal:if condition="python: info['total'] > 1 and info['total'] == len(results)">Displaying all ${info.matches} results</tal:if>
+	<tal:if condition="python: info['total'] > len(results)">Displaying ${info.start}-${info.end} of ${info.matches} results</tal:if>
+	<br/>
+	<table id="{$info.type}_results" border="1" style="width: 100%;">
+	<tr><span tal:omit-tag="" tal:repeat="col columns"><th id="{$info.type}_results_column_${col.name}" onclick="TableManager.Sort('{$info.type}_results','${col.name}');" tal:attributes="class python: 'sort' + test(sortcol==col.name, test(sortdsc, ' sort_dsc', 'sort_asc'), '')">${col.title}</th></span></tr>
+	<span tal:omit-tag="" tal:repeat="row results"><tr class="row0" tal:attributes="class string:info ${row.style}${repeat.row.odd}"><span tal:omit-tag="" tal:repeat="col columns"><td tal:content="python: row.HitInfo[col.name]"></td></span></tr></span>
+	</table>
+	<script>TableManager.Add("{$info.type}_results", "${sortcol}");</script>
+</tal:else>

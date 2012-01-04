@@ -1,0 +1,17 @@
+<tal:if condition="python: info['total'] < 1">Peptide not found</tal:if>
+<tal:else condition="python: info['total'] >= 1">
+	<tal:if condition="python: info['total'] == 1">Displaying the only occurrence, found in ${counts[0][0]}</tal:if>
+	<tal:else condition="python: info['total'] > 1">
+		<tal:if condition="python: info['total'] == len(peptides)">Displaying all ${info.total} occurrences</tal:if>
+		<tal:else condition="python: info['total'] > len(peptides)">Displaying best ${info.shown} of ${info.total} occurrences</tal:else>
+		<br/>
+		<tal:if condition="python: len(counts)==1">All hits were found by ${counts[0][0]}</tal:if>
+		<tal:else condition="python: len(counts)>1"><span tal:omit-tag="" tal:repeat="row counts"><tal:if condition="repeat.row.index">, </tal:if>${row[1]} from ${row[0]}</span></tal:else>
+	</tal:else>
+	<br/>
+	<table id="popup_peptides_results" style="width:100%;">
+		<tr><th>Spectrum</th><th>${info.engine}</th><th>Search Engine</th><th>Raw Score</th></tr>
+		<span tal:omit-tag="" tal:repeat="row peptides"><tr class="row0" style="text-align: center;" tal:attributes="class string:info row${repeat.row.odd}"><td style="text-align: left;">${row["spectrum"]}</td><td>${row["score"]}</td><td>${row["engine"]}</td><td>${row["engine_score"]}</td></tr></span>
+	</table>
+	<script>TableManager.Add("peptides", "score");</script>
+</tal:else>
