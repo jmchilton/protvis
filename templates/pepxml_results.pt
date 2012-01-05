@@ -1,0 +1,33 @@
+<tal:if condition="python: len(results) == 0">None of the ${info.total} queries matched your filter</tal:if>
+<tal:else condition="python: len(results) > 0">
+	<tal:if condition="python: info['total'] == 1">Displaying the only result</tal:if>
+	<tal:if condition="python: info['total'] > 1 and info['total'] == len(results)">Displaying all ${info.matches} results</tal:if>
+	<tal:if condition="python: info['total'] > len(results)">Displaying ${info.start}-${info.end} of ${info.matches} results</tal:if>
+	<br/>
+	<table id="{$info.type}_results" border="1" style="width: 100%;">
+	<tr><span tal:omit-tag="" tal:repeat="col columns"><th id="{$info.type}_results_column_${col.name}" onclick="TableManager.Sort('{$info.type}_results','${col.name}');" tal:attributes="class python: 'sort' + test(sortcol==col.name, test(sortdsc, ' sort_dsc', 'sort_asc'), '')">${col.title}</th></span></tr>
+	<span tal:omit-tag="" tal:repeat="row results">
+		<tr tal:attributes="class string:info ${row.style}${repeat.row.odd}">
+			<td><span class="peptide_full">${row.HitInfo.peptide_prev_aa}<span id="peptide_${info.hash}_${repeat.row.index}" class="link peptide" onclick="SearchPeptide('${row.HitInfo.peptide}');">${row.HitInfo.peptide}</span>${row.HitInfo.peptide_next_aa}</span></td>
+			<td>${row.HitInfo.protein}</td>
+			<td>${row.HitInfo.massdiff}</td>
+			<td onclick="DisplayScore('${row.HitInfo.peptide}/${row.HitInfo.protein}', ${info.datafile}, ${row.QueryOffset}, ${row.HitInfo.HitOffset});" tal:content="python: row.HitInfo[info.score]"></td>
+		</tr>
+		<tr tal:attributes="class string:desc ${row.style}${repeat.row.odd}"><td tal:attributes="colspan python: len(columns)" tal:content="python: row.HitInfo['protein_descr']"></td></tr>
+		<tal:if condition="python: row.HitMatches > 1">
+			<tr tal:attributes="class string:${row.style}${repeat.row.odd}"><td tal:attributes="colspan python: len(columns)"><span class="link" onclick="DisplayQuery(row.QueryOffset);"><span tal:omit-tag="" tal:content="python: row.HitMatches-1"></span> more result<tal:if condition="python: row.HitMatches > 2">s</tal:if> in this spectrum query</span></td></tr>
+		</tal:if>
+	</span>
+	</table>
+	<script>
+		TableManager.Add("{$info.type}_results", "${sortcol}");
+		var ids = [<span tal:omit-tag="" tal:repeat="row results">"peptide_${info.hash}_${repeat.row.index}", </span>];
+		var tt = new dijit.DynamicTooltip({
+			connectId: ids,
+			href: "/tooltip/peptide?file=${info.file}&n=${info.datafile}&peptide=",
+			position: ["below", "above"]
+		})
+		Tooltips.push(tt);
+		delete ids;
+	</script>
+</tal:else>

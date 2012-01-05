@@ -21,6 +21,11 @@
 			var Tooltips = new Array();
 			var CurrentResultsID = 0;
 			var CurrentPeptide = null;
+			var CurrentContents = null;
+			
+			function GetFile() {
+				return "${file}";
+			}
 			
 			function QueueAnimation(anim) {
 				dojo.connect(anim, "onEnd", function() {
@@ -39,8 +44,26 @@
 				}
 			}
 
-			function ApplyFilter() {
-				var oldhits = dojo.byId("search_hits_" + CurrentResultsID);
+			function LoadContents(container, url, t) {
+				var baseurl = url;
+				var srch = url.indexOf("?");
+				if (srch >= 0) {
+					baseurl = url.substr(srch + 1).split("&");
+					var i = baseurl.length - 1;
+					while (i >= 0) {
+						var p = baseurl[i].split("=");
+						if (p[0] == "q" || p == "start") {
+							baseurl.splice(i, 1);
+						}
+						--i;
+					}
+					baseurl.push("");
+					baseurl = url.substr(0, srch + 1) + baseurl.join("&");
+				} else {
+					baseurl += "?"
+				}
+				CurrentContents = { url: baseurl, container: container };
+				var oldhits = dojo.byId("data_" + container + "_" + CurrentResultsID);
 				if (oldhits == null) {
 					var anim = dojo.fx.wipeIn({
 						node: dojo.byId("searching"),
@@ -65,10 +88,10 @@
 					}
 				} else {
 					QueueAnimation(dojo.fx.wipeOut({
-						node: dojo.byId("search_hits_" + CurrentResultsID),
+						node: dojo.byId("data_" + container + "_" + CurrentResultsID),
 						onEnd: function(n) {
 							delete Tooltips.shift();
-							dojo.byId("search_hits").removeChild(n);
+							dojo.byId("data_" + container).removeChild(n);
 							if (PendingAnimations.length > 0) {
 								CurrentAnimation = PendingAnimations.shift();
 								CurrentAnimation.play();
@@ -90,24 +113,14 @@
 					}));
 				}
 				dojo.xhrGet({
-					url: "/results?file=${file}&q=" + dojo.byId("filter").value + "&max=50&sort=" + t["sort_col"] + "&order=" + t["sort_asc"],
+					url: url,
 					load: function(results) {
 						var cont = document.createElement("div");
-						cont.id = "search_hits_" + ++CurrentResultsID;
+						cont.id = "data_" + container + "_" + ++CurrentResultsID;
 						cont.visible = "false";
 						cont.style = "display: none";
-						results = BuildResults(results, CurrentResultsID);
-						cont.innerHTML = results[0];
-						dojo.byId("search_hits").appendChild(cont);
-						if (results.length > 1) {
-							var tt = new dijit.DynamicTooltip({
-								connectId: results[1],
-								href: "/tooltip/${type}/peptide?file=${file}&peptide=",
-								position: ["below", "above"]
-							})
-							Tooltips.push(tt);
-							delete results[1];
-						}
+						cont.innerHTML = results;
+						dojo.byId("data_" + container).appendChild(cont);
 						delete PendingAnimations;
 						PendingAnimations = new Array();
 						QueueAnimation(dojo.fx.wipeOut({ node: dojo.byId("searching") }));
@@ -115,17 +128,23 @@
 					},
 					error: function() {
 						var cont = document.createElement("div");
-						cont.id = "search_hits_" + ++CurrentResultsID;
+						cont.id = "data_" + container + "_" + ++CurrentResultsID;
 						cont.visible = "false";
 						cont.style = "display: none";
-						dojo.byId("search_hits").innerHTML = "Query Error. Server could not be reached";
-						dojo.byId("search_hits").appendChild(cont);
+						dojo.byId("data_" + container).innerHTML = "Query Error. Server could not be reached";
+						dojo.byId("data_" + container).appendChild(cont);
 						delete PendingAnimations;
 						PendingAnimations = new Array();
 						QueueAnimation(dojo.fx.wipeOut({ node: dojo.byId("searching") }));
 						QueueAnimation(dojo.fx.wipeIn({ node: cont }));
 					}
 				});
+			}
+			
+			function FilterCurrent(filter) {
+				if (CurrentContents != null) {
+					LoadContents(CurrentContents["container"], CurrentContents["url"] + "q=" + filter);
+				}
 			}
 			
 			function SearchPeptide(peptide) {
@@ -170,9 +189,9 @@
 				DetailsDialog.show();
 			}
 			
-			function DisplayScore(title, sid, qid, rid, hid) {
+			function DisplayScore(title, datafile, qoff, hoff) {
 				dojo.xhrGet({
-					url: "/search/${type}/score/?file=${file}&sid=" + sid + "&qid=" + qid + "&rid=" + rid + "&hid=" + hid,
+					url: "/search/${type}/score/?file=${file}&n=" + datafile + "&qoff=" + qoff + "&hoff=" + hoff,
 					load: function(scores) {
 						ret = BuildScores(scores);
 						DetailsDialog.attr("title", "Scores For " + ret[0]);
@@ -205,7 +224,7 @@
 
 			dojo.ready(function() {
 				// Populate content initially
-				ApplyFilter();
+				LoadContents("${type}", "/results?file=${file}&n=${top.index}&type=${type}&q=");
 				DetailsDialog = new dijit.Dialog({ style: "width: 400px" });
 			});
 		</script>
@@ -215,7 +234,7 @@
 		<table id="container" style="width: 100%;">
 			<tr>
 				<td>
-					<form id="filter_basic_view" onsubmit="ApplyFilter(); return false;">
+					<form id="filter_basic_view" onsubmit="FilterCurrent(document.getElementById('filter').value); return false;">
 						Filter: <input type="text" id="filter" />&nbsp;<input type="submit" value="Filter" />
 					</form>
 				</td>
@@ -227,9 +246,9 @@
 			<tr>
 				<td>
 					<div id="searching" style="width: 100%;" class="dijitContentPaneLoading">Searching... Please wait</div>
-					<div id="search_hits" style="width: 100%;">
+					<div id="data_hits" style="width: 100%;">
 					</div>
-					<div id="search_peptides" visible="false" style="width: 100%; display: none">
+					<div id="data_peptides" visible="false" style="width: 100%; display: none">
 					</div>
 				</td>
 			</tr>

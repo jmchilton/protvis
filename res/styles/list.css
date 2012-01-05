@@ -26,19 +26,19 @@ th {
 	font-weight: bold;
 }
 
-tr.norm {
+tr.row {
 	background-color: #E9E9FF;
 }
 
-tr.alt {
+tr.rowodd {
 	background-color: #DDDDFF;
 }
 
-tr.decoy_norm {
+tr.decoy {
 	background-color: #FFE9E9;
 }
 
-tr.decoy_alt {
+tr.decoyodd {
 	background-color: #FFDDDD;
 }
 

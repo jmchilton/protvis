@@ -17,16 +17,23 @@ def GetEngineCode(name):
 
 #Encoding Info
 class EncodingStatus:
-	def __init__(self):
+	def __init__(self, links):
 		self.IncludedScores = 0
 		self.Peptides = {}
 		self.QueryOffset = 0
+		self.Links = links
 
 	def AddPeptide(self, peptide, hit_offset):
 		try:
 			self.Peptides[peptide].append([hit_offset, self.QueryOffset])
 		except:
 			self.Peptides[peptide] = [[hit_offset, self.QueryOffset]]
+
+	def GetLink(name):
+		try:
+			return self.Links[name]
+		except:
+			return 0xFFFF
 
 
 #Search results
@@ -39,25 +46,19 @@ class ResultType:
 	Modification = 5
 	
 class Result:
-	def __init__(self, Type = ResultType.Undefined, Summary = -1, Query = -1, Result = -1, Hit = -1):
+	def __init__(self, Type = ResultType.Undefined, Query = -1, Hit = -1):
 		self.Type = Type
-		self.SummaryIndex = Summary
-		self.QueryIndex = Query
-		self.ResultIndex = Result
-		self.HitIndex = Hit
+		self.QueryOffset = Query
+		self.HitOffset = Hit
 		self.HitMatches = 0
 		self.TotalMatches = 0
 		self.HitInfo = None
 
 	def __str__(self):
 		fields = ["   Type: ", str(self.Type), "\n",
-			"   QueryIndex: ", str(self.QueryIndex), "\n",
-			"   ResultIndex: ", str(self.ResultIndex), "\n",
-			"   HitIndex: ", str(self.HitIndex), "\n",
+			"   QueryOffset: ", str(self.QueryOffset), "\n",
+			"   HitOffset: ", str(self.HitOffset), "\n",
 			"   TotalMatches: ", str(self.TotalMatches), "\n",
-			"   precursor_neutral_mass: ", str(self.precursor_neutral_mass), "\n",
-			"   retention_time_sec: ", str(self.retention_time_sec), "\n",
-			"   search_specification: ", str(self.search_specification), "\n",
 			"   HitInfo: ", str(self.HitInfo), "\n"]
 		return "".join(fields)
 
@@ -1016,7 +1017,6 @@ class SearchHit(TagHandler):
 		i = 0
 		BestScore = None
 		BestScorePos = -1
-		BestScoreIndex = -1
 		Hits = 0
 		while i < count:
 			s = stat.copy()
@@ -1066,7 +1066,6 @@ class SearchHit(TagHandler):
 				if BestScore == None or SearchScore.CompareHits(BestScore, score) > 0:
 					BestScore = score
 					BestScorePos = StartPos
-					BestScoreIndex = i
 			else:
 				f.seek(StartPos + RecordSize)
 			i += 1
@@ -1075,25 +1074,16 @@ class SearchHit(TagHandler):
 			f.seek(BestScorePos)
 			info = SearchHit.GetInfo(f)
 			f.seek(EndPos)
-			return [BestScoreIndex, Hits, info]
+			return [BestScorePos, Hits, info]
 		return None
 
 	@staticmethod
-	def GetScoresAll(f, count, hid):
-		i = 0
+	def GetScores(f, offset):
+		f.seek(offset + 4 + 2 + 2)
+		[DataOffset] = struct.unpack("=I", f.read(4))
+		f.seek(offset + DataOffset)
 		results = {}
-		while i < count:
-			TRACEPOS("SearchHit.GetScoresAll(", i, "): ", f.tell())
-			if i == hid:
-				StartPos = f.tell()
-				[RecordSize, _1, _2, DataOffset] = struct.unpack("=IHHI", f.read(4 + 2 + 2 + 4))
-				f.seek(StartPos + DataOffset)
-				results = {}
-				SearchScore.GetInfo(f, results)
-				f.seek(StartPos + RecordSize)
-			else:
-				f.seek(struct.unpack("=I", f.read(4))[0] - 4, 1)
-			i += 1
+		SearchScore.GetInfo(f, results)
 		return results
 
 	@staticmethod
@@ -1196,8 +1186,7 @@ class SearchResult(TagHandler):
 	@staticmethod
 	def SearchAllBestHitAndCount(f, stat, count):
 		i = 0
-		BestResultIndex = -1
-		BestHitIndex = -1
+		BestHitOffset = -1
 		BestHitInfo = None
 		BestHitMatches = 0
 		BestHitTotal = 0
@@ -1206,28 +1195,14 @@ class SearchResult(TagHandler):
 			[search_hit__count] = struct.unpack("=I", f.read(4))
 			r = SearchHit.SearchAllBestHit(f, stat, search_hit__count)
 			if r != None:
-				[idx, hits, info] = r
+				[off, hits, info] = r
 				if BestHitInfo == None or SearchScore.CompareHits(BestHitInfo, info) > 0:
-					BestResultIndex = i
-					BestHitIndex = idx
+					BestHitOffset = off
 					BestHitInfo = info
 					BestHitMatches = hits
 					BestHitTotal = search_hit__count
 			i += 1
-		return [BestResultIndex, BestHitIndex, BestHitMatches, BestHitTotal, BestHitInfo]
-
-	@staticmethod
-	def GetScoresAll(f, count, rid, hid):
-		i = 0
-		while i < count:
-			TRACEPOS("SearchResult.GetScoresAll(", i, "): ", f.tell())
-			[search_hit__count] = struct.unpack("=I", f.read(4))
-			if i == rid:
-				return SearchHit.GetScoresAll(f, search_hit__count, hid)
-			else:
-				SearchHit.EatAll(f, search_hit__count)
-			i += 1
-		return {}
+		return [BestHitOffset, BestHitMatches, BestHitTotal, BestHitInfo]
 
 	@staticmethod
 	def GetCount(f):
@@ -1245,19 +1220,20 @@ class SearchResult(TagHandler):
 	@staticmethod
 	def GetBestHitInfoAll(f, count):
 		i = 0
-		BestResultIndex = -1
 		BestHitInfo = None
 		TotalHits = 0
+		BestHitOffset = 0
 		while i < count:
 			TRACEPOS("SearchResult.GetBestHitInfoAll(", i, "): ", f.tell())
 			[search_hit__count] = struct.unpack("=I", f.read(4))
+			offset = f.tell()
 			info = SearchHit.GetInfoFirstEatRest(f, search_hit__count)
 			TotalHits += search_hit__count
 			if BestHitInfo == None or SearchScore.CompareHits(BestHitInfo, info) > 0:
-				BestResultIndex = i
 				BestHitInfo = info
+				BestHitOffset = offset
 			i += 1
-		return [BestResultIndex, 0, TotalHits, BestHitInfo]
+		return [BestHitOffset, TotalHits, BestHitInfo]
 		"""#the best hit is always the first one in the list
 		i = 0
 		BestResultIndex = -1
@@ -1643,6 +1619,7 @@ class SpectrumQuery(TagHandler):
 		while i < count:
 			s = stat.copy()
 			TRACEPOS("SpectrumQuery.SearchAll(", i, "): ", f.tell())
+			StartPos = f.tell()
 			[RecordSize, _, search_result__count, OptionalFlags, _1, _2, precursor_neutral_mass, _3, _4] = struct.unpack("=IIHBIIfiI", f.read(4 + 4 + 2 + 1 + 4 + 4 + 4 + 4 + 4))
 			spectrum = DecodeStringFromFile(f)
 			s.SearchItemFloat("NeutralMass", precursor_neutral_mass)
@@ -1657,14 +1634,13 @@ class SpectrumQuery(TagHandler):
 			result = None
 			if s.IsMatched():
 				result = Result(ResultType.SpectrumQuery)
-				[result.ResultIndex, result.HitIndex, result.TotalHits, result.HitInfo] = SearchResult.GetBestHitInfoAll(f, search_result__count)
+				[result.HitOffset, result.TotalHits, result.HitInfo] = SearchResult.GetBestHitInfoAll(f, search_result__count)
 				result.HitMatches = result.TotalHits
 			else:
-				[rid, hid, matches, total, info] = SearchResult.SearchAllBestHitAndCount(f, s, search_result__count)
+				[off, matches, total, info] = SearchResult.SearchAllBestHitAndCount(f, s, search_result__count)
 				if info != None:
 					result = Result(ResultType.SearchHit)
-					result.ResultIndex = rid
-					result.HitIndex = hid
+					result.HitOffset = off
 					result.HitMatches = matches
 					result.TotalHits = total
 					result.HitInfo = info
@@ -1672,28 +1648,16 @@ class SpectrumQuery(TagHandler):
 				result.precursor_neutral_mass = precursor_neutral_mass
 				result.retention_time_sec = retention_time_sec
 				result.search_specification = search_specification
-				result.QueryIndex = i
+				result.QueryOffset = StartPos
 				stat.Results.append(result)
 			i += 1
 
 	@staticmethod
-	def GetScoresAll(f, count, qid, rid, hid):
-		i = 0
-		while i < count:
-			TRACEPOS("SpectrumQuery.GetScoresAll(", i, "): ", f.tell())
-			if i == qid:
-				StartPos = f.tell()
-				[RecordSize, search_result__offset, search_result__count] = struct.unpack("=IIH", f.read(4 + 4 + 2))
-				f.seek(1 + 4 + 4 + 4 + 4 + 4, 1)
-				spectrum = DecodeStringFromFile(f)
-				f.seek(StartPos + search_result__offset)
-				results = SearchResult.GetScoresAll(f, search_result__count, rid, hid)
-				f.seek(StartPos + RecordSize)
-				return [spectrum, results]
-			else:
-				f.seek(struct.unpack("=I", f.read(4))[0] - 4, 1)
-			i += 1
-		return {}
+	def GetScores(f, qoff, hoff):
+		f.seek(qoff + 4 + 4 + 2 + 1 + 4 + 4 + 4 + 4 + 4)
+		spectrum = DecodeStringFromFile(f)
+		results = SearchHit.GetScores(f, hoff)
+		return [spectrum, results]
 
 	@staticmethod
 	def GetHitInfoSeek(f, query, hit):
@@ -1790,21 +1754,6 @@ class MsmsRunSummary(TagHandler):
 			stat.TotalQueries += spectrum_query__count
 			f.seek(StartPos + RecordSize)
 			i += 1
-
-	@staticmethod
-	def GetScoresAll(f, count, sid, qid, rid, hid):
-		i = 0
-		while i < count:
-			TRACEPOS("MsmsRunSummary.GetScoresAll(", i, "): ", f.tell())
-			if i == sid:
-				StartPos = f.tell()
-				[_, spectrum_query__count, spectrum_query__offset] = struct.unpack("=III", f.read(4 + 4 + 4))
-				f.seek(StartPos + spectrum_query__offset)
-				return SpectrumQuery.GetScoresAll(f, spectrum_query__count, qid, rid, hid)
-			else:
-				f.seek(struct.unpack("=I", f.read(4))[0] - 4, 1)
-			i += 1
-		return {}
 
 class DatasetDerivation(TagHandler):
 	def __init__(self, stream, stat, attr):
@@ -2214,15 +2163,6 @@ class MsmsPipelineAnalysis(TagHandler):
 		return scores
 
 	@staticmethod
-	def GetScores(f, sid, qid, rid, hid):
-		TRACEPOS("MsmsPipelineAnalysis.GetScores(): ", f.tell())
-		[scores, msms_run_summary__count, dataset_derivation__count, analysis_summary__count] = struct.unpack("=HHHH", f.read(2 + 2 + 2 + 2))
-		EatStringFromFile(f) #don't bother searching the summary filename
-		EatStringFromFile(f) #don't bother searching the date
-		return MsmsRunSummary.GetScoresAll(f, msms_run_summary__count, sid, qid, rid, hid)
-		#don't bother with the rest of the data in the file
-
-	@staticmethod
 	def GetAvaliableScores(f):
 		return struct.unpack("=H", f.read(2))[0]
 		
@@ -2235,7 +2175,7 @@ def ConvertFilename(FileName):
 def IsConverted(FileName):
 	return os.path.isfile(ConvertFilename(FileName))
 
-def ToBinary(FileName, Dest = None):
+def ToBinary(FileName, Dest = None, Links = None):
 	"""
 	struct _PeptideInstance {
 		String Peptide;
@@ -2253,7 +2193,7 @@ def ToBinary(FileName, Dest = None):
 	if Dest == None:
 		Dest = open(ConvertFilename(FileName), "w")
 	Dest.write(struct.pack("=I", 0))
-	stat = EncodingStatus()
+	stat = EncodingStatus(Links)
 	parser = xml.sax.make_parser()
 	parser.setFeature("http://xml.org/sax/features/external-general-entities", False)
 	parser.setContentHandler(SaxHandler(Dest, stat))
@@ -2312,10 +2252,9 @@ def SearchPeptide(FileName, peptide):
 	f.close()
 	return [socres, None]
 
-def GetScores(FileName, sid, qid, rid, hid):
+def GetScores(FileName, qoff, hoff):
 	f = open(FileName, "r")
-	f.seek(4) #skip the peptide index offset
-	results = MsmsPipelineAnalysis.GetScores(f, sid, qid, rid, hid)
+	results = SpectrumQuery.GetScores(f, qoff, hoff)
 	f.close()
 	return results
 
@@ -2358,6 +2297,9 @@ def DefaultSortColumn(scores):
 	elif scores & 0x20:
 		return "ionscore"
 	return "expect"
+
+def GetColumns():
+	return [{"name":"peptide", "title": "Peptide"}, {"name": "protein", "title": "Protein"}, {"name": "massdiff", "title": "Mass Difference"}, {"name": score, "title": score}]
 
 #FIXME: DEBUG
 def PrintResults(results):

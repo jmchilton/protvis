@@ -66,7 +66,8 @@ def DecodeStringFromFile(f):
 	return struct.unpack("={0}s".format(l), f.read(l))[0]
 
 def EatStringFromFile(f):
-	return f.seek(struct.unpack("=H", f.read(2))[0], 1)
+	l = struct.unpack("=H", f.read(2))[0]
+	return f.seek(l, 1)
 
 class SearchStatus:
 	def __init__(self, dic):

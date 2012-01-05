@@ -19,8 +19,9 @@ from HttpUtil import *
 import Reference
 import config
 import struct
-from CommonXML import EncodeStringToFile, TryGet
+from CommonXML import EncodeStringToFile, DecodeStringFromFile, TryGet
 import ProtXML, PepXML
+import time
 
 templates = os.path.realpath(os.path.dirname(__file__))+ "/templates/"
 converted = os.path.realpath(os.path.dirname(__file__))+ "/ConvertedFiles/"
@@ -45,7 +46,6 @@ class JobManager:
 		self.ThreadsLock.acquire()
 		try:
 			threads = self.Jobs[jobid]
-			self.ThreadsLock.release()
 		except:
 			self.ThreadsLock.release()
 			raise
@@ -54,22 +54,61 @@ class JobManager:
 			if t.isAlive():
 				alive += 1
 		if alive == 0:
-			#self.ThreadsLock.acquire()
 			del self.Jobs[jobid]
-			#self.ThreadsLock.release()
+		self.ThreadsLock.release()
 		return alive
 
 Jobs = JobManager()
 
+class FileLinks:
+	class Link:
+		def __init__(self, t, name):
+			self.Name = name
+			self.Type = t
+
+	def __init__(self, IndexFile):
+		f = open(converted + IndexFile, "r")
+		[files] = struct.unpack("=I", f.read(4))
+		self.Index = IndexFile
+		self.Links = [FileLinks.Link(struct.unpack("=B", f.read(1))[0], DecodeStringFromFile(f)) for i in xrange(files)]
+
+	def __getitem__(self, i):
+		if i == 0xFFFF:
+			return None
+		return self.Links[i]
+
+	def GetTopFile(self):
+		return self.Index + "_" + str(len(self.Links) - 1)
+
+	def GetTopIndex(self):
+		return len(self.Links) - 1
+
+	def GetTopType(self):
+		return self.Links[len(self.Links) - 1].Type
+
+	def GetTopName(self):
+		return self.Links[len(self.Links) - 1].Name
+
+	def GetTopInfo(self):
+		i = len(self.Links) - 1
+		l = self.Links[i]
+		return { "name": l.Name, "type": l.Type, "index": i }
+
+	def GetInfo(self, index):
+		l = self.Links[index]
+		return { "name": l.Name, "type": l.Type, "index": index }
+		
+
 class ConverterThread(Thread):
-	def __init__(self, mod, src, dst=None):
+	def __init__(self, mod, src, dst, links):
 		Thread.__init__(self)
 		self.Source = src
 		self.Dest = dst
 		self.Module = mod
+		self.Links = links
 
 	def run(self):
-		self.Module.ToBinary(self.Source, open(self.Dest, "w"))
+		self.Module.ToBinary(self.Source, open(self.Dest, "w"), self.Links)
 
 def test(cond, t, f):
 	if cond:
@@ -101,15 +140,6 @@ def DecodeDecoy(protein):
 		return "decoy"
 	return "row"
 
-def PepXml(request):
-	#f=open(binascii.unhexlify(request.matchdict["file"]), "r") #FIXME: SECURITY
-	return Response("<pre>" + escape(f.read(512 * 1024)) + "</pre>", request=request)
-	#return Response(request.matchdict.keys())
-
-def Xml(request):
-	#f=open(binascii.unhexlify(request.matchdict["file"]), "r") #FIXME: SECURITY
-	return Response(f.read(), content_type="application/xml", request=request)
-
 def DisplayList(request):
 	query = DecodeQuery(request.query_string)
 	fname = GetFileName(request, query)
@@ -119,21 +149,15 @@ def DisplayList(request):
 	except:
 		return HTTPNotFound()
 
-def SearchHit(request):
-	query = DecodeQuery(request.query_string)
-	return Response("search hit", request=request)
-
-def SearchScore(request):
+def SearchScores(request):
 	query = DecodeQuery(request.query_string)
 	fname = GetFileName(request, query)
 	try:
-		sid = int(query["sid"])
-		qid = int(query["qid"])
-		rid = int(query["rid"])
-		hid = int(query["hid"])
+		qoff = int(query["qoff"])
+		hoff = int(query["hoff"])
+		[spectrum, results] = PepXML.PepBinGetScores(fname, qoff, hoff)
 	except:
 		return HTTPBadRequest()
-	[spectrum, results] = PepXML.PepBinGetScores(fname, sid, qid, rid, hid)
 	items = sorted(results.items())
 	rows = spectrum;
 	names = {
@@ -171,14 +195,13 @@ def Convert(request):
 		fs = len(files)
 		#Build the index file
 		data.write(struct.pack("=I", fs))
-		data.seek(fs * 4, 1)
-		offsets = range(fs)
-		for i in offsets:
-			offsets[i] = data.tell()
-			EncodeStringToFile(data, data.name + "_" + str(i))
-		data.seek(4)
-		for o in offsets:
-			data.write(struct.pack("=I", o))
+		threads = range(fs)
+		links = {}
+		for i in threads:
+			f = files[i]
+			data.write(struct.pack("=B", f[1]))
+			EncodeStringToFile(data, f[0])
+			links[f[0]] = i
 		data.close()
 		#Now generate all the data files
 		MzMl = None #FIXME: delete when there is an MzMl module
@@ -188,10 +211,9 @@ def Convert(request):
 			Reference.FileType.PEPXML: PepXML, Reference.FileType.PEPXML_MASCOT: PepXML, Reference.FileType.PEPXML_OMSSA: PepXML, Reference.FileType.PEPXML_XTANDEM: PepXML, Reference.FileType.PEPXML_COMPARE: PepXML, Reference.FileType.PEPXML_PEPTIDEPROPHET: PepXML, Reference.FileType.PEPXML_INTERPROPHET: PepXML,
 			Reference.FileType.PROTXML: ProtXML, Reference.FileType.PROTXML_PROTEINPROPHET: ProtXML
 		}
-		threads = range(fs)
 		for i in threads:
 			f = files[i]
-			t = ConverterThread(modules[f[1]], f[0], data.name + "_" + str(i)) #FIXME: Security
+			t = ConverterThread(modules[f[1]], f[0], data.name + "_" + str(i), links) #FIXME: Security
 			t.start()
 			threads[i] = t
 		jobid = Jobs.Add(threads)
@@ -212,7 +234,11 @@ def QueryInitStatus(request):
 def View(request):
 	try:
 		query = DecodeQuery(request.query_string)
-		return render_to_response(templates + "dataview.pt", { "file": query["file"] }, request=request)
+		try:
+			top = FileLinks(query["file"]).GetTopInfo()
+		except:
+			return HTTPNotFound()
+		return render_to_response(templates + "dataview.pt", { "file": query["file"], "top": top, "type": Reference.FileType.Name(top["type"]) }, request=request)
 	except:
 		return HTTPBadRequest()
 
@@ -221,12 +247,13 @@ def ListResults(request):
 	fname = GetFileName(request, query)
 	#try:
 	t = query["type"]
-	parsers = { "pep": PepXML, "prot": ProtXML }
+	parsers = { "pepxml": PepXML, "protxml": ProtXML }
 	parser = parsers[t]
+	print parser
 	if TryGet(query, "level") == "adv":
-		[scores, total, results] = parser.SearchAdvanced(fname, urllib.unquote(query["q"]))
+		[scores, total, results] = parser.SearchAdvanced(fname + "_" + query["n"], urllib.unquote(query["q"]))
 	else:
-		[scores, total, results] = parser.SearchBasic(fname, urllib.unquote(query["q"]))
+		[scores, total, results] = parser.SearchBasic(fname + "_" + query["n"], urllib.unquote(query["q"]))
 	matches = len(results)
 	score = parser.DefaultSortColumn(scores)
 	try:
@@ -265,11 +292,9 @@ def ListResults(request):
 	for r in results:
 		h = r.HitInfo
 		r.style = DecodeDecoy(h["protein"])
-		h["peptide"] = Literal('<span class="peptide_full">' + h["peptide_prev_aa"] + '<span class="link peptide" onclick="SearchPeptide(\'' + h["peptide"] + '\');">' + h["peptide"] + "</span>" + h["peptide_next_aa"] + '</span>')
-	info = {"total": total, "matches": matches, "start": start + 1, "end": start + len(results), "type": t }
-	columns = [{"name":"peptide", "title": "Peptide"}, {"name": "protein", "title": "Protein"}, {"name": "massdiff", "title": "Mass Difference"}, {"name": score, "title": score}]
-	colattrs = ["" for i in range(len(columns))]
-	return render_to_response(templates + "results.pt", { "sortcol": sortcol, "sortdsc": reverse, "info": info, "results": results, "columns": columns, "colattrs": colattrs, "test": test }, request = request)
+	info = {"total": total, "matches": matches, "start": start + 1, "end": start + len(results), "type": t, "score": score, "file": query["file"], "datafile": query["datafile"], "hash": abs(hash(time.gmtime())) }
+	columns = parser.GetColumns()
+	return render_to_response(templates + t + "_results.pt", { "sortcol": sortcol, "sortdsc": reverse, "info": info, "results": results, "columns": columns, "test": test }, request = request)
 	#except:
 	#	return HTTPBadRequest()
 
@@ -423,7 +448,6 @@ if __name__ == "__main__":
 	ThreadsLock = Lock()
 	config = Configurator()
 	config.add_route("list", "/list/{type}/")
-	config.add_route("search_hit", "/search/{type}/hit/")
 	config.add_route("search_score", "/search/{type}/score/")
 	
 	config.add_route("upload", "/init")
@@ -435,8 +459,8 @@ if __name__ == "__main__":
 	config.add_route("tooltip_peptide", "/tooltip/peptide")
 	config.add_route("res", "/res/{file:.+}")
 	config.add_view(DisplayList, route_name="list")
-	config.add_view(SearchHit, route_name="search_hit")
-	config.add_view(SearchScore, route_name="search_score")
+	#config.add_view(SearchHit, route_name="search_hit")
+	config.add_view(SearchScores, route_name="search_score")
 	config.add_view(Upload, route_name="upload")
 	config.add_view(Convert, route_name="convert")
 	config.add_view(QueryInitStatus, route_name="query_init")

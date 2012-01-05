@@ -18,16 +18,23 @@ def GetEngineCode(name):
 
 #Encoding Info
 class EncodingStatus:
-	def __init__(self):
+	def __init__(self, links):
 		self.IncludedScores = 0
 		self.Peptides = {}
 		self.QueryOffset = 0
+		self.Links = links
 
 	def AddPeptide(self, peptide, hit_offset):
 		try:
 			self.Peptides[peptide].append([hit_offset, self.QueryOffset])
 		except:
 			self.Peptides[peptide] = [[hit_offset, self.QueryOffset]]
+
+	def GetLink(name):
+		try:
+			return self.Links[name]
+		except:
+			return 0xFFFF
 
 
 #Search results
@@ -40,27 +47,9 @@ class ResultType:
 	Modification = 5
 	
 class Result:
-	def __init__(self, Type = ResultType.Undefined, Summary = -1, Query = -1, Result = -1, Hit = -1):
+	def __init__(self, Type = ResultType.Undefined):
 		self.Type = Type
-		self.SummaryIndex = Summary
-		self.QueryIndex = Query
-		self.ResultIndex = Result
-		self.HitIndex = Hit
-		self.HitMatches = 0
-		self.TotalMatches = 0
 		self.HitInfo = None
-
-	def __str__(self):
-		fields = ["   Type: ", str(self.Type), "\n",
-			"   QueryIndex: ", str(self.QueryIndex), "\n",
-			"   ResultIndex: ", str(self.ResultIndex), "\n",
-			"   HitIndex: ", str(self.HitIndex), "\n",
-			"   TotalMatches: ", str(self.TotalMatches), "\n",
-			"   precursor_neutral_mass: ", str(self.precursor_neutral_mass), "\n",
-			"   retention_time_sec: ", str(self.retention_time_sec), "\n",
-			"   search_specification: ", str(self.search_specification), "\n",
-			"   HitInfo: ", str(self.HitInfo), "\n"]
-		return "".join(fields)
 
 
 #XML helpers
@@ -525,7 +514,7 @@ class Peptide(TagHandler):
 		raise ValueError(name)
 
 	@staticmethod
-	def SearchAll(f, stat, count):
+	def SearchAllBestHitAndCount(f, stat, count):
 		i = 0
 		while i < count:
 			TRACEPOS("Peptide.SearchAll(", i, "): ", f.tell())
@@ -566,6 +555,7 @@ class Peptide(TagHandler):
 class Protein(TagHandler):
 	"""
 	struct Protein {
+		DWORD RecordSize;
 		BYTE OptionalFlags;
 		WORD peptide__count;
 		WORD analysis_result__count;
@@ -591,6 +581,7 @@ class Protein(TagHandler):
 	def __init__(self, stream, stat, attr):
 		TRACEPOSXML(stream, "Protein.__init__(): ")
 		self.StartPos = stream.tell()
+		stream.write(struct.pack("=I", 0))
 		percent_coverage = TryGet(attr, "percent_coverage")
 		total_number_peptides = TryGet(attr, "total_number_peptides")
 		#unique_stripped_peptides = TryGet(attr, "unique_stripped_peptides")
@@ -624,7 +615,7 @@ class Protein(TagHandler):
 		self.Stream.seek(self.StartPos)
 		if self.Annotation != None:
 			self.Flags |= 0x20
-		self.Stream.write(struct.pack("=BHHHH", self.Flags, self.Peptides, self.Results, self.Proteins, self.Parameters))
+		self.Stream.write(struct.pack("=IBHHHH", Endpos - self.StartPos, self.Flags, self.Peptides, self.Results, self.Proteins, self.Parameters))
 		self.Stream.seek(EndPos)
 		if self.Annotation != None:
 			self.Stream.write(self.Annotation.getvalue())
@@ -668,10 +659,12 @@ class Protein(TagHandler):
 		while i < count:
 			TRACEPOS("Protein.SearchAll(", i, "): ", f.tell())
 			s = stat.copy()
-			[OptionalFlags, peptide__count, analysis_result__count, indistinguishable_protein__count, parameter__count, probability, n_indistinguishable_proteins] = struct.unpack("=BHHHHdi", f.read(1 + 2 + 2 + 2 + 2 + 8 + 4))
+			StartPos = f.tell()
+			[RecordSize, OptionalFlags, peptide__count, analysis_result__count, indistinguishable_protein__count, parameter__count, probability, n_indistinguishable_proteins] = struct.unpack("=IBHHHHdi", f.read(4 + 1 + 2 + 2 + 2 + 2 + 8 + 4))
+			s.SearchItemFloat("probability", probability)
 			protein_name = DecodeStringFromFile(f)
 			s.SearchItemString("protein_name", protein_name)
-			EatStringFromFile(f) #don't cate about group_sibling_id
+			EatStringFromFile(f) #don't care about group_sibling_id
 			if OptionalFlags & 0x01:
 				#struct.unpack("=d", f.read(8))
 				f.read(8) #ignore this
@@ -684,14 +677,34 @@ class Protein(TagHandler):
 				EatStringFromFile(f)
 			if OptionalFlags & 0x10:
 				EatStringFromFile(f)
-			Peptide.SearchAll(f, s, peptide__count)
-			if OptionalFlags & 0x20:
-				Annotation.SearchAll(f, s, 1)
-			Parameter.SearchAll(f, s, parameter__count)
-			AnalysisResult.SearchAll(f, s, analysis_result__count)
-			IndistinguishableProtein.SearchAll(f, s, indistinguishable_protein__count)
-			if s.IsMatched():
-				stat.Results.append(protein_name) #FIXME: Return more data
+			result = None
+			if not s.IsMatched():
+				PeptidePos = f.tell()
+				[off, matches, total, info] = Peptide.SearchAllBestAndCount(f, s, peptide__count)
+				if info != None:
+					result = Result(ResultType.SearchHit)
+					result.PeptideOffset = off
+					result.PeptideMatches = matches
+					result.TotalPeptides = total
+					result.HitInfo = info
+					f.seek(f.StartPos + RecordSize)
+				else:
+					if OptionalFlags & 0x20:
+						Annotation.SearchAll(f, s, 1)
+					Parameter.SearchAll(f, s, parameter__count)
+					AnalysisResult.SearchAll(f, s, analysis_result__count)
+					IndistinguishableProtein.SearchAll(f, s, indistinguishable_protein__count)
+			if result == None && s.IsMatched():
+				f.seek(PeptidePos)
+				result = Result(ResultType.Protein)
+				[result.HitOffset, result.TotalHits, result.HitInfo] = Peptide.GetBestInfoAll(f, search_result__count)
+				result.HitMatches = result.TotalHits
+				f.seek(f.StartPos + RecordSize)
+			if result != None:
+				result.HitInfo["protein"] = protein_name
+				result.HitInfo["probability"] = probability
+				result.ProteinOffset = StartPos
+				stat.Results.append(result)
 			i += 1
 
 class ProteinGroup(TagHandler):
@@ -1187,11 +1200,11 @@ def ConvertFilename(FileName):
 def IsConverted(FileName):
 	return os.path.isfile(ConvertFilename(FileName))
 
-def ToBinary(FileName, Dest = None):
+def ToBinary(FileName, Dest = None, Links = None):
 	if Dest == None:
 		Dest = open(ConvertFilename(FileName), "w")
-	Dest.write(struct.pack("=I", 0))
-	stat = EncodingStatus()
+	#Dest.write(struct.pack("=I", 0))
+	stat = EncodingStatus(Links)
 	parser = xml.sax.make_parser()
 	parser.setFeature("http://xml.org/sax/features/external-general-entities", False)
 	parser.setContentHandler(SaxHandler(Dest, stat))
@@ -1200,16 +1213,16 @@ def ToBinary(FileName, Dest = None):
 
 def SearchBasic(FileName, terms):
 	f = open(FileName, "r")
-	f.seek(4) #skip the peptide index offset
+	#f.seek(4) #skip the peptide index offset
 	stat = SearchStatus({ None: SplitPhrase(terms.upper()) })
 	ProteinSummary.Search(f, stat)
 	f.close()
 	PrintResults(stat.Results)
-	return stat.Results
+	return [0, stat.TotalQueries, stat.Results]
 
 def SearchAdvanced(FileName, terms_dict):
 	f = open(FileName, "r")
-	f.seek(4) #skip the peptide index offset
+	#f.seek(4) #skip the peptide index offset
 	terms = {}
 	for k, v in terms_dict.items():
 		terms[k] = SplitPhrase(v.upper())
@@ -1217,7 +1230,10 @@ def SearchAdvanced(FileName, terms_dict):
 	scores = ProteinSummary.Search(f, stat)
 	f.close()
 	PrintResults(stat.Results)
-	return stat.Results
+	return [0, stat.TotalQueries, stat.Results]
+
+def GetColumns():
+	return [{"name":"peptide", "title": "Peptide"}, {"name": "protein", "title": "Protein"}, {"name": "massdiff", "title": "Mass Difference"}, {"name": score, "title": score}]
 
 #FIXME: DEBUG
 def PrintResults(results):
