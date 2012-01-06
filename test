@@ -1,22 +1,22 @@
 #!/bin/sh
 
-python <<%%%
-from PepXML import *
-#PepBinSearchAdvanced("/home/andrew/Desktop/g.pepBIN", {"NeutralMass": "2667.32495117188"})
-PepBinSearchBasic("/home/andrew/Desktop/g.pepBIN", "SSPHNLDVLSKK")
-%%%
-
 #python <<%%%
 #from PepXML import *
-#PepXml2Bin("/home/andrew/Desktop/g.pepXML")
-#print("Starting search")
-##PepBinSearchBasic("/home/andrew/Desktop/g.pepBIN", "$search")
-#PepBinSearchAdv("/home/andrew/Desktop/g.pepBIN", {"NeutralMass": 2667.32495117188})
+##SearchAdvanced("/home/andrew/Desktop/g.pepBIN", {"NeutralMass": "2667.32495117188"})
+#SearchBasic("/home/andrew/Desktop/g.pepBIN", "SSPHNLDVLSKK")
 #%%%
 
+python <<%%%
+from PepXML import *
+ToBinary("/home/andrew/Desktop/g.pepXML")
+print("Starting search")
+SearchBasic("/home/andrew/Desktop/g.pepBIN", "$search")
+#SearchAdvanced("/home/andrew/Desktop/g.pepBIN", {"NeutralMass": 2667.32495117188})
+%%%
+
 
 
 #python <<%%%
 #from PepXML import *
-#PepXml2Bin("/home/andrew/Desktop/g.pepXML")
+#ToBinary("/home/andrew/Desktop/g.pepXML")
 #%%%

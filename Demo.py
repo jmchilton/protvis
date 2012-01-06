@@ -17,7 +17,7 @@ import urllib
 import re
 from HttpUtil import *
 import Reference
-import config
+import conf
 import struct
 from CommonXML import EncodeStringToFile, DecodeStringFromFile, TryGet
 import ProtXML, PepXML
@@ -25,8 +25,9 @@ import time
 
 templates = os.path.realpath(os.path.dirname(__file__))+ "/templates/"
 converted = os.path.realpath(os.path.dirname(__file__))+ "/ConvertedFiles/"
-decoy_regex = re.compile(config.DecoyRegex)
-spectrum_regex = re.compile(config.SpectrumRegex)
+decoy_regex = re.compile(conf.DecoyRegex)
+spectrum_regex = re.compile(conf.SpectrumRegex)
+Parsers = { "pepxml": PepXML, "protxml": ProtXML }
 
 class JobManager:
 	def __init__(self):
@@ -145,7 +146,7 @@ def DisplayList(request):
 	fname = GetFileName(request, query)
 	try:
 		t = request.matchdict["type"]
-		return render_to_response(templates + "list_" + t + ".pt", Renderers[t].DisplayList(request, query, fname), request = request)
+		return render_to_response(templates + "list_" + t + ".pt", Parsers[t].DisplayList(request, query, fname), request = request)
 	except:
 		return HTTPNotFound()
 
@@ -155,7 +156,7 @@ def SearchScores(request):
 	try:
 		qoff = int(query["qoff"])
 		hoff = int(query["hoff"])
-		[spectrum, results] = PepXML.PepBinGetScores(fname, qoff, hoff)
+		[spectrum, results] = PepXML.GetScores(fname, qoff, hoff)
 	except:
 		return HTTPBadRequest()
 	items = sorted(results.items())
@@ -191,7 +192,6 @@ def Convert(request):
 		data = tempfile.NamedTemporaryFile(dir = ".", prefix = "ConvertedFiles/", delete = False)
 		referencers = { "protxml": Reference.LoadChainProt, "pepxml": Reference.LoadChainPep, "mgf": Reference.LoadChainMgf, "mzml": Reference.LoadChainMzml }
 		files = referencers[query["type"]](binascii.unhexlify(query["file"])).Items()
-		print files
 		fs = len(files)
 		#Build the index file
 		data.write(struct.pack("=I", fs))
@@ -247,9 +247,7 @@ def ListResults(request):
 	fname = GetFileName(request, query)
 	#try:
 	t = query["type"]
-	parsers = { "pepxml": PepXML, "protxml": ProtXML }
-	parser = parsers[t]
-	print parser
+	parser = Parsers[t]
 	if TryGet(query, "level") == "adv":
 		[scores, total, results] = parser.SearchAdvanced(fname + "_" + query["n"], urllib.unquote(query["q"]))
 	else:
@@ -286,15 +284,14 @@ def ListResults(request):
 		if limit > 0:
 			results = results[start:start + limit]
 		else:
-			results = restults[start:]
+			results = results[start:]
 	elif limit > 0:
 		results = results[:limit]
 	for r in results:
 		h = r.HitInfo
 		r.style = DecodeDecoy(h["protein"])
-	info = {"total": total, "matches": matches, "start": start + 1, "end": start + len(results), "type": t, "score": score, "file": query["file"], "datafile": query["datafile"], "hash": abs(hash(time.gmtime())) }
-	columns = parser.GetColumns()
-	return render_to_response(templates + t + "_results.pt", { "sortcol": sortcol, "sortdsc": reverse, "info": info, "results": results, "columns": columns, "test": test }, request = request)
+	info = {"total": total, "matches": matches, "start": start + 1, "end": start + len(results), "type": t, "score": score, "file": query["file"], "datafile": query["n"], "hash": abs(hash(time.gmtime())) }
+	return render_to_response(templates + t + "_results.pt", { "sortcol": sortcol, "sortdsc": reverse, "info": info, "results": results, "test": test }, request = request)
 	#except:
 	#	return HTTPBadRequest()
 
@@ -310,7 +307,7 @@ def ListPeptide(request):
 	query = DecodeQuery(request.query_string)
 	fname = GetFileName(request, query)
 	try:
-		[scores, results] = PepXML.PepBinSearchPeptide(fname, query["peptide"])
+		[scores, results] = PepXML.SearchPeptide(fname, query["peptide"])
 		total = len(results)
 		score = PepXML.DefaultSortColumn(scores)
 		try:
@@ -368,7 +365,7 @@ def ListPeptide(request):
 			if limit > 0:
 				results = results[start:start+limit]
 			else:
-				results = restults[start:]
+				results = results[start:]
 		elif limit > 0:
 			results = results[:limit]
 		info = { "total": total, "start": start + 1, "end": start + len(results), "peptide": query["peptide"] }
@@ -383,7 +380,7 @@ def ListPeptideTooltip(request):
 	query = DecodeQuery(request.query_string)
 	fname = GetFileName(request, query)
 	try:
-		[scores, results] = PepXML.PepBinSearchPeptide(fname, query["peptide"])
+		[scores, results] = PepXML.SearchPeptide(fname, query["peptide"])
 		score = PepXML.DefaultSortColumn(scores)
 		if score == "expect":
 			reverse = False
@@ -470,4 +467,4 @@ if __name__ == "__main__":
 	config.add_view(ListPeptideTooltip, route_name="tooltip_peptide")
 	config.add_view(GetResource, route_name="res")
 	app = config.make_wsgi_app()
-	serve(app, host="127.0.0.1", port=8000)
+	serve(app, host=conf.Host, port=conf.Port)

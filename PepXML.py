@@ -29,7 +29,7 @@ class EncodingStatus:
 		except:
 			self.Peptides[peptide] = [[hit_offset, self.QueryOffset]]
 
-	def GetLink(name):
+	def GetLink(self, name):
 		try:
 			return self.Links[name]
 		except:
@@ -155,7 +155,7 @@ class SampleEnzyme(TagHandler):
 			fidelity = attr["fidelity"]
 			if fidelity == "semispecific":
 				Flags = 0x01
-			elif semispecific == "nonspecific":
+			elif fidelity == "nonspecific":
 				Flags = 0x02
 			#else Flags = 0x00
 		except:
@@ -266,14 +266,20 @@ class ModificationInfo(TagHandler):
 			i += 1
 
 	@staticmethod
-	def GetInfo(f):
-		[mod_aminoacid_mass__count, OptionalFlags] = struct.unpack("=HB", f.read(2 + 1))
-		dic = {}
-		if OptionalFlags & 0x01:
-			dic["mod_nterm_mass"] = struct.unpack("=d", f.read(8))
-		if OptionalFlags & 0x02:
-			dic["mod_cterm_mass"] = struct.unpack("=d", f.read(8))
-		dic["mod_aminoacid_mass"] = ModAminoacidMass.GetInfoAll(f, mod_aminoacid_mass__count)
+	def GetInfoAll(f, count):
+		i = 0
+		info = range(count)
+		while i < count:
+			[mod_aminoacid_mass__count, OptionalFlags] = struct.unpack("=HB", f.read(2 + 1))
+			dic = {}
+			if OptionalFlags & 0x01:
+				dic["mod_nterm_mass"] = struct.unpack("=d", f.read(8))
+			if OptionalFlags & 0x02:
+				dic["mod_cterm_mass"] = struct.unpack("=d", f.read(8))
+			dic["mod_aminoacid_mass"] = ModAminoacidMass.GetInfoAll(f, mod_aminoacid_mass__count)
+			info[i] = dic
+			i += 1
+		return info
 
 class AlternativeProtein(TagHandler):
 	"""
@@ -316,16 +322,21 @@ class AlternativeProtein(TagHandler):
 			i += 1
 
 	@staticmethod
-	def GetInfo(f):
-		[OptionalFlags] = struct.unpack("=B", f.read(1))
-		dic = { "protein": DecodeStringFromFile(f) }
-		if OptionalFlags & 0x01:
-			dic["protein_descr"] = DecodeStringFromFile(f)
-		if OptionalFlags & 0x02:
-			[dic["num_tol_term"]] = struct.unpack("=i", f.read(4))
-		if OptionalFlags & 0x04:
-			[dic["protein_mw"]] = struct.unpack("=d", f.read(8))
-		return dic
+	def GetInfoAll(f, count):
+		i = 0
+		info = range(count)
+		while i < count:
+			[OptionalFlags] = struct.unpack("=B", f.read(1))
+			dic = { "protein": DecodeStringFromFile(f) }
+			if OptionalFlags & 0x01:
+				dic["protein_descr"] = DecodeStringFromFile(f)
+			if OptionalFlags & 0x02:
+				[dic["num_tol_term"]] = struct.unpack("=i", f.read(4))
+			if OptionalFlags & 0x04:
+				[dic["protein_mw"]] = struct.unpack("=d", f.read(8))
+			info[i] = dic
+			i += 1
+		return info
 
 class SearchScoreSummary(TagHandler):
 	"""
@@ -1124,8 +1135,8 @@ class SearchHit(TagHandler):
 		if OptionalFlags & 0x100:
 			[dic["protein_mw"]] = struct.unpack("=d", f.read(8))
 		SearchScore.GetInfo(f, dic)
-		dic["modification_info"] = [ModificationInfo.GetInfo(f) for i in xrange(modification_info__count)]
-		dic["alternative_protein"] = [AlternativeProtein.GetInfo(f) for i in xrange(alternative_protein__count)]
+		dic["modification_info"] = ModificationInfo.GetInfoAll(f, modification_info__count)
+		dic["alternative_protein"] = AlternativeProtein.GetInfoAll(f, alternative_protein__count)
 		return dic
 
 	@staticmethod
@@ -2250,7 +2261,7 @@ def SearchPeptide(FileName, peptide):
 			f.seek(occurrances * (4 + 4), 1)
 		peptides -= 1
 	f.close()
-	return [socres, None]
+	return [scores, None]
 
 def GetScores(FileName, qoff, hoff):
 	f = open(FileName, "r")
@@ -2297,9 +2308,6 @@ def DefaultSortColumn(scores):
 	elif scores & 0x20:
 		return "ionscore"
 	return "expect"
-
-def GetColumns():
-	return [{"name":"peptide", "title": "Peptide"}, {"name": "protein", "title": "Protein"}, {"name": "massdiff", "title": "Mass Difference"}, {"name": score, "title": score}]
 
 #FIXME: DEBUG
 def PrintResults(results):

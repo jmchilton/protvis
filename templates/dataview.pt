@@ -246,8 +246,8 @@
 			<tr>
 				<td>
 					<div id="searching" style="width: 100%;" class="dijitContentPaneLoading">Searching... Please wait</div>
-					<div id="data_hits" style="width: 100%;">
-					</div>
+					<div id="data_pepxml" style="width: 100%;"></div>
+					<div id="data_protxml" style="width: 100%;"></div>
 					<div id="data_peptides" visible="false" style="width: 100%; display: none">
 					</div>
 				</td>

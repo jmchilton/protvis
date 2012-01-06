@@ -10,7 +10,6 @@ from cStringIO import StringIO
 from CommonXML import *
 
 #Util functions
-
 def GetEngineCode(name):
 	if name == "interprophet":
 		return 1
@@ -30,7 +29,7 @@ class EncodingStatus:
 		except:
 			self.Peptides[peptide] = [[hit_offset, self.QueryOffset]]
 
-	def GetLink(name):
+	def GetLink(self, name):
 		try:
 			return self.Links[name]
 		except:
@@ -40,16 +39,25 @@ class EncodingStatus:
 #Search results
 class ResultType:
 	Undefined = 0
-	SpectrumQuery = 1
-	SearchResult = 2
-	SearchHit = 3
-	SearchScore = 4
-	Modification = 5
+	Protein = 1
+	Peptide = 2
+	Modification = 3
 	
 class Result:
 	def __init__(self, Type = ResultType.Undefined):
 		self.Type = Type
+		self.ProteinOffset = None
+		self.PeptideOffset = None
+		self.PeptideMatches = None
 		self.HitInfo = None
+
+	def __str__(self):
+		fields = ["   Type: ", str(self.Type), "\n",
+			"   ProteinOffset: ", str(self.ProteinOffset), "\n",
+			"   PeptideOffset: ", str(self.PeptideOffset), "\n",
+			"   PeptideMatches: ", str(self.PeptideMatches), "\n",
+			"   HitInfo: ", str(self.HitInfo), "\n"]
+		return "".join(fields)
 
 
 #XML helpers
@@ -102,6 +110,15 @@ class Parameter(TagHandler):
 		while i < count:
 			TRACEPOS("Parameter.SearchAll(", i, "): ", f.tell())
 			stat.SearchItemString(DecodeStringFromFile(f), DecodeStringFromFile(f))
+			i += 1
+
+	@staticmethod
+	def EatAll(f, count):
+		i = 0
+		while i < count:
+			TRACEPOS("Parameter.EatAll(", i, "): ", f.tell())
+			EatStringFromFile(f)
+			EatStringFromFile(f)
 			i += 1
 
 class ModAminoacidMass(TagHandler):
@@ -180,14 +197,20 @@ class ModificationInfo(TagHandler):
 			i += 1
 
 	@staticmethod
-	def GetInfo(f):
-		[mod_aminoacid_mass__count, OptionalFlags] = struct.unpack("=HB", f.read(2 + 1))
-		dic = {}
-		if OptionalFlags & 0x01:
-			dic["mod_nterm_mass"] = struct.unpack("=d", f.read(8))
-		if OptionalFlags & 0x02:
-			dic["mod_cterm_mass"] = struct.unpack("=d", f.read(8))
-		dic["mod_aminoacid_mass"] = ModAminoacidMass.GetInfoAll(f, mod_aminoacid_mass__count)
+	def GetInfoAll(f, count):
+		i = 0
+		info = range(count)
+		while i < count:
+			[mod_aminoacid_mass__count, OptionalFlags] = struct.unpack("=HB", f.read(2 + 1))
+			dic = {}
+			if OptionalFlags & 0x01:
+				dic["mod_nterm_mass"] = struct.unpack("=d", f.read(8))
+			if OptionalFlags & 0x02:
+				dic["mod_cterm_mass"] = struct.unpack("=d", f.read(8))
+			dic["mod_aminoacid_mass"] = ModAminoacidMass.GetInfoAll(f, mod_aminoacid_mass__count)
+			info[i] = dic
+			i += 1
+		return info
 
 class Annotation(TagHandler):
 	"""
@@ -231,31 +254,49 @@ class Annotation(TagHandler):
 			EncodeStringToFile(stream, flybase)
 		
 	@staticmethod
-	def SearchAll(f, stat, count):
-		i = 0
-		while i < count:
-			TRACEPOS("Annotation.SearchAll(", i, "): ", f.tell())
-			[OptionalFlags] = struct.unpack("=B", f.read(1))
+	def Search(f, stat):
+		TRACEPOS("Annotation.Search(): ", f.tell())
+		[OptionalFlags] = struct.unpack("=B", f.read(1))
+		EatStringFromFile(f)
+		if OptionalFlags & 0x01:
 			EatStringFromFile(f)
-			if OptionalFlags & 0x01:
-				EatStringFromFile(f)
-			if OptionalFlags & 0x02:
-				EatStringFromFile(f)
-			if OptionalFlags & 0x04:
-				EatStringFromFile(f)
-			if OptionalFlags & 0x08:
-				EatStringFromFile(f)
-			if OptionalFlags & 0x10:
-				EatStringFromFile(f)
-			if OptionalFlags & 0x20:
-				EatStringFromFile(f)
-			if OptionalFlags & 0x40:
-				EatStringFromFile(f)
-			i += 1
+		if OptionalFlags & 0x02:
+			EatStringFromFile(f)
+		if OptionalFlags & 0x04:
+			EatStringFromFile(f)
+		if OptionalFlags & 0x08:
+			EatStringFromFile(f)
+		if OptionalFlags & 0x10:
+			EatStringFromFile(f)
+		if OptionalFlags & 0x20:
+			EatStringFromFile(f)
+		if OptionalFlags & 0x40:
+			EatStringFromFile(f)
+		
+	@staticmethod
+	def Eat(f):
+		TRACEPOS("Annotation.Eat(): ", f.tell())
+		[OptionalFlags] = struct.unpack("=B", f.read(1))
+		EatStringFromFile(f)
+		if OptionalFlags & 0x01:
+			EatStringFromFile(f)
+		if OptionalFlags & 0x02:
+			EatStringFromFile(f)
+		if OptionalFlags & 0x04:
+			EatStringFromFile(f)
+		if OptionalFlags & 0x08:
+			EatStringFromFile(f)
+		if OptionalFlags & 0x10:
+			EatStringFromFile(f)
+		if OptionalFlags & 0x20:
+			EatStringFromFile(f)
+		if OptionalFlags & 0x40:
+			EatStringFromFile(f)
 
 class AnalysisResult(TagHandler):
 	"""
 	struct AnalysisResult {
+		DWORD RecordSize;
 		WORD info__count;
 		DWORD id;
 		String analysis;
@@ -271,14 +312,14 @@ class AnalysisResult(TagHandler):
 		else:
 			_id = int(_id)
 		self.StartPos = stream.tell()
-		stream.write(struct.pack("=HI", 0, _id))
+		stream.write(struct.pack("=IHI", 0, 0, _id))
 		EncodeStringToFile(stream, attr["analysis"])
 		self.Infos = 0
 
 	def End(self):
 		EndPos = self.Stream.tell()
 		self.Stream.seek(self.StartPos)
-		self.Stream.write(struct.pack("=H", self.Infos))
+		self.Stream.write(struct.pack("=IH", EndPos - self.StartPos, self.Infos))
 		self.Stream.seek(EndPos)
 
 	def BeginChild(self, name):
@@ -290,7 +331,14 @@ class AnalysisResult(TagHandler):
 		i = 0
 		while i < count:
 			TRACEPOS("AnalysisResult.SearchAll(", i, "): ", f.tell())
-			s.SearchItemString(DecodeStringToFile(f), DecodeStringToFile(f))
+			i += 1
+	
+	@staticmethod
+	def EatAll(f, count):
+		i = 0
+		while i < count:
+			TRACEPOS("AnalysisResult.EatAll(", i, "): ", f.tell())
+			f.seek(struct.unpack("=I", f.read(4))[0] - 4, 1)
 			i += 1
 
 class PeptideParentProtein(TagHandler):
@@ -311,6 +359,16 @@ class PeptideParentProtein(TagHandler):
 			TRACEPOS("PeptideParentProtein.SearchAll(", i, "): ", f.tell())
 			stat.SearchItemString("peptide_parent_protein", DecodeStringFromFile(f))
 			i += 1
+
+	@staticmethod
+	def GetInfoAll(f, count):
+		i = 0
+		info = range(count)
+		while i < count:
+			TRACEPOS("PeptideParentProtein.SearchAll(", i, "): ", f.tell())
+			info[i] = DecodeStringFromFile(f)
+			i += 1
+		return info
 
 class IndistinguishableProtein(TagHandler):
 	"""
@@ -355,14 +413,38 @@ class IndistinguishableProtein(TagHandler):
 	@staticmethod
 	def SearchAll(f, stat, count):
 		i = 0
+		protein = None
+		indistinguishable = []
+		matched = False
 		while i < count:
 			TRACEPOS("IndistinguishableProtein.SearchAll(", i, "): ", f.tell())
 			[parameter__count] = struct.unpack("=H", f.read(2))
-			EatStringFromFile(f) #FIXME: Do we want this?
+			prot = DecodeStringFromFile(f)
+			stat.SearchItemString("protein", prot)
 			if parameter__count & 0x8000:
-				Annotation.SearchAll(f, stat, 1)
+				Annotation.Search(f, stat)
 			Parameter.SearchAll(f, stat, parameter__count & 0x7FFF)
+			if not matched and stat.IsMatched():
+				matched = True
+				protein = prot
+			else:
+				indistinguishable.append(prot)
 			i += 1
+		return [protein, indistinguishable]
+
+	@staticmethod
+	def GetInfoAll(f, count):
+		i = 0
+		info = range(count)
+		while i < count:
+			TRACEPOS("IndistinguishableProtein.GetInfoAll(", i, "): ", f.tell())
+			[parameter__count] = struct.unpack("=H", f.read(2))
+			info[i] = DecodeStringFromFile(f)
+			if parameter__count & 0x8000:
+				Annotation.Eat(f)
+			Parameter.EatAll(f, parameter__count & 0x7FFF)
+			i += 1
+		return info
 
 class IndistinguishablePeptide(TagHandler):
 	"""
@@ -397,14 +479,29 @@ class IndistinguishablePeptide(TagHandler):
 		i = 0
 		while i < count:
 			TRACEPOS("IndistinguishablePeptide.SearchAll(", i, "): ", f.tell())
-			stat.SearchItemString("indistinguishable_peptide", DecodeStringFromFile(f))
+			stat.SearchItemString("peptide", DecodeStringFromFile(f))
 			[modification_info__count] = struct.unpack("=H", f.read(2))
 			ModificationInfo.SearchAll(f, stat, modification_info__count)
 			i += 1
 
+	@staticmethod
+	def GetInfoAll(f, count):
+		i = 0
+		info = range(count)
+		while i < count:
+			TRACEPOS("IndistinguishablePeptide.GetInfoAll(", i, "): ", f.tell())
+			dic = {}
+			dic["peptide"] = DecodeStringFromFile(f)
+			[modification_info__count] = struct.unpack("=H", f.read(2))
+			dic["modification_info"] = ModificationInfo.GetInfoAll(f, modification_info__count)
+			info[i] = dic
+			i += 1
+		return info
+
 class Peptide(TagHandler):
 	"""
 	struct Peptide {
+		DWORD RecordSize;
 		WORD modification_info__count;
 		WORD parameter__count;
 		WORD peptide_parent_protein__count;
@@ -454,7 +551,7 @@ class Peptide(TagHandler):
 			n_sibling_peptides_bin = int(n_sibling_peptides_bin)
 		self.StartPos = stream.tell()
 		Flags = YNBit(attr["is_nondegenerate_evidence"], 0x8000) | YNBit(attr["is_contributing_evidence"], 0x4000) | EncodeOptional(nsp_adjusted_probability, ni_adjusted_probability, exp_sibling_ion_instances, exp_sibling_ion_bin, exp_tot_instances, n_enzymatic_termini, calc_neutral_pep_mass, peptide_group_designator)
-		stream.write(struct.pack("=HHHHIIddiiH", 0, 0, 0, 0, int(attr["charge"]), int(attr["n_enzymatic_termini"]), float(attr["initial_probability"]), weight, n_sibling_peptides_bin, int(attr["n_instances"]), Flags))
+		stream.write(struct.pack("=IHHHHIIddiiH", 0, 0, 0, 0, 0, int(attr["charge"]), int(attr["n_enzymatic_termini"]), float(attr["initial_probability"]), weight, n_sibling_peptides_bin, int(attr["n_instances"]), Flags))
 		EncodeStringToFile(stream, attr["peptide_sequence"])
 		if nsp_adjusted_probability != None:
 			stream.write(struct.pack("=d", float(nsp_adjusted_probability)))
@@ -481,16 +578,16 @@ class Peptide(TagHandler):
 		self.Indistinguishable = None
 
 	def End(self):
-		EndPos = self.Stream.tell()
-		self.Stream.seek(self.StartPos)
-		self.Stream.write(struct.pack("=HHHH", self.Modifications, self.Parameters, self.Parents, self.Indistinguishables))
-		self.Stream.seek(EndPos)
 		if self.Parameter != None:
 			self.Stream.write(self.Parameter.getvalue())
 		if self.Parent != None:
 			self.Stream.write(self.Parent.getvalue())
 		if self.Indistinguishable != None:
 			self.Stream.write(self.Indistinguishable.getvalue())
+		EndPos = self.Stream.tell()
+		self.Stream.seek(self.StartPos)
+		self.Stream.write(struct.pack("=IHHHH", EndPos - self.StartPos, self.Modifications, self.Parameters, self.Parents, self.Indistinguishables))
+		self.Stream.seek(EndPos)
 
 	def BeginChild(self, name):
 		if name == "modification_info":
@@ -514,14 +611,19 @@ class Peptide(TagHandler):
 		raise ValueError(name)
 
 	@staticmethod
-	def SearchAllBestHitAndCount(f, stat, count):
+	def SearchAllBestAndCount(f, stat, count):
+		TRACEPOS("Peptide.SearchAll(): ", f.tell())
 		i = 0
+		BestOffset = -1
+		matches = 0
 		while i < count:
-			TRACEPOS("Peptide.SearchAll(", i, "): ", f.tell())
-			[modification_info__count, parameter__count, peptide_parent_protein__count, indistinguishable_peptide__count, charge, n_enzymatic_termini, initial_probability, weight, n_sibling_peptides_bin, n_instances, OptionalFlags] = struct.unpack("=HHHHIIddiiH", f.read(2 + 2 + 2 + 2 + 4 + 4 + 8 + 8 + 4 + 4 + 2))
+			TRACEPOS("Peptide.SearchAllBestAndCount(", i, "): ", f.tell())
+			StartPos = f.tell()
+			s = stat.copy()
+			[RecordSize, modification_info__count, parameter__count, peptide_parent_protein__count, indistinguishable_peptide__count, charge, n_enzymatic_termini, initial_probability, weight, n_sibling_peptides_bin, n_instances, OptionalFlags] = struct.unpack("=IHHHHIIddiiH", f.read(4 + 2 + 2 + 2 + 2 + 4 + 4 + 8 + 8 + 4 + 4 + 2))
 			#stat.SearchItemString("peptide", DecodeStringFromFile(f))
 			peptide_sequence = DecodeStringFromFile(f)
-			stat.SearchItemString("peptide", peptide_sequence)
+			s.SearchItemString("peptide", peptide_sequence)
 			if OptionalFlags & 0x01:
 				#struct.unpack("=d", f.read(8)) #FIXME: Search this?
 				f.read(8)
@@ -546,11 +648,74 @@ class Peptide(TagHandler):
 			if OptionalFlags & 0x80:
 				#DecodeStringFromFile(f) #FIXME: Search this?
 				EatStringFromFile(f)
-			ModificationInfo.SearchAll(f, stat, modification_info__count)
-			Parameter.SearchAll(f, stat, parameter__count)
-			PeptideParentProtein.SearchAll(f, stat, peptide_parent_protein__count)
-			IndistinguishablePeptide.SearchAll(f, stat, indistinguishable_peptide__count)
+			ModificationInfo.SearchAll(f, s, modification_info__count)
+			Parameter.SearchAll(f, s, parameter__count)
+			PeptideParentProtein.SearchAll(f, s, peptide_parent_protein__count)
+			IndistinguishablePeptide.SearchAll(f, s, indistinguishable_peptide__count)
+			if s.IsMatched():
+				matches += 1
+				if BestOffset == -1:
+					BestOffset = StartPos
 			i += 1
+		if BestOffset != -1:
+			EndPos = f.tell()
+			f.seek(BestOffset)
+			BestInfo = Peptide.GetInfo(f)
+			f.seek(BestOffset)
+			return [BestOffset, BestInfo, matches]
+		return [0, None, 0]
+
+	@staticmethod
+	def GetInfo(f):
+		TRACEPOS("Peptide.GetInfo(): ", f.tell())
+		dic = {}
+		[RecordSize, modification_info__count, parameter__count, peptide_parent_protein__count, indistinguishable_peptide__count, charge, n_enzymatic_termini, initial_probability, weight, n_sibling_peptides_bin, n_instances, OptionalFlags] = struct.unpack("=IHHHHIIddiiH", f.read(4 + 2 + 2 + 2 + 2 + 4 + 4 + 8 + 8 + 4 + 4 + 2))
+		dic["initial_probability"] = initial_probability
+		dic["weight"] = weight
+		dic["charge"] = charge
+		dic["peptide"] = DecodeStringFromFile(f)
+		if OptionalFlags & 0x01:
+			#struct.unpack("=d", f.read(8)) #FIXME: Search this?
+			f.read(8)
+		if OptionalFlags & 0x02:
+			#struct.unpack("=d", f.read(8)) #FIXME: Search this?
+			f.read(8)
+		if OptionalFlags & 0x04:
+			#struct.unpack("=d", f.read(8)) #FIXME: Search this?
+			f.read(8)
+		if OptionalFlags & 0x08:
+			#struct.unpack("=d", f.read(8)) #FIXME: Search this?
+			f.read(8)
+		if OptionalFlags & 0x10:
+			#struct.unpack("=d", f.read(8)) #FIXME: Search this?
+			f.read(8)
+		if OptionalFlags & 0x20:
+			#struct.unpack("=d", f.read(8)) #FIXME: Search this?
+			f.read(8)
+		if OptionalFlags & 0x40:
+			#struct.unpack("=d", f.read(8)) #FIXME: Search this?
+			f.read(8)
+		if OptionalFlags & 0x80:
+			#DecodeStringFromFile(f) #FIXME: Search this?
+			EatStringFromFile(f)
+		dic["modification_info"] = ModificationInfo.GetInfoAll(f, modification_info__count)
+		Parameter.EatAll(f, parameter__count)
+		dic["peptide_parent_protein"] = PeptideParentProtein.GetInfoAll(f, peptide_parent_protein__count)
+		dic["indistinguishable_peptide"] = IndistinguishablePeptide.GetInfoAll(f, indistinguishable_peptide__count)
+		return dic
+
+	@staticmethod
+	def GetBestInfoAll(f, count):
+		off = f.tell()
+		if count == 0:
+			return [off, None]
+		info = Peptide.GetInfo(f)
+		i = 1
+		while i < count:
+			TRACEPOS("Peptide.GetBestInfoAll(", i, "): ", f.tell())
+			f.seek(struct.unpack("=I", f.read(4))[0] - 4, 1)
+			i += 1
+		return [off, info]
 
 class Protein(TagHandler):
 	"""
@@ -611,13 +776,8 @@ class Protein(TagHandler):
 		self.Parameter = None
 
 	def End(self):
-		EndPos = self.Stream.tell()
-		self.Stream.seek(self.StartPos)
 		if self.Annotation != None:
 			self.Flags |= 0x20
-		self.Stream.write(struct.pack("=IBHHHH", Endpos - self.StartPos, self.Flags, self.Peptides, self.Results, self.Proteins, self.Parameters))
-		self.Stream.seek(EndPos)
-		if self.Annotation != None:
 			self.Stream.write(self.Annotation.getvalue())
 		if self.Parameter != None:
 			self.Stream.write(self.Parameter.getvalue())
@@ -625,6 +785,10 @@ class Protein(TagHandler):
 			self.Stream.write(self.Result.getvalue())
 		if self.Protein != None:
 			self.Stream.write(self.Protein.getvalue())
+		EndPos = self.Stream.tell()
+		self.Stream.seek(self.StartPos)
+		self.Stream.write(struct.pack("=IBHHHH", EndPos - self.StartPos, self.Flags, self.Peptides, self.Results, self.Proteins, self.Parameters))
+		self.Stream.seek(EndPos)
 
 	def BeginChild(self, name):
 		if name == "peptide":
@@ -678,30 +842,51 @@ class Protein(TagHandler):
 			if OptionalFlags & 0x10:
 				EatStringFromFile(f)
 			result = None
+			protein = None
+			indistinguishable = None
+			PeptidePos = -1
 			if not s.IsMatched():
 				PeptidePos = f.tell()
-				[off, matches, total, info] = Peptide.SearchAllBestAndCount(f, s, peptide__count)
+				[off, info, matches] = Peptide.SearchAllBestAndCount(f, s, peptide__count)
 				if info != None:
-					result = Result(ResultType.SearchHit)
+					result = Result(ResultType.Peptide)
 					result.PeptideOffset = off
 					result.PeptideMatches = matches
-					result.TotalPeptides = total
 					result.HitInfo = info
+					if OptionalFlags & 0x20:
+						Annotation.Eat(f)
+					Parameter.EatAll(f, parameter__count)
+					AnalysisResult.EatAll(f, analysis_result__count)
+					indistinguishable = IndistinguishableProtein.GetInfoAll(f, indistinguishable_protein__count)
 					f.seek(f.StartPos + RecordSize)
 				else:
 					if OptionalFlags & 0x20:
-						Annotation.SearchAll(f, s, 1)
+						Annotation.Search(f, s)
 					Parameter.SearchAll(f, s, parameter__count)
 					AnalysisResult.SearchAll(f, s, analysis_result__count)
-					IndistinguishableProtein.SearchAll(f, s, indistinguishable_protein__count)
-			if result == None && s.IsMatched():
-				f.seek(PeptidePos)
+					[protein, indistinguishable] = IndistinguishableProtein.SearchAll(f, s, indistinguishable_protein__count)
+			if result == None and s.IsMatched():
+				if PeptidePos >= 0:
+					f.seek(PeptidePos)
 				result = Result(ResultType.Protein)
-				[result.HitOffset, result.TotalHits, result.HitInfo] = Peptide.GetBestInfoAll(f, search_result__count)
-				result.HitMatches = result.TotalHits
-				f.seek(f.StartPos + RecordSize)
+				[result.PeptideOffset, result.HitInfo] = Peptide.GetBestInfoAll(f, peptide__count)
+				result.PeptideMatches = peptide__count
+				if indistinguishable == None:
+					if OptionalFlags & 0x20:
+						Annotation.Eat(f)
+					Parameter.EatAll(f, parameter__count)
+					AnalysisResult.EatAll(f, analysis_result__count)
+					indistinguishable = IndistinguishableProtein.GetInfoAll(f, indistinguishable_protein__count)
+				f.seek(StartPos + RecordSize)
 			if result != None:
-				result.HitInfo["protein"] = protein_name
+				result.HitInfo["indistinguishable_protein"] = indistinguishable
+				if TryGet(result.HitInfo, "protein") == None:
+					if protein == None:
+						result.HitInfo["protein"] = protein_name
+					else:
+						result.HitInfo["protein"] = protein
+				else:
+					result.HitInfo["indistinguishable_protein"].append(protein_name)
 				result.HitInfo["probability"] = probability
 				result.ProteinOffset = StartPos
 				stat.Results.append(result)
@@ -806,20 +991,20 @@ class NiDistribution(TagHandler):
 
 	def __init__(self, stream, stat, attr):
 		TRACEPOSXML(stream, "NiDistribution.__init__(): ")
-		sp_lower_bound_incl = TryGet(attr, "sp_lower_bound_incl")
-		nsp_upper_bound_excl = TryGet(attr, "ni_upper_bound_excl")
-		nsp_lower_bound_excl = TryGet(attr, "ni_lower_bound_excl")
-		nsp_upper_bound_incl = TryGet(attr, "ni_upper_bound_incl")
+		ni_lower_bound_incl = TryGet(attr, "ni_lower_bound_incl")
+		ni_upper_bound_excl = TryGet(attr, "ni_upper_bound_excl")
+		ni_lower_bound_excl = TryGet(attr, "ni_lower_bound_excl")
+		ni_upper_bound_incl = TryGet(attr, "ni_upper_bound_incl")
 		alt_pos_to_neg_ratio = TryGet(attr, "alt_pos_to_neg_ratio")
 		stream.write(struct.pack("=idddB", int(attr["bin_no"]), float(attr["pos_freq"]), float(attr["neg_freq"]), float(attr["pos_to_neg_ratio"]), EncodeOptional(ni_lower_bound_incl, ni_upper_bound_excl, ni_lower_bound_excl, ni_upper_bound_incl, alt_pos_to_neg_ratio)))
 		if ni_lower_bound_incl != None:
 			stream.write(struct.pack("=d", float(ni_lower_bound_incl)))
 		if ni_upper_bound_excl != None:
-			EncodeStringToFile(ni_upper_bound_excl)
+			EncodeStringToFile(stream, ni_upper_bound_excl)
 		if ni_lower_bound_excl != None:
 			stream.write(struct.pack("=d", float(ni_lower_bound_excl)))
 		if ni_upper_bound_incl != None:
-			EncodeStringToFile(ni_upper_bound_incl)
+			EncodeStringToFile(stream, ni_upper_bound_incl)
 		if alt_pos_to_neg_ratio != None:
 			stream.write(struct.pack("=d", float(alt_pos_to_neg_ratio)))
 
@@ -1217,7 +1402,7 @@ def SearchBasic(FileName, terms):
 	stat = SearchStatus({ None: SplitPhrase(terms.upper()) })
 	ProteinSummary.Search(f, stat)
 	f.close()
-	PrintResults(stat.Results)
+	#PrintResults(stat.Results)
 	return [0, stat.TotalQueries, stat.Results]
 
 def SearchAdvanced(FileName, terms_dict):
@@ -1227,13 +1412,13 @@ def SearchAdvanced(FileName, terms_dict):
 	for k, v in terms_dict.items():
 		terms[k] = SplitPhrase(v.upper())
 	stat = SearchStatus(terms)
-	scores = ProteinSummary.Search(f, stat)
+	ProteinSummary.Search(f, stat)
 	f.close()
-	PrintResults(stat.Results)
+	#PrintResults(stat.Results)
 	return [0, stat.TotalQueries, stat.Results]
 
-def GetColumns():
-	return [{"name":"peptide", "title": "Peptide"}, {"name": "protein", "title": "Protein"}, {"name": "massdiff", "title": "Mass Difference"}, {"name": score, "title": score}]
+def DefaultSortColumn(scores):
+	return "probability"
 
 #FIXME: DEBUG
 def PrintResults(results):
