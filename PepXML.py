@@ -1762,7 +1762,7 @@ class MsmsRunSummary(TagHandler):
 			[RecordSize, spectrum_query__count, spectrum_query__offset] = struct.unpack("=III", f.read(4 + 4 + 4))
 			f.seek(StartPos + spectrum_query__offset)
 			SpectrumQuery.SearchAll(f, stat.copy(), spectrum_query__count)
-			stat.TotalQueries += spectrum_query__count
+			stat.Total += spectrum_query__count
 			f.seek(StartPos + RecordSize)
 			i += 1
 
@@ -2228,7 +2228,7 @@ def SearchBasic(FileName, terms):
 	scores = MsmsPipelineAnalysis.Search(f, stat)
 	f.close()
 	#PrintResults(stat.Results)
-	return [scores, stat.TotalQueries, stat.Results]
+	return [scores, stat.Total, stat.Results]
 
 def SearchAdvanced(FileName, terms_dict):
 	f = open(FileName, "r")
@@ -2240,7 +2240,7 @@ def SearchAdvanced(FileName, terms_dict):
 	scores = MsmsPipelineAnalysis.Search(f, stat)
 	f.close()
 	#PrintResults(stat.Results)
-	return [scores, stat.TotalQueries, stat.Results]
+	return [scores, stat.Total, stat.Results]
 
 def SearchPeptide(FileName, peptide):
 	f = open(FileName, "r")

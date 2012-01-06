@@ -25,8 +25,8 @@ import time
 
 templates = os.path.realpath(os.path.dirname(__file__))+ "/templates/"
 converted = os.path.realpath(os.path.dirname(__file__))+ "/ConvertedFiles/"
-decoy_regex = re.compile(conf.DecoyRegex)
-spectrum_regex = re.compile(conf.SpectrumRegex)
+decoy_regex = re.compile(conf.DECOY_REGEX)
+spectrum_regex = re.compile(conf.SPECTRUM_REGEX)
 Parsers = { "pepxml": PepXML, "protxml": ProtXML }
 
 class JobManager:
@@ -467,4 +467,4 @@ if __name__ == "__main__":
 	config.add_view(ListPeptideTooltip, route_name="tooltip_peptide")
 	config.add_view(GetResource, route_name="res")
 	app = config.make_wsgi_app()
-	serve(app, host=conf.Host, port=conf.Port)
+	serve(app, host=conf.HOST, port=conf.PORT)

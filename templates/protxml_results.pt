@@ -1,5 +1,6 @@
+<script type="text/javascript">alert("hello");</script>
 <tal:var define="global columns python: [{'name': 'protein', 'title': 'Protein'}, {'name':'peptide', 'title': 'Peptide'}, {'name': 'probability', 'title': 'Probability'}]"></tal:var>
-<tal:if condition="python: len(results) == 0">None of the ${info.total} queries matched your filter</tal:if>
+<tal:if condition="python: len(results) == 0">None of the ${info.total} proteins matched your filter</tal:if>
 <tal:else condition="python: len(results) > 0">
 	<tal:if condition="python: info['total'] == 1">Displaying the only result</tal:if>
 	<tal:if condition="python: info['total'] > 1 and info['total'] == len(results)">Displaying all ${info.matches} results</tal:if>
@@ -11,7 +12,7 @@
 		<tr tal:attributes="class string:info ${row.style}${repeat.row.odd}">
 			<td>${row.HitInfo.protein}</td>
 			<td><span id="peptide_${info.hash}_${repeat.row.index}" class="link" onclick="SearchPeptide('${row.HitInfo.peptide}');">${row.HitInfo.peptide}</span></td>
-			<td>${row.HitInfo.probability}</td>
+			<td style="text-align:center;">${row.HitInfo.probability}</td>
 		</tr>
 		<tal:if condition="python: row.PeptideMatches > 1">
 			<tr tal:attributes="class string:${row.style}${repeat.row.odd}"><td tal:attributes="colspan python: len(columns)"><span class="link" onclick="DisplayQuery(row.QueryOffset);"><span tal:omit-tag="" tal:content="python: row.PeptideMatches-1"></span> more peptide<tal:if condition="python: row.PeptideMatches > 2">s</tal:if> in found for this protein</span></td></tr>
@@ -19,6 +20,7 @@
 	</span>
 	</table>
 	<script>
+		alert("hello");
 		TableManager.Add("${info.type}_results", "${sortcol}");
 		/*var ids = [<span tal:omit-tag="" tal:repeat="row results">"peptide_${info.hash}_${repeat.row.index}", </span>];
 		var tt = new dijit.DynamicTooltip({

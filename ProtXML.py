@@ -820,6 +820,7 @@ class Protein(TagHandler):
 	@staticmethod
 	def SearchAll(f, stat, count):
 		i = 0
+		stat.Total += count
 		while i < count:
 			TRACEPOS("Protein.SearchAll(", i, "): ", f.tell())
 			s = stat.copy()
@@ -1403,7 +1404,7 @@ def SearchBasic(FileName, terms):
 	ProteinSummary.Search(f, stat)
 	f.close()
 	#PrintResults(stat.Results)
-	return [0, stat.TotalQueries, stat.Results]
+	return [0, stat.Total, stat.Results]
 
 def SearchAdvanced(FileName, terms_dict):
 	f = open(FileName, "r")
@@ -1415,7 +1416,7 @@ def SearchAdvanced(FileName, terms_dict):
 	ProteinSummary.Search(f, stat)
 	f.close()
 	#PrintResults(stat.Results)
-	return [0, stat.TotalQueries, stat.Results]
+	return [0, stat.Total, stat.Results]
 
 def DefaultSortColumn(scores):
 	return "probability"

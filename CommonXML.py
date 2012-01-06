@@ -74,7 +74,7 @@ class SearchStatus:
 		self.Terms = dic
 		self.Matched = {}
 		self.Results = []
-		self.TotalQueries = 0
+		self.Total = 0
 		
 	def copy(self):
 		dic = {}

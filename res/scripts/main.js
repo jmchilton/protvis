@@ -1,28 +1,3 @@
-var TableManager = new function() {
-	this.Tables = {};
-	
-	this.Add = function(id, sortcol) {
-		this.Tables[id] = { sort_col: sortcol, sort_asc: true };
-	}
-	
-	this.Delete = function(id) {
-		delete this.Tables[id];
-	}
-	
-	this.Sort = function(id, col, callback) {
-		t = this.Tables[id];
-		if (t["sort_col"] == col) {
-			t["sort_asc"] = !t["sort_asc"];
-		} else {
-			t["sort_col"] = col;
-			t["sort_asc"] = true;
-		}
-		this.Tables[id] = t;
-		document.getElementById(id + '_column_' + col['sort']).setAttribute("class", "sortable " + (t["sort_asc"] ? "sort_asc" : "sort_dsc"));
-		callback(t);
-	}
-}
-
 function TableBuilder(id, /*optinal:*/columns) {
 	this.ID = id;
 	this.Columns = columns.length;
@@ -42,7 +17,7 @@ function TableBuilder(id, /*optinal:*/columns) {
 		for (col in columns) {
 			attrs = "";
 			if (col["sort"]) {
-				attrs += 'id="' + id + '_column_' + col['sort'] + '" onclick="TableManager.Sort(' + id + ', ' + col['sort'] + ');" class="sortable";
+				attrs += 'id="' + id + '_column_' + col['sort'] + '" onclick="TableManager.Sort(' + id + ', ' + col['sort'] + ');" class="sortable"';
 			}
 			this.HTML += '<th ' + attrs + '>' + col["title"] + '</th>';
 		}

@@ -11,7 +11,7 @@ body {
 table {
 	border: 3px solid #F4F4F4;
 	border-collapse:collapse;
-	font-size: 10pt;
+	font-size: 14px;
 }
 
 td, th {
@@ -24,6 +24,21 @@ th {
 	text-align: center;
 	border: 3px solid #F4F4F4;
 	font-weight: bold;
+}
+
+th.sort {
+	text-decoration: underline;
+	cursor: pointer;
+}
+
+th.sort_asc {
+	padding-right: 15px;
+	background:url(/res/images/sort_asc.png) right no-repeat #B8B8E0;
+}
+
+th.sort_dsc {
+	padding-right: 15px;
+	background:url(/res/images/sort_dsc.png) right no-repeat #B8B8E0;
 }
 
 tr.row {
