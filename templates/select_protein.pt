@@ -1,0 +1,10 @@
+<tal:var define="global columns python: [{'name':'peptide', 'title': 'Peptide'}, {'name': 'initial_probability', 'title': 'Initial Probability'}]"></tal:var>
+<table id="select_protein_results" border="1" style="width: 100%;">
+<tr><tal:for repeat="col columns"><th>${col.title}</th></tal:for></tr>
+<tal:for repeat="row results">
+	<tr tal:attributes="class string:info row${repeat.row.odd}">
+		<td><span class="link" onclick="SearchPeptide('${row.peptide}');" tal:content="python: funcs.render_peptide(row)"><tal:for repeat="indes row.indistinguishable_peptide"><br/><tal:echo tal:content="python: funcs.render_peptide(indes)"></tal:echo></tal:for></span></td>
+		<td style="text-align:center;">${row.initial_probability}</td>
+	</tr>
+</tal:for>
+</table>

@@ -52,6 +52,7 @@ class JobManager:
 			raise
 		alive = 0
 		for t in threads:
+			t.join(5.0 / len(threads))
 			if t.isAlive():
 				alive += 1
 		if alive == 0:
@@ -61,6 +62,16 @@ class JobManager:
 
 Jobs = JobManager()
 
+def GetTypeParser(datatype):
+	MzMl = None #FIXME: delete when there is an MzMl module
+	Mgf = None #FIXME: delete when there is an Mgf module
+	modules = { Reference.FileType.MZML: MzMl,
+		Reference.FileType.MGF: Mgf,
+		Reference.FileType.PEPXML: PepXML, Reference.FileType.PEPXML_MASCOT: PepXML, Reference.FileType.PEPXML_OMSSA: PepXML, Reference.FileType.PEPXML_XTANDEM: PepXML, Reference.FileType.PEPXML_COMPARE: PepXML, Reference.FileType.PEPXML_PEPTIDEPROPHET: PepXML, Reference.FileType.PEPXML_INTERPROPHET: PepXML,
+		Reference.FileType.PROTXML: ProtXML, Reference.FileType.PROTXML_PROTEINPROPHET: ProtXML
+	}
+	return modules[datatype]
+
 class FileLinks:
 	class Link:
 		def __init__(self, t, name):
@@ -68,7 +79,7 @@ class FileLinks:
 			self.Type = t
 
 	def __init__(self, IndexFile):
-		f = open(converted + IndexFile, "r")
+		f = open(GetFileName(IndexFile), "r")
 		[files] = struct.unpack("=I", f.read(4))
 		self.Index = IndexFile
 		self.Links = [FileLinks.Link(struct.unpack("=B", f.read(1))[0], DecodeStringFromFile(f)) for i in xrange(files)]
@@ -98,7 +109,37 @@ class FileLinks:
 	def GetInfo(self, index):
 		l = self.Links[index]
 		return { "name": l.Name, "type": l.Type, "index": index }
+
+	def GetParser(self, index):
+		return GetTypeParser(self.Links[index].Type)
+
+def TemplateFunctions():
+	def test(cond, t, f):
+		if cond == True:
+			return t
+		return f
+
+	def render_peptide(peptide):
+		try:
+			mods = peptide["modification_info"]
+			if len(mods) == 0:
+				mods = None
+		except:
+			mods = None
+		pep = peptide["peptide"]
+		if mods != None:
+			mod = [m["mod_aminoacid_mass"] for m in mods]
+			mods = []
+			for m in mod:
+				mods += m
+			mods = sorted(mods, key = lambda mam: mam[0], reverse = True)
+			for m in mods:
+				(pos, mass) = m
+				pep = pep[:pos] + '<span class="modification">[' + str(int(mass)) + ']</span>' + pep[pos:]
+		return Literal(pep)
 		
+
+	return { "test": test, "render_peptide": render_peptide }
 
 class ConverterThread(Thread):
 	def __init__(self, mod, src, dst, links):
@@ -111,10 +152,6 @@ class ConverterThread(Thread):
 	def run(self):
 		self.Module.ToBinary(self.Source, open(self.Dest, "w"), self.Links)
 
-def test(cond, t, f):
-	if cond:
-		return t
-	return f
 
 def DecodeQuery(query):
 	params = query.split("&")
@@ -127,14 +164,17 @@ def DecodeQuery(query):
 			dic[p] = None
 	return dic
 
-def GetFileName(request, query):
-	try:
-		fname = query["file"]
-	except:
-		raise HTTPBadRequestError()
+def GetFileName(fname):
 	if fname.find("/") >= 0:
 		raise HTTPUnauthorized()
 	return converted + fname
+
+def GetQueryFileName(query):
+	try:
+		fname = query["file"]
+	except:
+		raise HTTPBadRequest()
+	return GetFileName(fname)
 
 def DecodeDecoy(protein):
 	if decoy_regex.match(protein.lower()) != None:
@@ -143,7 +183,7 @@ def DecodeDecoy(protein):
 
 def DisplayList(request):
 	query = DecodeQuery(request.query_string)
-	fname = GetFileName(request, query)
+	fname = GetQueryFileName(request, query)
 	try:
 		t = request.matchdict["type"]
 		return render_to_response(templates + "list_" + t + ".pt", Parsers[t].DisplayList(request, query, fname), request = request)
@@ -152,7 +192,7 @@ def DisplayList(request):
 
 def SearchScores(request):
 	query = DecodeQuery(request.query_string)
-	fname = GetFileName(request, query)
+	fname = GetQueryFileName(query)
 	try:
 		qoff = int(query["qoff"])
 		hoff = int(query["hoff"])
@@ -204,16 +244,9 @@ def Convert(request):
 			links[f[0]] = i
 		data.close()
 		#Now generate all the data files
-		MzMl = None #FIXME: delete when there is an MzMl module
-		Mgf = None #FIXME: delete when there is an Mgf module
-		modules = { Reference.FileType.MZML: MzMl,
-			Reference.FileType.MGF: Mgf,
-			Reference.FileType.PEPXML: PepXML, Reference.FileType.PEPXML_MASCOT: PepXML, Reference.FileType.PEPXML_OMSSA: PepXML, Reference.FileType.PEPXML_XTANDEM: PepXML, Reference.FileType.PEPXML_COMPARE: PepXML, Reference.FileType.PEPXML_PEPTIDEPROPHET: PepXML, Reference.FileType.PEPXML_INTERPROPHET: PepXML,
-			Reference.FileType.PROTXML: ProtXML, Reference.FileType.PROTXML_PROTEINPROPHET: ProtXML
-		}
 		for i in threads:
 			f = files[i]
-			t = ConverterThread(modules[f[1]], f[0], data.name + "_" + str(i), links) #FIXME: Security
+			t = ConverterThread(GetTypeParser(f[1]), f[0], data.name + "_" + str(i), links) #FIXME: Security
 			t.start()
 			threads[i] = t
 		jobid = Jobs.Add(threads)
@@ -232,19 +265,19 @@ def QueryInitStatus(request):
 		return Response("-", request=request)
 
 def View(request):
-	try:
+	#try:
 		query = DecodeQuery(request.query_string)
 		try:
 			top = FileLinks(query["file"]).GetTopInfo()
 		except:
 			return HTTPNotFound()
 		return render_to_response(templates + "dataview.pt", { "file": query["file"], "top": top, "type": Reference.FileType.Name(top["type"]) }, request=request)
-	except:
-		return HTTPBadRequest()
+	#except:
+	#	return HTTPBadRequest()
 
 def ListResults(request):
 	query = DecodeQuery(request.query_string)
-	fname = GetFileName(request, query)
+	fname = GetQueryFileName(query)
 	#try:
 	t = query["type"]
 	parser = Parsers[t]
@@ -290,8 +323,8 @@ def ListResults(request):
 	for r in results:
 		h = r.HitInfo
 		r.style = DecodeDecoy(h["protein"])
-	info = {"total": total, "matches": matches, "start": start + 1, "end": start + len(results), "type": t, "score": score, "file": query["file"], "datafile": query["n"], "hash": abs(hash(time.gmtime())) }
-	return render_to_response(templates + t + "_results.pt", { "sortcol": sortcol, "sortdsc": reverse, "info": info, "results": results, "test": test }, request = request)
+	info = {"total": total, "matches": matches, "start": start + 1, "end": start + len(results), "type": t, "score": score, "file": query["file"], "datafile": query["n"], "hash": abs(hash(time.gmtime()))}
+	return render_to_response(templates + t + "_results.pt", { "sortcol": sortcol, "sortdsc": reverse, "info": info, "results": results, "url": Literal(request.path_qs), "funcs": TemplateFunctions() }, request = request)
 	#except:
 	#	return HTTPBadRequest()
 
@@ -305,7 +338,7 @@ def ListPeptide(request):
 			return str(self.Count) + "/" + self.Spectrum
 
 	query = DecodeQuery(request.query_string)
-	fname = GetFileName(request, query)
+	fname = GetQueryFileName(query)
 	try:
 		[scores, results] = PepXML.SearchPeptide(fname, query["peptide"])
 		total = len(results)
@@ -371,14 +404,27 @@ def ListPeptide(request):
 		info = { "total": total, "start": start + 1, "end": start + len(results), "peptide": query["peptide"] }
 		columns = [{"name": "spectrum", "title": "Spectrum"}, {"name": "massdiff", "title": "Mass Diff"}, {"name": "score", "title": "Score"}, {"name": "engine", "title": "Search Engine"}, {"name": "engine_score", "title": "Engine Score"}]
 		specs = render(templates + "pepxml_peptide_spectrums.pt", { "count": len(spectrums), "spectrums": spectrums}, request=request)
-		instances = render(templates + "pepxml_peptide.pt", { "info": info, "peptides": results, "columns": columns, "test": test, "sortcol": sortcol, "sortdsc": reverse }, request=request)
+		instances = render(templates + "pepxml_peptide.pt", { "info": info, "peptides": results, "columns": columns, "sortcol": sortcol, "sortdsc": reverse, "funcs": TemplateFunctions() }, request=request)
 		return Response(specs + '<div id="peptide_results_list">' + instances + "</div>", request=request)
 	except:
 		return HTTPBadRequest()
 
+def SelectInfo(request):
+	query = DecodeQuery(request.query_string)
+	for c in query["type"]:
+		if (c < 'a' or c > 'z') and c != '_':
+			raise HTTPUnauthorized()
+	#try:
+	parser = FileLinks(query["file"]).GetParser(int(query["n"]))
+	select = eval("parser.select_" + query["type"])
+	results = select(GetQueryFileName(query), query)
+	return render_to_response(templates + "select_" + query["type"] + ".pt", { "query": query, "results": results, "funcs": TemplateFunctions() }, request=request)
+	#except:
+	#	return HTTPBadRequest()
+
 def ListPeptideTooltip(request):
 	query = DecodeQuery(request.query_string)
-	fname = GetFileName(request, query)
+	fname = GetQueryFileName(query)
 	try:
 		[scores, results] = PepXML.SearchPeptide(fname, query["peptide"])
 		score = PepXML.DefaultSortColumn(scores)
@@ -421,7 +467,7 @@ def ListPeptideTooltip(request):
 		if SearchEngines["Omssa"] == 0:
 			del SearchEngines["Omssa"]
 		info = { "shown": shown, "total": count, "engine": PepXML.SearchEngineName(scores) }
-		return render_to_response(templates + "pepxml_peptide_tooltip.pt", { "info": info, "peptides": results, "counts": SearchEngines.items() }, request=request)
+		return render_to_response(templates + "pepxml_peptide_tooltip.pt", { "info": info, "peptides": results, "counts": SearchEngines.items(), "funcs": TemplateFunctions() }, request=request)
 	except:
 		return HTTPBadRequest()
 
@@ -434,6 +480,7 @@ def GetResource(request):
 	try:
 		f = open("res/" + request.matchdict["file"], "r")
 		res = Response(f.read(), content_type=MimeTypes[os.path.splitext(request.matchdict["file"])[1][1:]])
+		res.expires = time.gmtime(time.time() + 3600 * 24 * 7)
 		f.close()
 	except:
 		res = HTTPNotFound()
@@ -453,6 +500,7 @@ if __name__ == "__main__":
 	config.add_route("view", "/view")
 	config.add_route("results", "/results")
 	config.add_route("peptide", "/peptide")
+	config.add_route("select", "/select")
 	config.add_route("tooltip_peptide", "/tooltip/peptide")
 	config.add_route("res", "/res/{file:.+}")
 	config.add_view(DisplayList, route_name="list")
@@ -464,6 +512,7 @@ if __name__ == "__main__":
 	config.add_view(View, route_name="view")
 	config.add_view(ListResults, route_name="results")
 	config.add_view(ListPeptide, route_name="peptide")
+	config.add_view(SelectInfo, route_name="select")
 	config.add_view(ListPeptideTooltip, route_name="tooltip_peptide")
 	config.add_view(GetResource, route_name="res")
 	app = config.make_wsgi_app()

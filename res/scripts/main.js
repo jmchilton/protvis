@@ -69,3 +69,27 @@ function TableBuilder(id, /*optinal:*/columns) {
 	} else {
 	}
 }*/
+			
+function executeAjaxResponse(response) {
+	var scripts = new Array();
+	var start = 0;
+	for (;;) {
+		start = response.indexOf("<script", start);
+		if (start < 0) {
+			break;
+		}
+		start = response.indexOf(">", start) + 1;
+		var end = response.indexOf("</script>", start);
+		scripts.push(response.substring(start, end));
+		start = end + 9;
+	}
+	for (var i = 0; i < scripts.length; ++i) {
+		try {
+			eval(scripts[i]);
+		} catch (e) {
+			if (console) {
+				console.log(e.description);
+			}
+		}
+	}
+}

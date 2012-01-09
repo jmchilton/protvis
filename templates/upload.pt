@@ -28,12 +28,12 @@
 							window.location = "/view?file=${file}";
 						} else {
 							ShowMessageStaus(left);
-							setTimeout("Update();", 1000);
+							setTimeout("Update();", 500);
 						}
 					},
 					error: function() {
 						ShowMessage("error_net");
-						setTimeout("Update();", 2500);
+						setTimeout("Update();", 2000);
 					}
 				});
 			}
@@ -63,7 +63,7 @@
 			}
 			
 			dojo.ready(function() {
-				setTimeout("Update();", 1000);
+				setTimeout("Update();", 500);
 			});
 		</script>
 	</head>

@@ -717,6 +717,13 @@ class Peptide(TagHandler):
 			i += 1
 		return [off, info]
 
+	@staticmethod
+	def EatAll(f, count):
+		i = 0
+		while i < count:
+			f.seek(struct.unpack("=I", f.read(4))[0] - 4, 1)
+			i += 1
+
 class Protein(TagHandler):
 	"""
 	struct Protein {
@@ -727,7 +734,6 @@ class Protein(TagHandler):
 		WORD indistinguishable_protein__count;
 		WORD parameter__count;
 		double probability;
-		int n_indistinguishable_proteins;
 		String protein_name;
 		String group_sibling_id;
 		double percent_coverage; //ONLY IF (OptionalFlags & 0x01)
@@ -753,7 +759,7 @@ class Protein(TagHandler):
 		subsuming_protein_entry = TryGet(attr, "subsuming_protein_entry")
 		pct_spectrum_ids = TryGet(attr, "pct_spectrum_ids")
 		self.Flags = EncodeOptional(percent_coverage, total_number_peptides, subsuming_protein_entry, pct_spectrum_ids)#, unique_stripped_peptides)
-		stream.write(struct.pack("=BHHHHdi", 0, 0, 0, 0, 0, float(attr["probability"]), int(attr["n_indistinguishable_proteins"])))
+		stream.write(struct.pack("=BHHHHd", 0, 0, 0, 0, 0, float(attr["probability"])))
 		EncodeStringToFile(stream, attr["protein_name"])
 		EncodeStringToFile(stream, attr["group_sibling_id"])
 		if percent_coverage != None:
@@ -825,7 +831,7 @@ class Protein(TagHandler):
 			TRACEPOS("Protein.SearchAll(", i, "): ", f.tell())
 			s = stat.copy()
 			StartPos = f.tell()
-			[RecordSize, OptionalFlags, peptide__count, analysis_result__count, indistinguishable_protein__count, parameter__count, probability, n_indistinguishable_proteins] = struct.unpack("=IBHHHHdi", f.read(4 + 1 + 2 + 2 + 2 + 2 + 8 + 4))
+			[RecordSize, OptionalFlags, peptide__count, analysis_result__count, indistinguishable_protein__count, parameter__count, probability] = struct.unpack("=IBHHHHd", f.read(4 + 1 + 2 + 2 + 2 + 2 + 8))
 			s.SearchItemFloat("probability", probability)
 			protein_name = DecodeStringFromFile(f)
 			s.SearchItemString("protein_name", protein_name)
@@ -859,7 +865,7 @@ class Protein(TagHandler):
 					Parameter.EatAll(f, parameter__count)
 					AnalysisResult.EatAll(f, analysis_result__count)
 					indistinguishable = IndistinguishableProtein.GetInfoAll(f, indistinguishable_protein__count)
-					f.seek(f.StartPos + RecordSize)
+					f.seek(StartPos + RecordSize)
 				else:
 					if OptionalFlags & 0x20:
 						Annotation.Search(f, s)
@@ -892,6 +898,54 @@ class Protein(TagHandler):
 				result.ProteinOffset = StartPos
 				stat.Results.append(result)
 			i += 1
+
+	@staticmethod
+	def GetPeptides(f, off):
+		f.seek(off)
+		[_1, OptionalFlags, peptide__count, _2, _3, _4, _5] = struct.unpack("=IBHHHHd", f.read(4 + 1 + 2 + 2 + 2 + 2 + 8))
+		EatStringFromFile(f)
+		EatStringFromFile(f)
+		if OptionalFlags & 0x01:
+			f.read(8)
+		if OptionalFlags & 0x02:
+			f.read(4)
+		if OptionalFlags & 0x04:
+			EatStringFromFile(f)
+		if OptionalFlags & 0x08:
+			EatStringFromFile(f)
+		if OptionalFlags & 0x10:
+			EatStringFromFile(f)
+		i = 0
+		peptides = []
+		while i < peptide__count:
+			peptides.append(Peptide.GetInfo(f))
+			i += 1
+		return peptides
+
+	@staticmethod
+	def GetIndistinguishable(f, off):
+		f.seek(off)
+		[_1, OptionalFlags, peptide__count, analysis_result__count, indistinguishable_protein__count, parameter__count, _5] = struct.unpack("=IBHHHHd", f.read(4 + 1 + 2 + 2 + 2 + 2 + 8))
+		protein = DecodeStringFromFile(f)
+		EatStringFromFile(f)
+		if OptionalFlags & 0x01:
+			f.read(8)
+		if OptionalFlags & 0x02:
+			f.read(4)
+		if OptionalFlags & 0x04:
+			EatStringFromFile(f)
+		if OptionalFlags & 0x08:
+			EatStringFromFile(f)
+		if OptionalFlags & 0x10:
+			EatStringFromFile(f)
+		Peptide.EatAll(f, peptide__count)
+		if OptionalFlags & 0x20:
+			Annotation.Eat(f)
+		Parameter.EatAll(f, parameter__count)
+		AnalysisResult.EatAll(f, analysis_result__count)
+		same = IndistinguishableProtein.GetInfoAll(f, indistinguishable_protein__count)
+		same.insert(0, protein)
+		return same
 
 class ProteinGroup(TagHandler):
 	"""
@@ -1417,6 +1471,24 @@ def SearchAdvanced(FileName, terms_dict):
 	f.close()
 	#PrintResults(stat.Results)
 	return [0, stat.Total, stat.Results]
+
+def select_protein(BaseFile, query):
+	f = open(BaseFile + "_" + query["n"], "r")
+	peptides = Protein.GetPeptides(f, int(query["off"]))
+	f.close()
+	return peptides
+
+def select_indistinguishable_protein(BaseFile, query):
+	f = open(BaseFile + "_" + query["n"], "r")
+	proteins = Protein.GetIndistinguishable(f, int(query["off"]))
+	f.close()
+	return proteins
+
+def select_indistinguishable_peptide(BaseFile, query):
+	f = open(BaseFile + "_" + query["n"], "r")
+	peptides = Peptide.GetIndistinguishable(f, int(query["off"]))
+	f.close()
+	return peptides
 
 def DefaultSortColumn(scores):
 	return "probability"

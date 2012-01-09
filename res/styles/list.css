@@ -57,6 +57,26 @@ tr.decoyodd {
 	background-color: #FFDDDD;
 }
 
+.notice {
+	background-color: #E9E9FF;
+}
+
+.noticeodd {
+	background-color: #DDDDFF;
+}
+
+.indistinguishable {
+	font-weight: bold;
+	color: green;
+	text-decoration: underline;
+	cursor: pointer;
+}
+
+.modification {
+	color: red;
+	font-weight:bold;
+}
+
 #results tr.info {
 	font-size: 11pt;
 }

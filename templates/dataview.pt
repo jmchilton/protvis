@@ -23,11 +23,38 @@
 			var CurrentPeptide = null;
 			var CurrentContents = null;
 			
+			function BaseUrl(url, remove) {
+				if (!remove) {
+					remove = [ "q", "start", "sort", "order" ];
+				}
+				var baseurl = url;
+				var srch = url.indexOf("?");
+				if (srch >= 0) {
+					baseurl = url.substr(srch + 1).split("&");
+					var i = baseurl.length - 1;
+					while (i >= 0) {
+						var p = baseurl[i].split("=");
+						for (r in remove) {
+							if (p[0] == remove[r]) {
+								baseurl.splice(i, 1);
+								break;
+							}
+						}
+						--i;
+					}
+					baseurl.push("");
+					baseurl = url.substr(0, srch + 1) + baseurl.join("&");
+				} else {
+					baseurl += "?";
+				}
+				return baseurl;
+			}
+			
 			var TableManager = new function() {
 				this.Tables = {};
 	
-				this.Add = function(id, sortcol) {
-					this.Tables[id] = { sort_col: sortcol, sort_asc: true };
+				this.Add = function(id, sortcol, sortasc, container, url) {
+					this.Tables[id] = { sort_col: sortcol, sort_asc: sortasc, url: url, container: container };
 				}
 	
 				this.Delete = function(id) {
@@ -43,28 +70,8 @@
 						t["sort_asc"] = true;
 					}
 					this.Tables[id] = t;
-					document.getElementById(id + '_column_' + col['sort']).setAttribute("class", "sortable " + (t["sort_asc"] ? "sort_asc" : "sort_dsc"));
-					callback(t);
-				}
-			}
-			
-			function executeAjaxResponse(response) {
-				var scripts = new Array();
-				var start = 0;
-				for (;;) {
-					start = response.indexOf(">", response.indexOf("<script", start)) + 1;
-					if (start <= 0) {
-						break;
-					}
-					var end = response.indexOf(">", response.indexOf("</script"));
-					scripts.push(response.substring(start, end));
-				}
-				for (var i = 0; i < scripts.length; ++i) {
-					try {
-						eval(scripts[i]);
-					} catch (e) {
-						//FIXME: forward to the console?
-					}
+					document.getElementById(id + '_column_' + col).setAttribute("class", "sortable " + (t["sort_asc"] ? "sort_asc" : "sort_dsc"));
+					LoadContents(t["container"], BaseUrl(t["url"], [ "start", "sort", "order" ]) + "sort=" + t["sort_col"] + "&order=" + (t["sort_asc"] ? "asc" : "dsc"));
 				}
 			}
 			
@@ -85,25 +92,8 @@
 				}
 			}
 
-			function LoadContents(container, url, t) {
-				var baseurl = url;
-				var srch = url.indexOf("?");
-				if (srch >= 0) {
-					baseurl = url.substr(srch + 1).split("&");
-					var i = baseurl.length - 1;
-					while (i >= 0) {
-						var p = baseurl[i].split("=");
-						if (p[0] == "q" || p == "start") {
-							baseurl.splice(i, 1);
-						}
-						--i;
-					}
-					baseurl.push("");
-					baseurl = url.substr(0, srch + 1) + baseurl.join("&");
-				} else {
-					baseurl += "?"
-				}
-				CurrentContents = { url: baseurl, container: container };
+			function LoadContents(container, url) {
+				CurrentContents = { url: BaseUrl(url), container: container };
 				var oldhits = dojo.byId("data_" + container + "_" + CurrentResultsID);
 				if (oldhits == null) {
 					var anim = dojo.fx.wipeIn({
@@ -210,46 +200,41 @@
 				});
 			}
 
-			function DisplayQuery(title, sid, qid) {
+			function SelectInfo(title, type, params) {
 				dojo.xhrGet({
-					url: "/search/${type}/hit/?file=${file}&sid=" + sid + "&qid=" + qid,
+					url: "/select?file=${file}&type=" + type + (params["datafile"] ? "&n=" + params["datafile"] : '') + (params["params"] ? "&" + params["params"] : ''),
 					load: function(results) {
-						ret = BuildSpectrumQuery(results);
-						DetailsDialog.attr("title", "Results For " + ret[0]);
-						DetailsDialog.attr("content", ret[1]);
+						DetailsDialog.attr("content", results);
 					},
 					error: function() {
-						DetailsDialog.attr("title", "Query Results");
 						DetailsDialog.attr("content", "Query Error. Server could not be reached");
 					}
 				});
-				//DetailsDialog.attr("title", "All results for " + title);
-				DetailsDialog.attr("title", "Loading Results");
-				//DetailsDialog.attr("href", "/search/${type}/hit/?file=${file}&sid=" + sid + "&qid=" + qid);
+				DetailsDialog.attr("title", title);
 				DetailsDialog.attr("content", "<center><span class='dijitContentPaneLoading'>Loading results... Please wait</span></center>");
-				DetailsDialog.attr("style", "width: 500px;");
+				DetailsDialog.attr("style", "width: " + (params["width"] ? params["width"] : '500px') + ";");
 				DetailsDialog.show();
 			}
+
+			function DisplayProtein(protein, datafile, off) {
+				SelectInfo("Peptides in " + protein, "protein", { datafile: datafile, params: "off=" + off });
+			}
+
+
+			function DisplayIndistinguishableProtein(protein, datafile, off) {
+				SelectInfo("Proteins indistinguishable from " + protein, "indistinguishable_protein", { datafile: datafile, params: "off=" + off, width: "400px" });
+			}
+
+			function DisplayIndistinguishablePeptide(peptide, datafile, off) {
+				SelectInfo("Peptides indistinguishable from " + peptide, "indistinguishable_peptide", { datafile: datafile, params: "off=" + off, width: "400px" });
+			}
+
+			function DisplayQuery(protein, peptide, datafile, off) {
+				SelectInfo("Results for in " + protein + "/" + peptide, "query", { datafile: datafile, params: "off=" + off });
+			}
 			
-			function DisplayScore(title, datafile, qoff, hoff) {
-				dojo.xhrGet({
-					url: "/search/${type}/score/?file=${file}&n=" + datafile + "&qoff=" + qoff + "&hoff=" + hoff,
-					load: function(scores) {
-						ret = BuildScores(scores);
-						DetailsDialog.attr("title", "Scores For " + ret[0]);
-						DetailsDialog.attr("content", ret[1]);
-					},
-					error: function() {
-						DetailsDialog.attr("title", "Hit Scores");
-						DetailsDialog.attr("content", "Query Error. Server could not be reached");
-					}
-				});
-				//DetailsDialog.attr("title", "Scores for " + title);
-				DetailsDialog.attr("title", "Loading Scores");
-				//DetailsDialog.attr("href", "/search/${type}/score/?file=${file}&sid=" + sid + "&qid=" + qid + "&rid=" + rid + "&hid=" + hid);
-				DetailsDialog.attr("content", "<center><span class='dijitContentPaneLoading'>Loading scores... Please wait</span></center>");
-				DetailsDialog.attr("style", "width: 300px;");
-				DetailsDialog.show();
+			function DisplayScore(protein, peptide, datafile, qoff, hoff) {
+				SelectInfo("Hit Scores for " + protein + "/" + peptide, "scores", { datafile: datafile, params: "qoff=" + qoff + "&hoff=" + hoff });
 			}
 
 			function ReturnToResults() {
@@ -266,7 +251,7 @@
 
 			dojo.ready(function() {
 				// Populate content initially
-				LoadContents("${type}", "/results?file=${file}&n=${top.index}&type=${type}&q=");
+				LoadContents("${type}", "/results?file=${file}&n=${top.index}&type=${type}&q=&max=50");
 				DetailsDialog = new dijit.Dialog({ style: "width: 400px" });
 			});
 		</script>
