@@ -29,6 +29,12 @@ decoy_regex = re.compile(conf.DECOY_REGEX)
 spectrum_regex = re.compile(conf.SPECTRUM_REGEX)
 Parsers = { "pepxml": PepXML, "protxml": ProtXML }
 
+
+def test(cond, t, f):
+	if cond == True:
+		return t
+	return f
+
 class JobManager:
 	def __init__(self):
 		self.Jobs = {}
@@ -74,15 +80,16 @@ def GetTypeParser(datatype):
 
 class FileLinks:
 	class Link:
-		def __init__(self, t, name):
-			self.Name = name
-			self.Type = t
+		def __init__(self, f):
+			[self.Type, deps] = struct.unpack("=BH", f.read(1 + 2))
+			self.Depends = [struct.unpack("=H", f.read(2))[0] for i in xrange(deps)]
+			self.Name = DecodeStringFromFile(f)
 
 	def __init__(self, IndexFile):
 		f = open(GetFileName(IndexFile), "r")
 		[files] = struct.unpack("=I", f.read(4))
 		self.Index = IndexFile
-		self.Links = [FileLinks.Link(struct.unpack("=B", f.read(1))[0], DecodeStringFromFile(f)) for i in xrange(files)]
+		self.Links = [FileLinks.Link(f) for i in xrange(files)]
 
 	def __getitem__(self, i):
 		if i == 0xFFFF:
@@ -110,15 +117,13 @@ class FileLinks:
 		l = self.Links[index]
 		return { "name": l.Name, "type": l.Type, "index": index }
 
+	def Get(self, index):
+		return self.Links[index]
+
 	def GetParser(self, index):
 		return GetTypeParser(self.Links[index].Type)
 
 def TemplateFunctions():
-	def test(cond, t, f):
-		if cond == True:
-			return t
-		return f
-
 	def render_peptide(peptide):
 		try:
 			mods = peptide["modification_info"]
@@ -227,11 +232,11 @@ def Upload(request):
 def Convert(request):
 	#for when this is running on the same server as galaxy
 	#just use the local files directly
-	try:
+	#try:
 		query = DecodeQuery(request.query_string)
 		data = tempfile.NamedTemporaryFile(dir = ".", prefix = "ConvertedFiles/", delete = False)
 		referencers = { "protxml": Reference.LoadChainProt, "pepxml": Reference.LoadChainPep, "mgf": Reference.LoadChainMgf, "mzml": Reference.LoadChainMzml }
-		files = referencers[query["type"]](binascii.unhexlify(query["file"])).Items()
+		files = referencers[query["type"]](binascii.unhexlify(query["file"]))
 		fs = len(files)
 		#Build the index file
 		data.write(struct.pack("=I", fs))
@@ -239,20 +244,22 @@ def Convert(request):
 		links = {}
 		for i in threads:
 			f = files[i]
-			data.write(struct.pack("=B", f[1]))
-			EncodeStringToFile(data, f[0])
-			links[f[0]] = i
+			data.write(struct.pack("=BH", f.Type, len(f.Depends)))
+			for d in f.Depends:
+				data.write(struct.pack("=H", test(d < 0, 0xFFFF, d)))
+			EncodeStringToFile(data, f.Name)
+			links[f.Name] = i
 		data.close()
 		#Now generate all the data files
 		for i in threads:
 			f = files[i]
-			t = ConverterThread(GetTypeParser(f[1]), f[0], data.name + "_" + str(i), links) #FIXME: Security
+			t = ConverterThread(GetTypeParser(f.Type), f.Name, data.name + "_" + str(i), links) #FIXME: Security
 			t.start()
 			threads[i] = t
 		jobid = Jobs.Add(threads)
 		return render_to_response(templates + "upload.pt", { "file": data.name[len(converted):], "jobid": jobid }, request=request)
-	except:
-		return HTTPBadRequest()
+	#except:
+	#	return HTTPBadRequest()
 
 def QueryInitStatus(request):
 	try:
@@ -268,10 +275,18 @@ def View(request):
 	#try:
 		query = DecodeQuery(request.query_string)
 		try:
-			top = FileLinks(query["file"]).GetTopInfo()
+			links = FileLinks(query["file"])
 		except:
 			return HTTPNotFound()
-		return render_to_response(templates + "dataview.pt", { "file": query["file"], "top": top, "type": Reference.FileType.Name(top["type"]) }, request=request)
+		try:
+			index = query["n"]
+			typename = Reference.FileType.Name(links.Get(index).Type)
+		except:
+			index = links.GetTopInfo()
+			typename = Reference.FileType.Name(index["type"])
+			index = index["index"]
+		files = "[" + ",".join(["{" + ",".join(["name:'" + os.path.split(l.Name)[1] + "'", "type:" + str(l.Type), "deps:[" + ",".join([str(d) for d in l.Depends]) + "]"]) + "}" for l in links]) + "]"
+		return render_to_response(templates + "dataview.pt", { "file": query["file"], "index": index, "type": typename, "files": files }, request=request)
 	#except:
 	#	return HTTPBadRequest()
 

@@ -12,6 +12,7 @@ class IncludedFile:
 			self.Type = t
 			self.Index = index
 			self.Level = level
+			self.Depends = []
 
 		def Refernece(self, index, level):
 			if (level > self.Level):
@@ -45,9 +46,26 @@ class IncludedFile:
 		self.Level -= 1
 
 	def Items(self):
-		files = [[f, t] for f, t in self.Files.items()]
+		def IndexOf(items, item):
+			n = 0
+			for i in items:
+				if i[0] == item:
+					return n
+				n += 1
+			return -1
+
+		class IncludedFile:
+			def __init__(self, f, t, deps):
+				self.Name = f
+				self.Type = t
+				self.Depends = deps
+
+		files = [[f, fi] for f, fi in self.Files.items()]
 		files = sorted(files, key=lambda flist: flist[1].Index, reverse=True)
-		return [[f, t.Type] for f, t in files]
+		return [IncludedFile(f, fi.Type, list(set([IndexOf(files, d) for d in fi.Depends]))) for f, fi in files]
+
+	def SetDepends(self, fname, depends):
+		self.Files[fname].Depends = depends
 
 class SaxHandler(xml.sax.ContentHandler):
 	def __init__(self, elems, handler):
@@ -204,9 +222,12 @@ def PepReferences(fname, IncludedFiles):
 		elif name == "inputfile":
 			files.append([attr["name"], FileType.UNKNOWN])
 	SearchXml(fname, ["msms_run_summary", "inputfile"], _HandleProtFind)
-	for f in files:
+	deps = range(len(files))
+	for i in deps:
+		f = files[i]
 		try:
 			info = ValidateFilename(IncludedFiles, f[0], ["mzml", "mzxml", "mgf", "pepxml", "pep", "xml"])
+			deps[i] = info.Name
 			if info.Type == FileType.PEPXML:
 				IncludedFiles.Set(fname, FileType.PEPXML_COMPARE)
 			t = info.Type
@@ -216,7 +237,9 @@ def PepReferences(fname, IncludedFiles):
 			if not info.Exists:
 				_References(t, info.Name, IncludedFiles)
 		except:
+			deps[i] = None
 			print("Can't open referenced file: " + f[0])
+	IncludedFiles.SetDepends(fname, deps)
 	IncludedFiles.StepOut()
 
 def ProtReferences(fname, IncludedFiles):
@@ -227,14 +250,19 @@ def ProtReferences(fname, IncludedFiles):
 		files.append(attr["source_files_alt"]) #FIXME: this is a plural, how are the names seperated?
 		raise StopIteration()
 	SearchXml(fname, ["protein_summary_header"], _HandleProtFind)
-	for f in files:
+	deps = range(len(files))
+	for i in deps:
+		f = files[i]
 		try:
 			info = ValidateFilename(IncludedFiles, f, ["pepxml", "pep", "xml"])
+			deps[i] = info.Name
 			#IncludedFiles.Add(info.Name, FileType.PEPXML)
 			if not info.Exists:
 				PepReferences(info.Name, IncludedFiles)
 		except:
+			deps[i] = None
 			print("Can't open referenced file: " + f)
+	IncludedFiles.SetDepends(fname, deps)
 	IncludedFiles.StepOut()
 
 def _References(t, fname, IncludedFiles):
@@ -261,25 +289,25 @@ def LoadChainProt(fname):
 		raise ValueError(fname)
 	IncludedFiles = IncludedFile(fname, FileType.PROTXML)
 	ProtReferences(fname, IncludedFiles)
-	return IncludedFiles
+	return IncludedFiles.Items()
 
 def LoadChainPep(fname):
 	if not os.path.abspath(fname).startswith(GalaxyPath):
 		raise ValueError(fname)
 	IncludedFiles = IncludedFile(fname, FileType.PEPXML)
 	PepReferences(fname, IncludedFiles)
-	return IncludedFiles
+	return IncludedFiles.Items()
 
 def LoadChainMgf(fname):
 	if not os.path.abspath(fname).startswith(GalaxyPath):
 		raise ValueError(fname)
 	IncludedFiles = IncludedFile(fname, FileType.MGF)
 	MgfReferences(fname, IncludedFiles)
-	return IncludedFiles
+	return IncludedFiles.Items()
 
 def LoadChainMzml(fname):
 	if not os.path.abspath(fname).startswith(GalaxyPath):
 		raise ValueError(fname)
 	IncludedFiles = IncludedFile(fname, FileType.MZML)
 	MzmlReferences(fname, IncludedFiles)
-	return IncludedFiles
+	return IncludedFiles.Items()

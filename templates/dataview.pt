@@ -7,6 +7,7 @@
 		<link id="themeStyles" href="/res/dojo/dijit/themes/claro/claro.css" type="text/css" rel="stylesheet" />
 		<link id="themeStyles" href="/res/dojo/dojox/html/resources/ellipsis.css" type="text/css" rel="stylesheet" />
 		<script type="text/javascript" src="/res/dojo/dojo/dojo.js" data-dojo-config="parseOnLoad: true"></script>
+		<script type="text/javascript" src="/res/scripts/flowchart.js"></script>
 		<script type="text/javascript">
 			dojo.require("dojo.fx");
 			dojo.require("dijit.Dialog");
@@ -201,10 +202,11 @@
 			}
 
 			function SelectInfo(title, type, params) {
+				var width = params["width"] ? params["width"] : 500;
 				dojo.xhrGet({
 					url: "/select?file=${file}&type=" + type + (params["datafile"] ? "&n=" + params["datafile"] : '') + (params["params"] ? "&" + params["params"] : ''),
 					load: function(results) {
-						DetailsDialog.attr("content", results);
+						DetailsDialog.attr("content", '<div id="" style="overflow:auto; width:' + (width - 16) + 'px;max-height:400px;">' + results + '</div>');
 					},
 					error: function() {
 						DetailsDialog.attr("content", "Query Error. Server could not be reached");
@@ -212,7 +214,7 @@
 				});
 				DetailsDialog.attr("title", title);
 				DetailsDialog.attr("content", "<center><span class='dijitContentPaneLoading'>Loading results... Please wait</span></center>");
-				DetailsDialog.attr("style", "width: " + (params["width"] ? params["width"] : '500px') + ";");
+				DetailsDialog.attr("style", "width: " + width + "px;");
 				DetailsDialog.show();
 			}
 
@@ -220,13 +222,12 @@
 				SelectInfo("Peptides in " + protein, "protein", { datafile: datafile, params: "off=" + off });
 			}
 
-
 			function DisplayIndistinguishableProtein(protein, datafile, off) {
-				SelectInfo("Proteins indistinguishable from " + protein, "indistinguishable_protein", { datafile: datafile, params: "off=" + off, width: "400px" });
+				SelectInfo("Proteins indistinguishable from " + protein, "indistinguishable_protein", { datafile: datafile, params: "off=" + off, width: 400 });
 			}
 
 			function DisplayIndistinguishablePeptide(peptide, datafile, off) {
-				SelectInfo("Peptides indistinguishable from " + peptide, "indistinguishable_peptide", { datafile: datafile, params: "off=" + off, width: "400px" });
+				SelectInfo("Peptides indistinguishable from " + peptide, "indistinguishable_peptide", { datafile: datafile, params: "off=" + off, width: 400 });
 			}
 
 			function DisplayQuery(protein, peptide, datafile, off) {
@@ -251,14 +252,21 @@
 
 			dojo.ready(function() {
 				// Populate content initially
-				LoadContents("${type}", "/results?file=${file}&n=${top.index}&type=${type}&q=&max=50");
+				LoadContents("${type}", "/results?file=${file}&n=${index}&type=${type}&q=&max=50");
 				DetailsDialog = new dijit.Dialog({ style: "width: 400px" });
+				FlowChartCreate(${files});
+				FlowChardSelect(${index});
 			});
 		</script>
 		<script type="text/javascript" src="/res/scripts/main.js"></script>
 	</head>
 	<body class="claro">
 		<table id="container" style="width: 100%;">
+			<tr>
+				<td>
+					<div id="navigation_graph" style="width:100%; height:auto: overflow:auto;"></div>
+				</td>
+			</tr>
 			<tr>
 				<td>
 					<form id="filter_basic_view" onsubmit="FilterCurrent(document.getElementById('filter').value); return false;">
