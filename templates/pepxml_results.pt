@@ -1,4 +1,4 @@
-<tal:var define="global columns python: [{'name':'peptide', 'title': 'Peptide'}, {'name': 'protein', 'title': 'Protein'}, {'name': 'massdiff', 'title': 'Mass Difference'}, {'name': score, 'title': score}]"></tal:var>
+<tal:var define="global columns python: [{'name':'peptide', 'title': 'Peptide'}, {'name': 'protein', 'title': 'Protein'}, {'name': 'massdiff', 'title': 'Mass Difference'}, {'name': info['score'], 'title': info['score']}]"></tal:var>
 <tal:if condition="python: len(results) == 0">None of the ${info.total} queries matched your filter</tal:if>
 <tal:else condition="python: len(results) > 0">
 	<tal:if condition="python: info['total'] == 1">Displaying the only result</tal:if>
@@ -12,9 +12,11 @@
 			<td><span class="peptide_full">${row.HitInfo.peptide_prev_aa}<span id="peptide_${info.hash}_${repeat.row.index}" class="link peptide" onclick="SearchPeptide('${row.HitInfo.peptide}');">${row.HitInfo.peptide}</span>${row.HitInfo.peptide_next_aa}</span></td>
 			<td>${row.HitInfo.protein}</td>
 			<td>${row.HitInfo.massdiff}</td>
-			<td onclick="DisplayScore('${row.HitInfo.peptide}/${row.HitInfo.protein}', ${info.datafile}, ${row.QueryOffset}, ${row.HitInfo.HitOffset});" tal:content="python: row.HitInfo[info.score]"></td>
+			<td onclick="DisplayScore('${row.HitInfo.peptide}/${row.HitInfo.protein}', ${info.datafile}, ${row.QueryOffset}, ${row.HitOffset});" tal:content="python: row.HitInfo[info.score]"></td>
 		</tr>
-		<tr tal:attributes="class string:desc ${row.style}${repeat.row.odd}"><td tal:attributes="colspan python: len(columns)" tal:content="python: row.HitInfo['protein_descr']"></td></tr>
+		<tal:if condition="python: funcs.try_get(row.HitInfo, 'protein_descr') != None">
+			<tr tal:attributes="class string:desc ${row.style}${repeat.row.odd}"><td tal:attributes="colspan python: len(columns)" tal:content="python: row.HitInfo['protein_descr']"></td></tr>
+		</tal:if>
 		<tal:if condition="python: row.HitMatches > 1">
 			<tr tal:attributes="class string:${row.style}${repeat.row.odd}"><td tal:attributes="colspan python: len(columns)"><span class="link" onclick="DisplayQuery(${row.QueryOffset});"><span tal:omit-tag="" tal:content="python: row.HitMatches-1"></span> more result<tal:if condition="python: row.HitMatches > 2">s</tal:if> in this spectrum query</span></td></tr>
 		</tal:if>

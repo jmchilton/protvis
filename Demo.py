@@ -144,7 +144,7 @@ def TemplateFunctions():
 		return Literal(pep)
 		
 
-	return { "test": test, "render_peptide": render_peptide }
+	return { "test": test, "render_peptide": render_peptide, "try_get": TryGet }
 
 class ConverterThread(Thread):
 	def __init__(self, mod, src, dst, links):

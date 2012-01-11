@@ -50,6 +50,49 @@
 				}
 				return baseurl;
 			}
+
+			function GetTypeName(type, full) {
+				if (full) {
+					switch (type) {
+						case 1:
+							return "MZML";
+						case 2:
+							return "MGF";
+						case 3:
+							return "PepXML";
+						case 4:
+							return "Mascot";
+						case 5:
+							return "Omssa";
+						case 6:
+							return "X! Tandem";
+						case 7:
+							return "PepXML Comparison";
+						case 8:
+							return "PeptideProphet";
+						case 9:
+							return "InterProphet";
+						case 10:
+							return "ProtXML";
+						case 11:
+							return "ProteinProphet";
+						default:
+							return "";
+					}
+				} else {
+					if (type <= 0) {
+						return "";
+					} else if (type == 1) {
+						return "MZML";
+					} else if (type == 2) {
+						return "MGF";
+					} else if (type <= 9) {
+						return "PepXML";
+					} else {
+						return "ProtXML";
+					}
+				}
+			}
 			
 			var TableManager = new function() {
 				this.Tables = {};
@@ -254,7 +297,11 @@
 				// Populate content initially
 				LoadContents("${type}", "/results?file=${file}&n=${index}&type=${type}&q=&max=50");
 				DetailsDialog = new dijit.Dialog({ style: "width: 400px" });
-				FlowChartCreate(${files});
+				FlowChartCreate(${files}, function(evt, file) {
+					var type = GetTypeName(file["type"], false).toLowerCase();
+					LoadContents(type, "/results?file=${file}&n=" + file["index"] + "&type=" + type + "&q=&max=50");
+					FlowChartSelect(file["index"]);
+				});
 				FlowChartSelect(${index});
 			});
 		</script>
