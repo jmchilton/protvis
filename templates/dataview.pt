@@ -255,7 +255,7 @@
 				LoadContents("${type}", "/results?file=${file}&n=${index}&type=${type}&q=&max=50");
 				DetailsDialog = new dijit.Dialog({ style: "width: 400px" });
 				FlowChartCreate(${files});
-				FlowChardSelect(${index});
+				FlowChartSelect(${index});
 			});
 		</script>
 		<script type="text/javascript" src="/res/scripts/main.js"></script>
