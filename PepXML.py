@@ -2311,15 +2311,16 @@ def SearchEngineOnlyName(scores):
 	return "unknown"
 
 def DefaultSortColumn(scores):
+	reverses = ["hyperscore", "ionscore", "pp_prob", "ip_prob"]
 	if scores & 0x800:
-		return "ip_prob"
+		return ["ip_prob", reverses]
 	if scores & 0x400:
-		return "pp_prob"
+		return ["pp_prob", reverses]
 	if scores & 0x08:
-		return "hyperscore"
+		return ["hyperscore", reverses]
 	elif scores & 0x20:
-		return "ionscore"
-	return "expect"
+		return ["ionscore", reverses]
+	return ["expect", reverses]
 
 #FIXME: DEBUG
 def PrintResults(results):

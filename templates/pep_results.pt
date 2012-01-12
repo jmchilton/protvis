@@ -1,23 +1,21 @@
 <tal:var define="global columns python: [{'name':'peptide', 'title': 'Peptide'}, {'name': 'protein', 'title': 'Protein'}, {'name': 'massdiff', 'title': 'Mass Difference'}, {'name': info['score'], 'title': info['score']}]"></tal:var>
+<form id="filter_pepxml_${info.hash}_basic" onsubmit="FilterCurrent(document.getElementById('filter_pepxml_${info.hash}').value); return false;">
+	Filter: <input type="text" id="filter_pepxml_${info.hash}" value="${info.query}" />&nbsp;<input type="submit" value="Filter" />
+</form>
+<br/>
 <tal:if condition="python: len(results) == 0">None of the ${info.total} queries matched your filter</tal:if>
 <tal:else condition="python: len(results) > 0">
 	<tal:if condition="python: info['total'] == 1">Displaying the only result</tal:if>
-	<tal:else condition="python: info['total'] > 1">
-		<form id="filter_pepxml_${info.hash}_basic" onsubmit="FilterCurrent(document.getElementById('filter_pepxml_${info.hash}').value); return false;">
-			Filter: <input type="text" id="filter_pepxml_${info.hash}" value="${info.query}" />&nbsp;<input type="submit" value="Filter" />
-		</form>
-		<br/>
-		<tal:if condition="python: info['total'] == len(results)">Displaying all ${info.matches} results</tal:if>
-		<tal:if condition="python: info['total'] > len(results)">Displaying ${info.start}-${info.end} of ${info.matches} results</tal:if>
-	</tal:else>
+	<tal:if condition="python: info['total'] > 1 and info['total'] == len(results)">Displaying all ${info.matches} results</tal:if>
+	<tal:if condition="python: info['total'] > len(results)">Displaying ${info.start}-${info.end} of ${info.matches} results</tal:if>
 	<br/>
 	<table id="results_${info.datafile}" border="1" style="width: 100%;">
-	<tr><tal:for repeat="col columns"><th id="${info.type}_results_column_${col.name}" onclick="TableManager.Sort('{$info.type}_results','${col.name}');" tal:attributes="class python: 'sort' + funcs.test(sortcol==col.name, funcs.test(sortdsc, ' sort_dsc', ' sort_asc'), '')">${col.title}</th></tal:for></tr>
+	<tr><tal:for repeat="col columns"><th id="results_${info.datafile}_column_${col.name}" onclick="TableManager.Sort('results_${info.datafile}','${col.name}');" tal:attributes="class python: 'sort' + funcs.test(sortcol==col.name, funcs.test(sortdsc, ' sort_dsc', ' sort_asc'), '')">${col.title}</th></tal:for></tr>
 	<tal:for repeat="row results">
 		<tr tal:attributes="class string:info ${row.style}${repeat.row.odd}">
 			<td><span class="peptide_full">${row.HitInfo.peptide_prev_aa}<span id="peptide_${info.hash}_${repeat.row.index}" class="link peptide" onclick="SearchPeptide('${row.HitInfo.peptide}', ${info.datafile});" tipurl="${row.HitInfo.peptide}" tal:content="python: funcs.render_peptide(row.HitInfo)"></span>${row.HitInfo.peptide_next_aa}</span></td>
 			<td>
-				<tal:if condition="python: info['datas'] & 0x8"><span class="link" onclick="var prot = FindFilesWithDependancy(${info.datafile}, [10, 11]); SwitchDataset('data_' + prot); LoadContents(prot, '/results?file=${info.file}&n=' + prot + '&type=prot&q=${row.HitInfo.protein}&max=50');">${row.HitInfo.protein}</span></tal:if>
+				<tal:if condition="python: info['datas'] & 0x8"><span class="link" onclick="var prot = FindFilesWithDependancy(${info.datafile}, [10, 11])[0]; SwitchDataset('data_' + prot); FlowChartSelect(prot); LoadContents(prot, '/results?file=${info.file}&n=' + prot + '&type=prot&q=${row.HitInfo.protein}&max=50');">${row.HitInfo.protein}</span></tal:if>
 				<tal:else condition="python: not info['datas'] & 0x8">${row.HitInfo.protein}</tal:else>
 			</td>
 			<td>${row.HitInfo.massdiff}</td>

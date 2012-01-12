@@ -113,9 +113,9 @@
 				for (;;) {
 					for (i in Files) {
 						var f = Files[i];
-						var deps = f["deps"];
-						for (var d in deps) {
-							if (InArray(search_deps, deps[d])) {
+						var ds = f["deps"];
+						for (var d in ds) {
+							if (InArray(search_deps, ds[d])) {
 								new_deps.push(f["index"]);
 								break;
 							}
@@ -138,6 +138,7 @@
 						deps.splice(i, 1);
 					}
 				}
+				return deps;
 			}
 			
 			var TableManager = new function() {
@@ -151,7 +152,7 @@
 					delete this.Tables[id];
 				}
 	
-				this.Sort = function(id, col, callback) {
+				this.Sort = function(id, col) {
 					t = this.Tables[id];
 					if (t["sort_col"] == col) {
 						t["sort_asc"] = !t["sort_asc"];

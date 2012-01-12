@@ -1,18 +1,16 @@
 <tal:var define="global columns python: [{'name': 'protein', 'title': 'Protein'}, {'name':'peptide', 'title': 'Peptide'}, {'name': 'probability', 'title': 'Probability'}]"></tal:var>
+<form id="filter_protxml_${info.hash}_basic" onsubmit="FilterCurrent(document.getElementById('filter_protxml_${info.hash}').value); return false;">
+	Filter: <input type="text" id="filter_protxml_${info.hash}" value="${info.query}" />&nbsp;<input type="submit" value="Filter" />
+</form>
+<br/>
 <tal:if condition="python: len(results) == 0">None of the ${info.total} proteins matched your filter</tal:if>
 <tal:else condition="python: len(results) > 0">
 	<tal:if condition="python: info['total'] == 1">Displaying the only result</tal:if>
-	<tal:else condition="python: info['total'] > 1">
-		<form id="filter_protxml_${info.hash}_basic" onsubmit="FilterCurrent(document.getElementById('filter_protxml_${info.hash}').value); return false;">
-			Filter: <input type="text" id="filter_protxml_${info.hash}" value="${info.query}" />&nbsp;<input type="submit" value="Filter" />
-		</form>
-		<br/>
-		<tal:if condition="python: info['total'] == len(results)">Displaying all ${info.matches} results</tal:if>
-		<tal:if condition="python: info['total'] > len(results)">Displaying ${info.start}-${info.end} of ${info.matches} results</tal:if>
-	</tal:else>
+	<tal:if condition="python: info['total'] > 1 and info['total'] == len(results)">Displaying all ${info.matches} results</tal:if>
+	<tal:if condition="python: info['total'] > len(results)">Displaying ${info.start}-${info.end} of ${info.matches} results</tal:if>
 	<br/>
 	<table id="results_${info.datafile}" border="1" style="width: 100%;">
-	<tr><tal:for repeat="col columns"><th id="${info.type}_results_column_${col.name}" onclick="TableManager.Sort('${info.type}_results','${col.name}');" tal:attributes="class python: 'sort' + funcs.test(sortcol==col.name, funcs.test(sortdsc, ' sort_dsc', ' sort_asc'), '')">${col.title}</th></tal:for></tr>
+	<tr><tal:for repeat="col columns"><th id="results_${info.datafile}_column_${col.name}" onclick="TableManager.Sort('results_${info.datafile}','${col.name}');" tal:attributes="class python: 'sort' + funcs.test(sortcol==col.name, funcs.test(sortdsc, ' sort_dsc', ' sort_asc'), '')">${col.title}</th></tal:for></tr>
 	<tal:for repeat="row results">
 		<tr tal:attributes="class string:info ${row.style}${repeat.row.odd}">
 			<td tal:attributes="class python:funcs.test(len(row.HitInfo['indistinguishable_protein']) > 0, 'notice', '')+repeat.row.odd">${row.HitInfo.protein}

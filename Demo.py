@@ -320,25 +320,19 @@ def ListResults(request):
 	else:
 		[scores, total, results] = parser.SearchBasic(fname + "_" + query["n"], urllib.unquote(query["q"]))
 	matches = len(results)
-	score = parser.DefaultSortColumn(scores)
+	[score, reverses] = parser.DefaultSortColumn(scores)
 	try:
 		sortcol = query["sort"]
 	except:
 		sortcol = score
 	try:
-		sortby = query["order"]
-		if sortby == "asc":
+		if query["order"] == "asc":
 			reverse = False
 		else:
 			reverse = True
 	except:
-		reverse = True
-	sc = sortcol
-	if sortcol == "score":
-		sc = score
-	if sc in ["hyperscore", "pp_prob", "ip_prob"]:
-		reverse = not reverse
-	results = sorted(results, key = lambda key: key.HitInfo[sortcol], reverse = reverse)
+		reverse = False
+	results = sorted(results, key = lambda key: key.HitInfo[sortcol], reverse = test(test(sortcol == "score", score, sortcol) in reverses, not reverse, reverse))
 	try:
 		start = int(query["start"])
 	except:
@@ -377,24 +371,18 @@ def ListPeptide(request):
 	int(query["n"])
 	[scores, results] = PepXML.SearchPeptide(fname + "_" + query["n"], query["peptide"])
 	total = len(results)
-	score = PepXML.DefaultSortColumn(scores)
+	[score, reverses] = PepXML.DefaultSortColumn(scores)
 	try:
 		sortcol = query["sort"]
 	except:
 		sortcol = "score"
 	try:
-		sortby = query["order"]
-		if sortby == "asc":
+		if query["order"] == "asc":
 			reverse = False
 		else:
 			reverse = True
 	except:
-		reverse = True
-	sc = sortcol
-	if sortcol == "score":
-		sc = score
-	if sc in ["hyperscore", "pp_prob", "ip_prob"]:
-		reverse = not reverse
+		reverse = False
 	SearchEngines = { "X-Tandem": 0, "Mascot": 0, "Omssa": 0 }
 	spectrums = {}
 	for r in results:
@@ -420,7 +408,7 @@ def ListPeptide(request):
 		except:
 			spectrums[spec] = 1
 	spectrums = sorted([Spec(k, v) for k, v in spectrums.items()], reverse = True, key = lambda spec: spec.Count)
-	results = sorted(results, key = lambda key: key[sortcol], reverse = reverse)
+	results = sorted(results, key = lambda key: key[sortcol], reverse = test(test(sortcol == "score", score, sortcol) in reverses, not reverse, reverse))
 	try:
 		start = int(query["start"])
 	except:
@@ -510,21 +498,6 @@ def Tooltip(request):
 			return HTTPBadRequest()
 	return HTTPNotFound()
 
-def GetResource(request):
-	MimeTypes = {
-		"png": "image/png",
-		"gif": "image/gif",
-		"js": "text/javascript",
-		"css": "text/css" }
-	try:
-		f = open("res/" + request.matchdict["file"], "r")
-		res = Response(f.read(), content_type=MimeTypes[os.path.splitext(request.matchdict["file"])[1][1:]])
-		res.expires = time.gmtime(time.time() + 3600 * 24 * 7)
-		f.close()
-	except:
-		res = HTTPNotFound()
-	return res
-
 if __name__ == "__main__":
 	Threads = {}
 	JobsTotal = 0
@@ -541,7 +514,6 @@ if __name__ == "__main__":
 	config.add_route("peptide", "/peptide")
 	config.add_route("select", "/select")
 	config.add_route("tooltip", "/tooltip/{type}")
-	config.add_route("res", "/res/{file:.+}")
 	config.add_view(DisplayList, route_name="list")
 	#config.add_view(SearchHit, route_name="search_hit")
 	config.add_view(SearchScores, route_name="search_score")
@@ -553,7 +525,7 @@ if __name__ == "__main__":
 	config.add_view(ListPeptide, route_name="peptide")
 	config.add_view(SelectInfo, route_name="select")
 	config.add_view(Tooltip, route_name="tooltip")
-	config.add_view(GetResource, route_name="res")
+	config.add_static_view("res", "res", cache_max_age=3600*24*7)
 	app = config.make_wsgi_app()
 	server = make_server(conf.HOST, conf.PORT, app)
 	server.serve_forever()
