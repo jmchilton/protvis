@@ -2,9 +2,9 @@ import binascii
 import os
 import xml.sax
 import xml.parsers.expat
-import config;
+import conf;
 
-GalaxyPath = config.GalaxyRoot + "/database/files/"
+GalaxyPath = conf.GALAXY_ROOT + "/database/files/"
 
 class IncludedFile:
 	class FileInfo:
@@ -125,6 +125,26 @@ class FileType:
 			FileType.PEPXML_INTERPROPHET: "pepint",
 			FileType.PROTXML: "protxml",
 			FileType.PROTXML_PROTEINPROPHET: "protpro"
+		}
+		try:
+			return switch[t]
+		except:
+			return "aux"
+
+	@staticmethod
+	def NameBasic(t):
+		switch = {
+			FileType.MZML: "mzml",
+			FileType.MGF: "mgf",
+			FileType.PEPXML: "pep",
+			FileType.PEPXML_MASCOT: "pep",
+			FileType.PEPXML_OMSSA: "pep",
+			FileType.PEPXML_XTANDEM: "pep",
+			FileType.PEPXML_COMPARE: "pep",
+			FileType.PEPXML_PEPTIDEPROPHET: "pep",
+			FileType.PEPXML_INTERPROPHET: "pep",
+			FileType.PROTXML: "prot",
+			FileType.PROTXML_PROTEINPROPHET: "prot"
 		}
 		try:
 			return switch[t]

@@ -3,5 +3,3 @@ Dont show tooltip on click
 Show other hits in query
 Advanced search
 peptide YSLNVTYNYPVHYFDGR has tooltip error in large_interprophet.pepXML.xml
-Display modifications to peptides
-Check if unescape() is needed

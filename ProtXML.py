@@ -1441,6 +1441,7 @@ def IsConverted(FileName):
 	return os.path.isfile(ConvertFilename(FileName))
 
 def ToBinary(FileName, Dest = None, Links = None):
+	import Reference
 	if Dest == None:
 		Dest = open(ConvertFilename(FileName), "w")
 	#Dest.write(struct.pack("=I", 0))
@@ -1450,6 +1451,7 @@ def ToBinary(FileName, Dest = None, Links = None):
 	parser.setContentHandler(SaxHandler(Dest, stat))
 	parser.parse(open(FileName, "r"))
 	Dest.close()
+	return Reference.FileType.PROTXML_PROTEINPROPHET
 
 def SearchBasic(FileName, terms):
 	f = open(FileName, "r")

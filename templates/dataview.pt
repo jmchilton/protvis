@@ -23,6 +23,18 @@
 			var CurrentResultsID = 0;
 			var CurrentPeptide = null;
 			var CurrentContents = null;
+			var CurrentDataset;
+			var ResultsVisible;
+			var Files = ${files};
+
+			function InArray(arr, e) {
+				for (var i in arr) {
+					if (arr[i] == e) {
+						return true;
+					}
+				}
+				return false;
+			}
 			
 			function BaseUrl(url, remove) {
 				if (!remove) {
@@ -83,13 +95,47 @@
 					if (type <= 0) {
 						return "";
 					} else if (type == 1) {
-						return "MZML";
+						return "mzml";
 					} else if (type == 2) {
-						return "MGF";
+						return "mgf";
 					} else if (type <= 9) {
-						return "PepXML";
+						return "pep";
 					} else {
-						return "ProtXML";
+						return "prot";
+					}
+				}
+			}
+			
+			function FindFilesWithDependancy(file, types) {
+				var search_deps = [file];
+				var deps = new Array();
+				var new_deps = new Array();
+				for (;;) {
+					for (i in Files) {
+						var f = Files[i];
+						var deps = f["deps"];
+						for (var d in deps) {
+							if (InArray(search_deps, deps[d])) {
+								new_deps.push(f["index"]);
+								break;
+							}
+						}
+					}
+					if (new_deps.length == 0) {
+						break;
+					}
+					for (var d in new_deps) {
+						if (!InArray(deps, new_deps[d])) {
+							deps.push(new_deps[d]);
+						}
+					}
+					delete search_deps;
+					search_deps = new_deps;
+					new_deps = new Array();
+				}
+				for (var i = deps.length - 1; i >= 0; --i) {
+					if (!InArray(types, Files[deps[i]]["type"])) {
+						deps.splice(i, 1);
 					}
 				}
 			}
@@ -119,6 +165,16 @@
 				}
 			}
 			
+			function SwitchDataset(set) {
+				if (set != CurrentDataset) {
+					dojo.fx.combine([
+						dojo.fx.wipeOut({ node: dojo.byId(CurrentDataset) }),
+						dojo.fx.wipeIn({ node: dojo.byId(set) })
+					]).play();
+					CurrentDataset = set;
+				}
+			}
+			
 			function QueueAnimation(anim) {
 				dojo.connect(anim, "onEnd", function() {
 					if (PendingAnimations.length > 0) {
@@ -138,7 +194,7 @@
 
 			function LoadContents(container, url) {
 				CurrentContents = { url: BaseUrl(url), container: container };
-				var oldhits = dojo.byId("data_" + container + "_" + CurrentResultsID);
+				var oldhits = dojo.byId("data_" + container).firstChild;
 				if (oldhits == null) {
 					var anim = dojo.fx.wipeIn({
 						node: dojo.byId("searching"),
@@ -163,7 +219,7 @@
 					}
 				} else {
 					QueueAnimation(dojo.fx.wipeOut({
-						node: dojo.byId("data_" + container + "_" + CurrentResultsID),
+						node: oldhits,
 						onEnd: function(n) {
 							delete Tooltips.shift();
 							dojo.byId("data_" + container).removeChild(n);
@@ -223,17 +279,15 @@
 				}
 			}
 			
-			function SearchPeptide(peptide) {
+			function SearchPeptide(peptide, datafile) {
 				CurrentPeptide = peptide;
+				var tab = TableManager.Tables["results_" + datafile];
 				dojo.xhrGet({
-					url: "/list/${type}/peptide?file=${file}&peptide=" + peptide + "&sort=" + peptides_sortcol + "&order=" + peptides_sortdir,
+					url: "/peptide?file=${file}&n=" + datafile + "&peptide=" + peptide + "&sort=" + tab["sort_col"] + "&order=" + (tab["sort_asc"] ? "asc" : "dsc"),
 					load: function(results) {
-						elem = dojo.byId("search_peptides")
-						elem.innerHTML = "<span class='link' onclick='ReturnToResults();'>Back to all results</span>" + BuildPeptideResults(results);
-						dojo.fx.combine([
-							dojo.fx.wipeOut({ node: dojo.byId("search_hits") }),
-							dojo.fx.wipeIn({ node: elem })
-						]).play();
+						elem = dojo.byId("data_peptides")
+						elem.innerHTML = "<span class='link' onclick='ReturnToResults();'>Back to all results</span>" + results;
+						SwitchDataset("data_peptides");
 					},
 					error: function() {
 						DetailsDialog.attr("title", "Query Results");
@@ -242,6 +296,16 @@
 						DetailsDialog.show();
 					}
 				});
+			}
+
+			function ToggleSpectrums() {
+				if (ResultsVisible) {
+					dojo.fx.wipeOut({ node: dojo.byId("spectrum_list") }).play();
+					ResultsVisible = false;
+				} else {
+					dojo.fx.wipeIn({ node: dojo.byId("spectrum_list") }).play();
+					ResultsVisible = true;
+				}
 			}
 
 			function SelectInfo(title, type, params) {
@@ -295,11 +359,13 @@
 
 			dojo.ready(function() {
 				// Populate content initially
-				LoadContents("${type}", "/results?file=${file}&n=${index}&type=${type}&q=&max=50");
+				CurrentDataset = "data_${index}";
+				LoadContents("${index}", "/results?file=${file}&n=${index}&type=${type}&q=&max=50");
 				DetailsDialog = new dijit.Dialog({ style: "width: 400px" });
-				FlowChartCreate(${files}, function(evt, file) {
-					var type = GetTypeName(file["type"], false).toLowerCase();
-					LoadContents(type, "/results?file=${file}&n=" + file["index"] + "&type=" + type + "&q=&max=50");
+				FlowChartCreate(Files, function(evt, file) {
+					var type = GetTypeName(file["type"], false);
+					SwitchDataset("data_" + file["index"]);
+					LoadContents(file["index"], "/results?file=${file}&n=" + file["index"] + "&type=" + type + "&q=&max=50");
 					FlowChartSelect(file["index"]);
 				});
 				FlowChartSelect(${index});
@@ -308,32 +374,11 @@
 		<script type="text/javascript" src="/res/scripts/main.js"></script>
 	</head>
 	<body class="claro">
-		<table id="container" style="width: 100%;">
-			<tr>
-				<td>
-					<div id="navigation_graph" style="width:100%; height:auto: overflow:auto;"></div>
-				</td>
-			</tr>
-			<tr>
-				<td>
-					<form id="filter_basic_view" onsubmit="FilterCurrent(document.getElementById('filter').value); return false;">
-						Filter: <input type="text" id="filter" />&nbsp;<input type="submit" value="Filter" />
-					</form>
-				</td>
-			</tr>
-			<tr>
-				<td>
-				</td>
-			</tr>
-			<tr>
-				<td>
-					<div id="searching" style="width: 100%;" class="dijitContentPaneLoading">Searching... Please wait</div>
-					<div id="data_pepxml" style="width: 100%;"></div>
-					<div id="data_protxml" style="width: 100%;"></div>
-					<div id="data_peptides" visible="false" style="width: 100%; display: none">
-					</div>
-				</td>
-			</tr>
-		</table>
+		<div id="navigation_graph" style="width:100%; height:auto; overflow:auto;"></div>
+		<br/>
+		<div id="searching" style="width: 100%;" class="dijitContentPaneLoading">Searching... Please wait</div>
+		<tal:for repeat="n python:range(index)"><div id="data_${n}" style="width:100%;height:0;display:none;"></div></tal:for>
+		<div id="data_${index}" style="width:100%"></div>
+		<div id="data_peptides" visible="false" style="width: 100%; display: none"></div>
 	</body>
 </html>

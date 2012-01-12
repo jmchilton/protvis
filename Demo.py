@@ -1,9 +1,5 @@
 #!/usr/bin/python
-import sys
-sys.path.insert(1, "env/lib/python2.7")
-import getsite
-
-from paste.httpserver import serve
+from wsgiref.simple_server import make_server
 from pyramid.config import Configurator
 from pyramid.response import Response
 from pyramid.renderers import render, render_to_response
@@ -27,8 +23,11 @@ templates = os.path.realpath(os.path.dirname(__file__))+ "/templates/"
 converted = os.path.realpath(os.path.dirname(__file__))+ "/ConvertedFiles/"
 decoy_regex = re.compile(conf.DECOY_REGEX)
 spectrum_regex = re.compile(conf.SPECTRUM_REGEX)
-Parsers = { "pepxml": PepXML, "protxml": ProtXML }
 
+MzMl = None #FIXME: delete when there is an MzMl module
+Mgf = None #FIXME: delete when there is an Mgf module
+
+Parsers = { "mzml": MzMl, "mgf": Mgf, "pep": PepXML, "prot": ProtXML }
 
 def test(cond, t, f):
 	if cond == True:
@@ -41,27 +40,37 @@ class JobManager:
 		self.NextJobID = 0
 		self.ThreadsLock = Lock()
 
-	def Add(self, threads):
+	def Add(self, threads, files, data):
 		self.ThreadsLock.acquire()
 		jobid = self.NextJobID
 		self.NextJobID += 1
-		self.Jobs[jobid] = threads
+		self.Jobs[jobid] = { "index": data, "files": [[threads[i], files[i]] for i in xrange(len(threads))] }
 		self.ThreadsLock.release()
 		return jobid
 
 	def QueryStatus(self, jobid):
 		self.ThreadsLock.acquire()
 		try:
-			threads = self.Jobs[jobid]
+			job = self.Jobs[jobid]
 		except:
 			self.ThreadsLock.release()
 			raise
 		alive = 0
-		for t in threads:
-			t.join(5.0 / len(threads))
+		for t, _ in job["files"]:
+			t.join(5.0 / len(job["files"]))
 			if t.isAlive():
 				alive += 1
 		if alive == 0:
+			data = job["index"]
+			data.write(struct.pack("=I", len(job["files"])))
+			for t, f in job["files"]:
+				if t.Type > f.Type:
+					f.Type = t.Type
+				data.write(struct.pack("=BH", f.Type, len(f.Depends)))
+				for d in f.Depends:
+					data.write(struct.pack("=H", test(d < 0, 0xFFFF, d)))
+				EncodeStringToFile(data, f.Name)
+			data.close()
 			del self.Jobs[jobid]
 		self.ThreadsLock.release()
 		return alive
@@ -69,8 +78,6 @@ class JobManager:
 Jobs = JobManager()
 
 def GetTypeParser(datatype):
-	MzMl = None #FIXME: delete when there is an MzMl module
-	Mgf = None #FIXME: delete when there is an Mgf module
 	modules = { Reference.FileType.MZML: MzMl,
 		Reference.FileType.MGF: Mgf,
 		Reference.FileType.PEPXML: PepXML, Reference.FileType.PEPXML_MASCOT: PepXML, Reference.FileType.PEPXML_OMSSA: PepXML, Reference.FileType.PEPXML_XTANDEM: PepXML, Reference.FileType.PEPXML_COMPARE: PepXML, Reference.FileType.PEPXML_PEPTIDEPROPHET: PepXML, Reference.FileType.PEPXML_INTERPROPHET: PepXML,
@@ -123,6 +130,19 @@ class FileLinks:
 	def GetParser(self, index):
 		return GetTypeParser(self.Links[index].Type)
 
+	def Types(self):
+		flags = 0
+		for l in self.Links:
+			if l.Type >= Reference.FileType.PROTXML:
+				flags |= 8
+			elif l.Type >= Reference.FileType.PEPXML:
+				flags |= 4
+			elif l.Type == Reference.FileType.MGF:
+				flags |= 2
+			elif l.Type == Reference.FileType.MZML:
+				flags |= 1
+		return flags
+
 def TemplateFunctions():
 	def render_peptide(peptide):
 		try:
@@ -153,9 +173,10 @@ class ConverterThread(Thread):
 		self.Dest = dst
 		self.Module = mod
 		self.Links = links
+		self.Type = Reference.FileType.UNKNOWN
 
 	def run(self):
-		self.Module.ToBinary(self.Source, open(self.Dest, "w"), self.Links)
+		self.Type = self.Module.ToBinary(self.Source, open(self.Dest, "w"), self.Links)
 
 
 def DecodeQuery(query):
@@ -232,34 +253,26 @@ def Upload(request):
 def Convert(request):
 	#for when this is running on the same server as galaxy
 	#just use the local files directly
-	#try:
+	try:
 		query = DecodeQuery(request.query_string)
-		data = tempfile.NamedTemporaryFile(dir = ".", prefix = "ConvertedFiles/", delete = False)
 		referencers = { "protxml": Reference.LoadChainProt, "pepxml": Reference.LoadChainPep, "mgf": Reference.LoadChainMgf, "mzml": Reference.LoadChainMzml }
 		files = referencers[query["type"]](binascii.unhexlify(query["file"]))
-		fs = len(files)
 		#Build the index file
-		data.write(struct.pack("=I", fs))
-		threads = range(fs)
+		data = tempfile.NamedTemporaryFile(dir = ".", prefix = "ConvertedFiles/", delete = False)
+		threads = range(len(files))
 		links = {}
 		for i in threads:
-			f = files[i]
-			data.write(struct.pack("=BH", f.Type, len(f.Depends)))
-			for d in f.Depends:
-				data.write(struct.pack("=H", test(d < 0, 0xFFFF, d)))
-			EncodeStringToFile(data, f.Name)
-			links[f.Name] = i
-		data.close()
+			links[files[i].Name] = i
 		#Now generate all the data files
 		for i in threads:
 			f = files[i]
 			t = ConverterThread(GetTypeParser(f.Type), f.Name, data.name + "_" + str(i), links) #FIXME: Security
 			t.start()
 			threads[i] = t
-		jobid = Jobs.Add(threads)
+		jobid = Jobs.Add(threads, files, data)
 		return render_to_response(templates + "upload.pt", { "file": data.name[len(converted):], "jobid": jobid }, request=request)
-	#except:
-	#	return HTTPBadRequest()
+	except:
+		return HTTPBadRequest()
 
 def QueryInitStatus(request):
 	try:
@@ -272,29 +285,35 @@ def QueryInitStatus(request):
 		return Response("-", request=request)
 
 def View(request):
-	#try:
+	try:
 		query = DecodeQuery(request.query_string)
 		try:
 			links = FileLinks(query["file"])
 		except:
 			return HTTPNotFound()
 		try:
+			int(query["n"]) #ensure it is an integer
 			index = query["n"]
-			typename = Reference.FileType.Name(links.Get(index).Type)
+			typename = Reference.FileType.NameBasic(links.Get(index).Type)
 		except:
 			index = links.GetTopInfo()
-			typename = Reference.FileType.Name(index["type"])
+			typename = Reference.FileType.NameBasic(index["type"])
 			index = index["index"]
 		files = "[" + ",".join(["{" + ",".join(["name:'" + os.path.split(l.Name)[1] + "'", "type:" + str(l.Type), "deps:[" + ",".join([str(d) for d in l.Depends]) + "]"]) + "}" for l in links]) + "]"
 		return render_to_response(templates + "dataview.pt", { "file": query["file"], "index": index, "type": typename, "files": files }, request=request)
-	#except:
-	#	return HTTPBadRequest()
+	except:
+		return HTTPBadRequest()
 
 def ListResults(request):
 	query = DecodeQuery(request.query_string)
 	fname = GetQueryFileName(query)
+	try:
+		links = FileLinks(query["file"])
+	except:
+		return HTTPNotFound()
 	#try:
 	t = query["type"]
+	int(query["n"]) #ensure it is an integer
 	parser = Parsers[t]
 	if TryGet(query, "level") == "adv":
 		[scores, total, results] = parser.SearchAdvanced(fname + "_" + query["n"], urllib.unquote(query["q"]))
@@ -338,7 +357,7 @@ def ListResults(request):
 	for r in results:
 		h = r.HitInfo
 		r.style = DecodeDecoy(h["protein"])
-	info = {"total": total, "matches": matches, "start": start + 1, "end": start + len(results), "type": t, "score": score, "file": query["file"], "datafile": query["n"], "hash": abs(hash(time.gmtime()))}
+	info = {"total": total, "matches": matches, "start": start + 1, "end": start + len(results), "type": t, "score": score, "file": query["file"], "datafile": query["n"], "query": query["q"], "hash": abs(hash(time.gmtime())), "datas": links.Types()}
 	return render_to_response(templates + t + "_results.pt", { "sortcol": sortcol, "sortdsc": reverse, "info": info, "results": results, "url": Literal(request.path_qs), "funcs": TemplateFunctions() }, request = request)
 	#except:
 	#	return HTTPBadRequest()
@@ -354,137 +373,142 @@ def ListPeptide(request):
 
 	query = DecodeQuery(request.query_string)
 	fname = GetQueryFileName(query)
+	#try:
+	int(query["n"])
+	[scores, results] = PepXML.SearchPeptide(fname + "_" + query["n"], query["peptide"])
+	total = len(results)
+	score = PepXML.DefaultSortColumn(scores)
 	try:
-		[scores, results] = PepXML.SearchPeptide(fname, query["peptide"])
-		total = len(results)
-		score = PepXML.DefaultSortColumn(scores)
-		try:
-			sortcol = query["sort"]
-		except:
-			sortcol = "score"
-		try:
-			sortby = query["order"]
-			if sortby == "asc":
-				reverse = False
-			else:
-				reverse = True
-		except:
-			reverse = True
-		sc = sortcol
-		if sortcol == "score":
-			sc = score
-		if sc in ["hyperscore", "pp_prob", "ip_prob"]:
-			reverse = not reverse
-		SearchEngines = { "X-Tandem": 0, "Mascot": 0, "Omssa": 0 }
-		spectrums = {}
-		for r in results:
-			r["score"] = r[score]
-			if "hyperscore" in r:
-				r["engine"] = "X-Tandem"
-				r["engine_score"] = str(r["hyperscore"])
-				SearchEngines["X-Tandem"] += 1
-			elif "ionscore" in r:
-				r["engine"] = "Mascot"
-				r["engine_score"] = str(r["ionscore"])
-				SearchEngines["Mascot"] += 1
-			elif "expect" in r:
-				r["engine"] = "Omssa"
-				r["engine_score"] = str(r["expect"])
-				SearchEngines["Omssa"] += 1
-			else:
-				r["engine"] = ""
-				r["engine_score"] = ""
-			spec = spectrum_regex.sub(r"\1", r["spectrum"])
-			try:
-				spectrums[spec] += 1
-			except:
-				spectrums[spec] = 1
-		spectrums = sorted([Spec(k, v) for k, v in spectrums.items()], reverse = True, key = lambda spec: spec.Count)
-		results = sorted(results, key = lambda key: key[sortcol], reverse = reverse)
-		try:
-			start = int(query["start"])
-		except:
-			start = 0
-		try:
-			limit = int(query["max"])
-		except:
-			limit = -1
-		if start > 0:
-			if limit > 0:
-				results = results[start:start+limit]
-			else:
-				results = results[start:]
-		elif limit > 0:
-			results = results[:limit]
-		info = { "total": total, "start": start + 1, "end": start + len(results), "peptide": query["peptide"] }
-		columns = [{"name": "spectrum", "title": "Spectrum"}, {"name": "massdiff", "title": "Mass Diff"}, {"name": "score", "title": "Score"}, {"name": "engine", "title": "Search Engine"}, {"name": "engine_score", "title": "Engine Score"}]
-		specs = render(templates + "pepxml_peptide_spectrums.pt", { "count": len(spectrums), "spectrums": spectrums}, request=request)
-		instances = render(templates + "pepxml_peptide.pt", { "info": info, "peptides": results, "columns": columns, "sortcol": sortcol, "sortdsc": reverse, "funcs": TemplateFunctions() }, request=request)
-		return Response(specs + '<div id="peptide_results_list">' + instances + "</div>", request=request)
+		sortcol = query["sort"]
 	except:
-		return HTTPBadRequest()
+		sortcol = "score"
+	try:
+		sortby = query["order"]
+		if sortby == "asc":
+			reverse = False
+		else:
+			reverse = True
+	except:
+		reverse = True
+	sc = sortcol
+	if sortcol == "score":
+		sc = score
+	if sc in ["hyperscore", "pp_prob", "ip_prob"]:
+		reverse = not reverse
+	SearchEngines = { "X-Tandem": 0, "Mascot": 0, "Omssa": 0 }
+	spectrums = {}
+	for r in results:
+		r["score"] = r[score]
+		if "hyperscore" in r:
+			r["engine"] = "X-Tandem"
+			r["engine_score"] = str(r["hyperscore"])
+			SearchEngines["X-Tandem"] += 1
+		elif "ionscore" in r:
+			r["engine"] = "Mascot"
+			r["engine_score"] = str(r["ionscore"])
+			SearchEngines["Mascot"] += 1
+		elif "expect" in r:
+			r["engine"] = "Omssa"
+			r["engine_score"] = str(r["expect"])
+			SearchEngines["Omssa"] += 1
+		else:
+			r["engine"] = ""
+			r["engine_score"] = ""
+		spec = spectrum_regex.sub(r"\1", r["spectrum"])
+		try:
+			spectrums[spec] += 1
+		except:
+			spectrums[spec] = 1
+	spectrums = sorted([Spec(k, v) for k, v in spectrums.items()], reverse = True, key = lambda spec: spec.Count)
+	results = sorted(results, key = lambda key: key[sortcol], reverse = reverse)
+	try:
+		start = int(query["start"])
+	except:
+		start = 0
+	try:
+		limit = int(query["max"])
+	except:
+		limit = -1
+	if start > 0:
+		if limit > 0:
+			results = results[start:start+limit]
+		else:
+			results = results[start:]
+	elif limit > 0:
+		results = results[:limit]
+	info = { "total": total, "start": start + 1, "end": start + len(results), "peptide": query["peptide"] }
+	columns = [{"name": "spectrum", "title": "Spectrum"}, {"name": "massdiff", "title": "Mass Diff"}, {"name": "score", "title": "Score"}, {"name": "engine", "title": "Search Engine"}, {"name": "engine_score", "title": "Engine Score"}]
+	specs = render(templates + "pepxml_peptide_spectrums.pt", { "count": len(spectrums), "spectrums": spectrums}, request=request)
+	instances = render(templates + "pepxml_peptide.pt", { "info": info, "peptides": results, "columns": columns, "sortcol": sortcol, "sortdsc": reverse, "funcs": TemplateFunctions() }, request=request)
+	return Response(specs + '<div id="peptide_results_list">' + instances + "</div>", request=request)
+	#except:
+	#	return HTTPBadRequest()
 
 def SelectInfo(request):
 	query = DecodeQuery(request.query_string)
 	for c in query["type"]:
 		if (c < 'a' or c > 'z') and c != '_':
 			raise HTTPUnauthorized()
-	#try:
-	parser = FileLinks(query["file"]).GetParser(int(query["n"]))
-	select = eval("parser.select_" + query["type"])
-	results = select(GetQueryFileName(query), query)
-	return render_to_response(templates + "select_" + query["type"] + ".pt", { "query": query, "results": results, "funcs": TemplateFunctions() }, request=request)
-	#except:
-	#	return HTTPBadRequest()
-
-def ListPeptideTooltip(request):
-	query = DecodeQuery(request.query_string)
-	fname = GetQueryFileName(query)
 	try:
-		[scores, results] = PepXML.SearchPeptide(fname, query["peptide"])
-		score = PepXML.DefaultSortColumn(scores)
-		if score == "expect":
-			reverse = False
-		else:
-			reverse = True
-		results = sorted(results, key = lambda key: key[score], reverse = reverse)
-		count = len(results)
-		shown = count
-		SearchEngines = { "X-Tandem": 0, "Mascot": 0, "Omssa": 0 }
-		for r in results:
-			if "hyperscore" in r:
-				SearchEngines["X-Tandem"] += 1
-			elif "ionscore" in r:
-				SearchEngines["Mascot"] += 1
-			elif "expect" in r:
-				SearchEngines["Omssa"] += 1
-		if count > 5:
-			results = results[:5]
-			shown = 5
-		for r in results:
-			r["score"] = r[score]
-			if "hyperscore" in r:
-				r["engine"] = "X-Tandem"
-				r["engine_score"] = str(r["hyperscore"])
-			elif "ionscore" in r:
-				r["engine"] = "Mascot"
-				r["engine_score"] = str(r["ionscore"])
-			elif "expect" in r:
-				r["engine"] = "Omssa"
-				r["engine_score"] = str(r["expect"])
-			else:
-				r["engine"] = ""
-				r["engine_score"] = ""
-		if SearchEngines["X-Tandem"] == 0:
-			del SearchEngines["X-Tandem"]
-		if SearchEngines["Mascot"] == 0:
-			del SearchEngines["Mascot"]
-		if SearchEngines["Omssa"] == 0:
-			del SearchEngines["Omssa"]
-		info = { "shown": shown, "total": count, "engine": PepXML.SearchEngineName(scores) }
-		return render_to_response(templates + "pepxml_peptide_tooltip.pt", { "info": info, "peptides": results, "counts": SearchEngines.items(), "funcs": TemplateFunctions() }, request=request)
+		parser = FileLinks(query["file"]).GetParser(int(query["n"]))
+		select = eval("parser.select_" + query["type"])
+		results = select(GetQueryFileName(query), query)
+		return render_to_response(templates + "select_" + query["type"] + ".pt", { "query": query, "results": results, "funcs": TemplateFunctions() }, request=request)
 	except:
 		return HTTPBadRequest()
+
+def Tooltip(request):
+	t = request.matchdict["type"]
+	query = DecodeQuery(request.query_string)
+	fname = GetQueryFileName(query)
+	if t == "peptide":
+		try:
+			int(query["n"]) #ensure it is an integer
+			[scores, results] = PepXML.SearchPeptide(fname + "_" + query["n"], query["peptide"])
+			score = PepXML.DefaultSortColumn(scores)
+			if score == "expect":
+				reverse = False
+			else:
+				reverse = True
+			results = sorted(results, key = lambda key: key[score], reverse = reverse)
+			count = len(results)
+			shown = count
+			SearchEngines = { "X-Tandem": 0, "Mascot": 0, "Omssa": 0 }
+			for r in results:
+				if "hyperscore" in r:
+					SearchEngines["X-Tandem"] += 1
+				elif "ionscore" in r:
+					SearchEngines["Mascot"] += 1
+				elif "expect" in r:
+					SearchEngines["Omssa"] += 1
+			if count > 5:
+				results = results[:5]
+				shown = 5
+			for r in results:
+				r["score"] = r[score]
+				if "hyperscore" in r:
+					r["engine"] = "X-Tandem"
+					r["engine_score"] = str(r["hyperscore"])
+				elif "ionscore" in r:
+					r["engine"] = "Mascot"
+					r["engine_score"] = str(r["ionscore"])
+				elif "expect" in r:
+					r["engine"] = "Omssa"
+					r["engine_score"] = str(r["expect"])
+				else:
+					r["engine"] = ""
+					r["engine_score"] = ""
+			if SearchEngines["X-Tandem"] == 0:
+				del SearchEngines["X-Tandem"]
+			if SearchEngines["Mascot"] == 0:
+				del SearchEngines["Mascot"]
+			if SearchEngines["Omssa"] == 0:
+				del SearchEngines["Omssa"]
+			info = { "shown": shown, "total": count, "engine": PepXML.SearchEngineName(scores) }
+			return render_to_response(templates + "pepxml_peptide_tooltip.pt", { "info": info, "peptides": results, "counts": SearchEngines.items(), "funcs": TemplateFunctions() }, request=request)
+		except:
+			return HTTPBadRequest()
+	return HTTPNotFound()
 
 def GetResource(request):
 	MimeTypes = {
@@ -516,7 +540,7 @@ if __name__ == "__main__":
 	config.add_route("results", "/results")
 	config.add_route("peptide", "/peptide")
 	config.add_route("select", "/select")
-	config.add_route("tooltip_peptide", "/tooltip/peptide")
+	config.add_route("tooltip", "/tooltip/{type}")
 	config.add_route("res", "/res/{file:.+}")
 	config.add_view(DisplayList, route_name="list")
 	#config.add_view(SearchHit, route_name="search_hit")
@@ -528,7 +552,8 @@ if __name__ == "__main__":
 	config.add_view(ListResults, route_name="results")
 	config.add_view(ListPeptide, route_name="peptide")
 	config.add_view(SelectInfo, route_name="select")
-	config.add_view(ListPeptideTooltip, route_name="tooltip_peptide")
+	config.add_view(Tooltip, route_name="tooltip")
 	config.add_view(GetResource, route_name="res")
 	app = config.make_wsgi_app()
-	serve(app, host=conf.HOST, port=conf.PORT)
+	server = make_server(conf.HOST, conf.PORT, app)
+	server.serve_forever()

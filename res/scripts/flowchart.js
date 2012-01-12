@@ -69,15 +69,6 @@ function FlowChartCreate(files, OnSelect) {
 		}
 	}
 
-	function InArray(arr, e) {
-		for (var i in arr) {
-			if (arr[i] == e) {
-				return true;
-			}
-		}
-		return false;
-	}
-
 	function SubtractArray(arr, sub) {
 		var ret = new Array();
 		for (var i in arr) {
@@ -174,7 +165,6 @@ function FlowChartCreate(files, OnSelect) {
 		indices = SubtractArray(indices, is);
 		x += BoxWidth + BoxHSpacing;
 	}
-	console.log(files);
 	//layout each column
 	var height = GetBoxHeight(columns, files, 0, columns[0][0]);
 	height = CalcGroupHeight(height);

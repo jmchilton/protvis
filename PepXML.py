@@ -2201,6 +2201,7 @@ def ToBinary(FileName, Dest = None, Links = None):
 		_PeptideInstance Peptides[PeptideCount];
 	}
 	"""
+	import Reference
 	if Dest == None:
 		Dest = open(ConvertFilename(FileName), "w")
 	Dest.write(struct.pack("=I", 0))
@@ -2220,6 +2221,17 @@ def ToBinary(FileName, Dest = None, Links = None):
 		for hit, query in offsets:
 			Dest.write(struct.pack("=II", hit, query))
 	Dest.close()
+	if stat.IncludedScores & 0x800:
+		return Reference.FileType.PEPXML_INTERPROPHET
+	elif stat.IncludedScores & 0x400:
+		return Reference.FileType.PEPXML_PEPTIDEPROPHET
+	elif stat.IncludedScores & 0x08:
+		return Reference.FileType.PEPXML_XTANDEM
+	elif stat.IncludedScores & 0x20:
+		return Reference.FileType.PEPXML_MASCOT
+	elif stat.IncludedScores & 0x02:
+		return Reference.FileType.PEPXML_OMSSA
+	return Reference.FileType.UNKNOWN
 
 def SearchBasic(FileName, terms):
 	f = open(FileName, "r")

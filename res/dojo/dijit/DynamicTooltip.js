@@ -12,8 +12,9 @@ dojo.declare("dijit.DynamicTooltip", dijit.Tooltip,
 		
 		_onHover: function(/*Event*/ e){
 			this.label = "<center><span class='dijitContentPaneLoading'>Loading results... Please wait</span></center>";
+			var url = this.href + e.target.getAttribute("tipurl");
 			dojo.xhrGet({
-				url: this.href + e.target.innerHTML,
+				url: url,
 				tooltipWidget: this,
 				load: function(response, ioArgs) {
 					this.tooltipWidget.label = response;

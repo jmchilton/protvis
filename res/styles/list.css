@@ -4,10 +4,6 @@ body {
 	background-color: #F4F4F4;
 }
 
-#container {
-	border: none;
-}
-
 table {
 	border: 3px solid #F4F4F4;
 	border-collapse:collapse;
@@ -77,18 +73,19 @@ tr.decoyodd {
 	font-weight:bold;
 }
 
-#results tr.info {
+.info {
 	font-size: 11pt;
 }
 
-#results tr.desc {
+.desc {
 	color: #505050;
 }
-#results span.peptide_full {
+
+.peptide_full {
 	color: #707070;
 }
 
-#results span.peptide {
+.peptide {
 	color: #303030;
 	font-weight: bold;
 }
