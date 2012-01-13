@@ -35,6 +35,7 @@
 			var LastDataset = new Location(${index});
 			var ResultsVisible;
 			var Files = ${files};
+			var Flowchart;
 
 			function InArray(arr, e) {
 				for (var i in arr) {
@@ -188,7 +189,7 @@
 					]).play();
 					CurrentDataset = set;
 				}
-				FlowChartSelect(set.Dataset);
+				Flowchart.Select(set.Dataset);
 			}
 			
 			function QueueAnimation(anim) {
@@ -369,13 +370,13 @@
 				// Populate content initially
 				LoadContents("${index}", "/results?file=${file}&n=${index}&type=${type}&q=&max=50");
 				DetailsDialog = new dijit.Dialog({ style: "width: 400px" });
-				FlowChartCreate(Files, function(evt, file) {
+				Flowchart = new FlowChart(Files, function(evt, file) {
 					var type = GetTypeName(file["type"], false);
 					SwitchDataset(file["index"]);
 					LoadContents(file["index"], "/results?file=${file}&n=" + file["index"] + "&type=" + type + "&q=&max=50");
-					FlowChartSelect(file["index"]);
+					Flowchart.Select(file["index"]);
 				});
-				FlowChartSelect(${index});
+				Flowchart.Select(${index});
 			});
 		</script>
 		<script type="text/javascript" src="/res/scripts/main.js"></script>
