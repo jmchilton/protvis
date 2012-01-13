@@ -1,0 +1,106 @@
+<html>
+	<head>
+		<title>Display test for flowcharts</title>
+		<script src="/res/dojo/dojo/dojo.js" type="text/javascript" data-dojo-config="parseOnLoad: true"></script>
+		<script src="/res/scripts/flowchart.js"></script>
+		<script>
+			function InArray(arr, e) {
+				for (var i in arr) {
+					if (arr[i] == e) {
+						return true;
+					}
+				}
+				return false;
+			}
+
+			function GetTypeName(type, full) {
+				if (full) {
+					switch (type) {
+						case 1:
+							return "MZML";
+						case 2:
+							return "MGF";
+						case 3:
+							return "PepXML";
+						case 4:
+							return "Mascot";
+						case 5:
+							return "Omssa";
+						case 6:
+							return "X! Tandem";
+						case 7:
+							return "PepXML Comparison";
+						case 8:
+							return "PeptideProphet";
+						case 9:
+							return "InterProphet";
+						case 10:
+							return "ProtXML";
+						case 11:
+							return "ProteinProphet";
+						default:
+							return "";
+					}
+				} else {
+					if (type <= 0) {
+						return "";
+					} else if (type == 1) {
+						return "mzml";
+					} else if (type == 2) {
+						return "mgf";
+					} else if (type <= 9) {
+						return "pep";
+					} else {
+						return "prot";
+					}
+				}
+			}
+			
+			dojo.ready(function() {
+				new FlowChart(dojo.byId("graph_1"), [
+					{name:'dataset_46.dat',type:1,deps:[]},    //0
+					{name:'dataset_50.dat',type:6,deps:[0]},   //1
+					{name:'dataset_47.dat',type:2,deps:[]},    //2
+					{name:'dataset_49.dat',type:4,deps:[2]},   //3
+					{name:'dataset_52.dat',type:8,deps:[2,3]}, //4
+					{name:'dataset_51.dat',type:8,deps:[0,1]}, //5
+					{name:'dataset_54.dat',type:8,deps:[2,4]}, //6
+					{name:'dataset_55.dat',type:9,deps:[0,1,2,3,4,5,6]}, //7
+					{name:'dataset_56.dat',type:11,deps:[7]}   //8
+				]);
+				new FlowChart(dojo.byId("graph_2"), [
+					{name:'dataset_46.dat',type:1,deps:[]},
+					{name:'dataset_50.dat',type:6,deps:[0]},
+					{name:'dataset_47.dat',type:2,deps:[]},
+					{name:'dataset_49.dat',type:4,deps:[2]},
+					{name:'dataset_52.dat',type:8,deps:[2,3]},
+					{name:'dataset_51.dat',type:8,deps:[0,1,4]},
+					{name:'dataset_54.dat',type:8,deps:[2,4]},
+					{name:'dataset_55.dat',type:9,deps:[0,1,2,3,4,5,6]},
+					{name:'dataset_56.dat',type:11,deps:[7]}
+				]);
+				new FlowChart(dojo.byId("graph_2"), [
+					{name:'dataset_46.dat',type:1,deps:[9]},   //0
+					{name:'dataset_50.dat',type:6,deps:[0]},   //1
+					{name:'dataset_47.dat',type:2,deps:[9]},   //2
+					{name:'dataset_49.dat',type:4,deps:[2]},   //3
+					{name:'dataset_52.dat',type:8,deps:[2,3]}, //4
+					{name:'dataset_51.dat',type:8,deps:[0,1]}, //5
+					{name:'dataset_54.dat',type:8,deps:[2,4]}, //6
+					{name:'dataset_55.dat',type:9,deps:[0,1,2,3,4,5,6]}, //7
+					{name:'dataset_56.dat',type:11,deps:[7]},  //8
+					{name:'dataset_aa.dat',type:1,deps:[]}     //9
+				]);
+			});
+		</script>
+	</head>
+	<body>
+		<div id="graph_1"></div>
+		<div id="graph_2"></div>
+		<div id="graph_3"></div>
+		<div id="graph_4"></div>
+		<div id="graph_5"></div>
+		<div id="graph_6"></div>
+		<div id="graph_7"></div>
+	</body>
+</html>
