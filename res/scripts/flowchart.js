@@ -8,7 +8,7 @@ var BoxHeight = 45;
 var BoxHSpacing = 50, BoxVSpacing = (BoxSlots * 2 + 1) * BoxSlotSpacing, BoxVSize = BoxVSpacing + BoxHeight;
 var Colors = [ "#ff5900", "#0d56ff", "#4dde00", "#a600a6", "#ff9700", "#2618b1", "#1049a9", "#009999", "#e9003a" ];
 
-FlowChart = function(files, OnSelect) {
+FlowChart = function(parent, files, OnSelect) {
 	this.Surface = null;
 	this.Matrix = dojox.gfx.matrix;
 	this.Nodes = new Array();
@@ -17,14 +17,16 @@ FlowChart = function(files, OnSelect) {
 	var columns = new Array();
 	var obj = this;
 	
-	function MakeBox(file, selected) {
+	function MakeBox(file) {
 		var color = Colors[file["index"] % Colors.length];//file["missing"] ? "gray" : "black";
 		var mat = obj.Matrix.translate(file["x"], file["y"]);
 		var g = obj.Surface.createGroup().setTransform(mat);
 		var box = g.createRect({x:-BoxWidth/2, y:-BoxHeight/2, width:BoxWidth, height:BoxHeight, r:5}).setFill({type:"linear", y1:-BoxHeight * 0.75, x2:0, y2:BoxHeight, colors:[{offset:0, color:"white"}, {offset:1, color:color}]}).setStroke({color:"black", width:2});
 		var title = g.createText({x:0, y:-3, text:file["name"], align:"middle"}).setFont({family:"Arial", size:"14px", weight:"bold"}).setFill("black");
 		var type = g.createText({x:0, y:14, text:GetTypeName(file["type"], true), align:"middle"}).setFont({family:"Arial", size:"12px"}).setFill("black");
-		g.connect("onmousedown", this,function(evt) { if (OnSelect) { OnSelect(evt, file); } });
+		if (OnSelect) {
+			g.connect("onmousedown", this, function(evt) { OnSelect(evt, file); });
+		}
 		g.rawNode.setAttribute("cursor", "pointer");
 		return { box:box, title:title, type:type, g:g, mat:mat, slots_top:[], slots_bot:[], x:file["x"], y:file["y"] };
 	}
@@ -307,7 +309,7 @@ FlowChart = function(files, OnSelect) {
 	height = CalcGroupHeight(height);
 	OffsetChain(files, columns, columns[0][0], 0, height / 2);
 
-	this.Surface = dojox.gfx.createSurface(dojo.byId("navigation_graph"), 10 + BoxHSpacing * (columns.length - 1) + BoxWidth * columns.length + 10, height + 6 + BoxSlots * BoxSlotSpacing);
+	this.Surface = dojox.gfx.createSurface(parent, 10 + BoxHSpacing * (columns.length - 1) + BoxWidth * columns.length + 10, height * 2 + 6 + BoxSlots * BoxSlotSpacing);
 	for (var f in files) {
 		this.Nodes.push(MakeBox(files[f]));
 	}

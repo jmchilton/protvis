@@ -370,7 +370,7 @@
 				// Populate content initially
 				LoadContents("${index}", "/results?file=${file}&n=${index}&type=${type}&q=&max=50");
 				DetailsDialog = new dijit.Dialog({ style: "width: 400px" });
-				Flowchart = new FlowChart(Files, function(evt, file) {
+				Flowchart = new FlowChart(dojo.byId("navigation_graph"), Files, function(evt, file) {
 					var type = GetTypeName(file["type"], false);
 					SwitchDataset(file["index"]);
 					LoadContents(file["index"], "/results?file=${file}&n=" + file["index"] + "&type=" + type + "&q=&max=50");

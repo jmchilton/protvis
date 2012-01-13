@@ -526,6 +526,7 @@ if __name__ == "__main__":
 	config.add_view(SelectInfo, route_name="select")
 	config.add_view(Tooltip, route_name="tooltip")
 	config.add_static_view("res", "res", cache_max_age=3600*24*7)
+	config.add_static_view("test", "test", cache_max_age=0)
 	app = config.make_wsgi_app()
 	server = make_server(conf.HOST, conf.PORT, app)
 	server.serve_forever()
