@@ -14,6 +14,14 @@
 			dojo.require("dojo._base.connect");
 			dojo.require("dijit.DynamicTooltip");
 			dojo.require("dojox.html.ellipsis");
+			
+			var Location = function(dataset, table) {
+				if (!table) {
+					table = "data_" + dataset;
+				}
+				this.Dataset = dataset;
+				this.Table = table;
+			}
 
 			var DetailsDialog;
 			var CurrentResults = "";
@@ -23,7 +31,8 @@
 			var CurrentResultsID = 0;
 			var CurrentPeptide = null;
 			var CurrentContents = null;
-			var CurrentDataset;
+			var CurrentDataset = new Location(${index});
+			var LastDataset = new Location(${index});
 			var ResultsVisible;
 			var Files = ${files};
 
@@ -141,6 +150,10 @@
 				return deps;
 			}
 			
+			function GetDependencies(file) {
+				return Files[file]["deps"];
+			}
+			
 			var TableManager = new function() {
 				this.Tables = {};
 	
@@ -166,14 +179,16 @@
 				}
 			}
 			
-			function SwitchDataset(set) {
-				if (set != CurrentDataset) {
+			function SwitchDataset(dataset, table) {
+				var set = (dataset instanceof Location) ? dataset : new Location(dataset, table);
+				if (set.Table != CurrentDataset.Table) {
 					dojo.fx.combine([
-						dojo.fx.wipeOut({ node: dojo.byId(CurrentDataset) }),
-						dojo.fx.wipeIn({ node: dojo.byId(set) })
+						dojo.fx.wipeOut({ node: dojo.byId(CurrentDataset.Table) }),
+						dojo.fx.wipeIn({ node: dojo.byId(set.Table) })
 					]).play();
 					CurrentDataset = set;
 				}
+				FlowChartSelect(set.Dataset);
 			}
 			
 			function QueueAnimation(anim) {
@@ -264,7 +279,7 @@
 						cont.id = "data_" + container + "_" + ++CurrentResultsID;
 						cont.visible = "false";
 						cont.style = "display: none";
-						dojo.byId("data_" + container).innerHTML = "Query Error. Server could not be reached";
+						cont.innerHTML = "Query Error. Server could not be reached";
 						dojo.byId("data_" + container).appendChild(cont);
 						delete PendingAnimations;
 						PendingAnimations = new Array();
@@ -282,13 +297,13 @@
 			
 			function SearchPeptide(peptide, datafile) {
 				CurrentPeptide = peptide;
-				var tab = TableManager.Tables["results_" + datafile];
+				LastDataset = CurrentDataset;
 				dojo.xhrGet({
-					url: "/peptide?file=${file}&n=" + datafile + "&peptide=" + peptide + "&sort=" + tab["sort_col"] + "&order=" + (tab["sort_asc"] ? "asc" : "dsc"),
+					url: "/peptide?file=${file}&n=" + datafile + "&peptide=" + peptide,
 					load: function(results) {
 						elem = dojo.byId("data_peptides")
 						elem.innerHTML = "<span class='link' onclick='ReturnToResults();'>Back to all results</span>" + results;
-						SwitchDataset("data_peptides");
+						SwitchDataset(datafile, "data_peptides");
 					},
 					error: function() {
 						DetailsDialog.attr("title", "Query Results");
@@ -347,25 +362,16 @@
 			}
 
 			function ReturnToResults() {
-				dojo.fx.combine([
-					dojo.fx.wipeOut({
-						node: dojo.byId("search_peptides"),
-						onEnd: function(n) {
-							n.innerHTML = "";
-						}
-					}),
-					dojo.fx.wipeIn({ node: dojo.byId("search_hits") })
-				]).play();
+				SwitchDataset(LastDataset);
 			}
 
 			dojo.ready(function() {
 				// Populate content initially
-				CurrentDataset = "data_${index}";
 				LoadContents("${index}", "/results?file=${file}&n=${index}&type=${type}&q=&max=50");
 				DetailsDialog = new dijit.Dialog({ style: "width: 400px" });
 				FlowChartCreate(Files, function(evt, file) {
 					var type = GetTypeName(file["type"], false);
-					SwitchDataset("data_" + file["index"]);
+					SwitchDataset(file["index"]);
 					LoadContents(file["index"], "/results?file=${file}&n=" + file["index"] + "&type=" + type + "&q=&max=50");
 					FlowChartSelect(file["index"]);
 				});
