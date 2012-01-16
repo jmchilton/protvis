@@ -309,7 +309,7 @@ FlowChart = function(parent, files, OnSelect) {
 	height = CalcGroupHeight(height);
 	OffsetChain(files, columns, columns[0][0], 0, height / 2);
 
-	this.Surface = dojox.gfx.createSurface(parent, 10 + BoxHSpacing * (columns.length - 1) + BoxWidth * columns.length + 10, height * 2 + 6 + BoxSlots * BoxSlotSpacing);
+	this.Surface = dojox.gfx.createSurface(parent, 10 + BoxHSpacing * (columns.length - 1) + BoxWidth * columns.length + 10, height + 6 + BoxSlots * BoxSlotSpacing);
 	for (var f in files) {
 		this.Nodes.push(MakeBox(files[f]));
 	}

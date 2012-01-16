@@ -176,6 +176,14 @@ class SearchStatus:
 def SplitPhrase(phrase):
 	return phrase.split(); #FIXME: don't split quotes
 
+def EncodeTermsBasic(terms):
+	return { None: SplitPhrase(terms.upper()) }
+
+def EncodeTermsAdvanced(terms_dict):
+	terms = {}
+	for k, v in terms_dict.items():
+		terms[k] = SplitPhrase(v.upper())
+
 #XML Helpers
 class NullStream:
 	def tell(self):

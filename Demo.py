@@ -15,8 +15,8 @@ from HttpUtil import *
 import Reference
 import conf
 import struct
-from CommonXML import EncodeStringToFile, DecodeStringFromFile, TryGet
-import ProtXML, PepXML
+from Common import EncodeStringToFile, DecodeStringFromFile, TryGet, EncodeTermsBasic, EncodeTermsAdvanced
+import ProtXML, PepXML, MGF
 import time
 
 templates = os.path.realpath(os.path.dirname(__file__))+ "/templates/"
@@ -25,9 +25,8 @@ decoy_regex = re.compile(conf.DECOY_REGEX)
 spectrum_regex = re.compile(conf.SPECTRUM_REGEX)
 
 MzMl = None #FIXME: delete when there is an MzMl module
-Mgf = None #FIXME: delete when there is an Mgf module
 
-Parsers = { "mzml": MzMl, "mgf": Mgf, "pep": PepXML, "prot": ProtXML }
+Parsers = { "mzml": MzMl, "mgf": MGF, "pep": PepXML, "prot": ProtXML }
 
 def test(cond, t, f):
 	if cond == True:
@@ -79,7 +78,7 @@ Jobs = JobManager()
 
 def GetTypeParser(datatype):
 	modules = { Reference.FileType.MZML: MzMl,
-		Reference.FileType.MGF: Mgf,
+		Reference.FileType.MGF: MGF,
 		Reference.FileType.PEPXML: PepXML, Reference.FileType.PEPXML_MASCOT: PepXML, Reference.FileType.PEPXML_OMSSA: PepXML, Reference.FileType.PEPXML_XTANDEM: PepXML, Reference.FileType.PEPXML_COMPARE: PepXML, Reference.FileType.PEPXML_PEPTIDEPROPHET: PepXML, Reference.FileType.PEPXML_INTERPROPHET: PepXML,
 		Reference.FileType.PROTXML: ProtXML, Reference.FileType.PROTXML_PROTEINPROPHET: ProtXML
 	}
@@ -316,9 +315,9 @@ def ListResults(request):
 	int(query["n"]) #ensure it is an integer
 	parser = Parsers[t]
 	if TryGet(query, "level") == "adv":
-		[scores, total, results] = parser.SearchAdvanced(fname + "_" + query["n"], urllib.unquote(query["q"]))
+		[scores, total, results] = parser.Search(fname + "_" + query["n"], EncodeTermsAdvanced(urllib.unquote(query["q"])))
 	else:
-		[scores, total, results] = parser.SearchBasic(fname + "_" + query["n"], urllib.unquote(query["q"]))
+		[scores, total, results] = parser.Search(fname + "_" + query["n"], EncodeTermsBasic(urllib.unquote(query["q"])))
 	matches = len(results)
 	[score, reverses] = parser.DefaultSortColumn(scores)
 	try:
@@ -350,7 +349,10 @@ def ListResults(request):
 		results = results[:limit]
 	for r in results:
 		h = r.HitInfo
-		r.style = DecodeDecoy(h["protein"])
+		try:
+			r.style = DecodeDecoy(h["protein"])
+		except:
+			r.style = "row"
 	info = {"total": total, "matches": matches, "start": start + 1, "end": start + len(results), "type": t, "score": score, "file": query["file"], "datafile": query["n"], "query": query["q"], "hash": abs(hash(time.gmtime())), "datas": links.Types()}
 	return render_to_response(templates + t + "_results.pt", { "sortcol": sortcol, "sortdsc": reverse, "info": info, "results": results, "url": Literal(request.path_qs), "funcs": TemplateFunctions() }, request = request)
 	#except:
@@ -445,6 +447,16 @@ def SelectInfo(request):
 	except:
 		return HTTPBadRequest()
 
+def Spectrum(request):
+	query = DecodeQuery(request.query_string)
+	fname = GetQueryFileName(query)
+	#try:
+	parser = Parsers[query["type"]]
+	spectrum = parser.GetSpectrumFromOffset(fname + "_" + query["n"], int(query["off"]))
+	return render_to_response(templates + "spectrum.pt", { "query": query, "spectrum": spectrum, "funcs": TemplateFunctions() }, request=request)
+	#except:
+	#	return HTTPBadRequest()
+
 def Tooltip(request):
 	t = request.matchdict["type"]
 	query = DecodeQuery(request.query_string)
@@ -513,6 +525,7 @@ if __name__ == "__main__":
 	config.add_route("results", "/results")
 	config.add_route("peptide", "/peptide")
 	config.add_route("select", "/select")
+	config.add_route("spectrum", "/spectrum")
 	config.add_route("tooltip", "/tooltip/{type}")
 	config.add_view(DisplayList, route_name="list")
 	#config.add_view(SearchHit, route_name="search_hit")
@@ -524,6 +537,7 @@ if __name__ == "__main__":
 	config.add_view(ListResults, route_name="results")
 	config.add_view(ListPeptide, route_name="peptide")
 	config.add_view(SelectInfo, route_name="select")
+	config.add_view(Spectrum, route_name="spectrum")
 	config.add_view(Tooltip, route_name="tooltip")
 	config.add_static_view("res", "res", cache_max_age=3600*24*7)
 	config.add_static_view("test", "test", cache_max_age=0)

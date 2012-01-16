@@ -7,7 +7,7 @@ import os
 import xml.sax
 import xml.parsers.expat
 from cStringIO import StringIO
-from CommonXML import *
+from Common import *
 
 #Util functions
 def GetEngineCode(name):
@@ -2209,7 +2209,9 @@ def ToBinary(FileName, Dest = None, Links = None):
 	parser = xml.sax.make_parser()
 	parser.setFeature("http://xml.org/sax/features/external-general-entities", False)
 	parser.setContentHandler(SaxHandler(Dest, stat))
-	parser.parse(open(FileName, "r"))
+	f = open(FileName, "r")
+	parser.parse(f)
+	f.close()
 	EndPos = Dest.tell()
 	Dest.seek(0)
 	Dest.write(struct.pack("=I", EndPos))
@@ -2233,21 +2235,9 @@ def ToBinary(FileName, Dest = None, Links = None):
 		return Reference.FileType.PEPXML_OMSSA
 	return Reference.FileType.UNKNOWN
 
-def SearchBasic(FileName, terms):
+def Search(FileName, terms):
 	f = open(FileName, "r")
 	f.seek(4) #skip the peptide index offset
-	stat = SearchStatus({ None: SplitPhrase(terms.upper()) })
-	scores = MsmsPipelineAnalysis.Search(f, stat)
-	f.close()
-	#PrintResults(stat.Results)
-	return [scores, stat.Total, stat.Results]
-
-def SearchAdvanced(FileName, terms_dict):
-	f = open(FileName, "r")
-	f.seek(4) #skip the peptide index offset
-	terms = {}
-	for k, v in terms_dict.items():
-		terms[k] = SplitPhrase(v.upper())
 	stat = SearchStatus(terms)
 	scores = MsmsPipelineAnalysis.Search(f, stat)
 	f.close()

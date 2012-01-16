@@ -8,6 +8,7 @@
 		<link id="themeStyles" href="/res/dojo/dojox/html/resources/ellipsis.css" type="text/css" rel="stylesheet" />
 		<script type="text/javascript" src="/res/dojo/dojo/dojo.js" data-dojo-config="parseOnLoad: true"></script>
 		<script type="text/javascript" src="/res/scripts/flowchart.js"></script>
+		<script type="text/javascript" src="/res/scripts/specview.js"></script>
 		<script type="text/javascript">
 			dojo.require("dojo.fx");
 			dojo.require("dijit.Dialog");
@@ -324,6 +325,11 @@
 					ResultsVisible = true;
 				}
 			}
+			
+			function ShowSpectrum(dataset, type, title, offset) {
+				SwitchDataset(dataset, "data_spectrum");
+				LoadContents("spectrum", "/spectrum?file=${file}&n=" + dataset + "&type=" + type + "&off=" + offset + "&title=" + title);
+			}
 
 			function SelectInfo(title, type, params) {
 				var width = params["width"] ? params["width"] : 500;
@@ -388,5 +394,6 @@
 		<tal:for repeat="n python:range(index)"><div id="data_${n}" style="width:100%;height:0;display:none;"></div></tal:for>
 		<div id="data_${index}" style="width:100%"></div>
 		<div id="data_peptides" visible="false" style="width: 100%; display: none"></div>
+		<div id="data_spectrum" visible="false" style="width: 100%; display: none"></div>
 	</body>
 </html>
