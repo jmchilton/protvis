@@ -1,0 +1,51 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+	<head>
+		<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+		<title>Lorikeet Spectrum Viewer</title>
+		<!--[if IE]><script language="javascript" type="text/javascript" src="/res/lorikeet/js/excanvas.min.js"></script><![endif]-->
+		<script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.4.2/jquery.min.js"></script>
+		<script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jqueryui/1.8.4/jquery-ui.min.js"></script>
+		<script type="text/javascript" src="/res/lorikeet/js/jquery.flot.js"></script>
+		<script type="text/javascript" src="/res/lorikeet/js/jquery.flot.selection.js"></script>
+		<script type="text/javascript" src="/res/lorikeet/js/specview.js"></script>
+		<script type="text/javascript" src="/res/lorikeet/js/peptide.js"></script>
+		<script type="text/javascript" src="/res/lorikeet/js/aminoacid.js"></script>
+		<script type="text/javascript" src="/res/lorikeet/js/ion.js"></script>
+		<link href="/res/lorikeet/css/lorikeet.css" type="text/css" rel="stylesheet" />
+		<tal:if condition="python: peptide == None">
+			<script type="text/javascript">
+				$(document).ready(function () {
+					$("#lorikeet").specview({							
+						scanNum: ${spectrum.scan},
+						charge: ${spectrum.charge},
+						fileName:"${spectrum.file}",
+						peaks: ${spectrum.ions.ions}
+					});	
+
+				});
+			</script>
+		</tal:if>
+		<tal:else condition="python: peptide != None">
+			<script type="text/javascript">
+				$(document).ready(function () {
+					$("#lorikeet").specview({
+						sequence: "${peptide.sequence}",
+						scanNum: ${spectrum.scan},
+						charge: ${spectrum.charge},
+						precursorMz: ${peptide.precursor_neutral_mass},
+						fileName:"${spectrum.file}",
+						<tal:if condition="python: peptide.mods != None">
+							variableMods: [<tal:for repeat="mod peptide.mods">{index: ${mod.index}, modMass: ${mod.mass}, aminoAcid: ${mod.aa}}, </tal:for>],
+							ntermMod: ${peptide.nterm},
+							ctermMod: ${peptide.cterm},
+						</tal:if>
+						peaks: ${spectrum.ions.ions}
+					});	
+
+				});
+			</script>
+		</tal:else>
+	</head>
+	<body><div id="lorikeet"></div></body>
+</html>

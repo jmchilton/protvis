@@ -542,7 +542,7 @@ def Lorikeet(request):
 	else:
 		peptide = None
 	spectrum = { "file": ".".join(spec[:-3]), "scan": spec[-3], "charge": spec[-1], "ions": parser.GetSpectrumFromOffset(fname + "_" + query["n"], int(query["off"])) }
-	return render_to_response(templates + "lorikeet.pt", { "query": query, "spectrum": spectrum, "peptide": peptide }, request=request)
+	return render_to_response(templates + "lorikeet_frame.pt", { "query": query, "spectrum": spectrum, "peptide": peptide }, request=request)
 	#except:
 	#	return HTTPBadRequest()
 
