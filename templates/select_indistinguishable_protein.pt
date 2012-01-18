@@ -1,7 +1,7 @@
 <table id="select_indistinguishable_protein_results" border="1" style="width: 100%;">
 <tal:for repeat="row results">
 	<tr tal:attributes="class string:info row${repeat.row.odd}">
-		<td tal:attributes="style python:funcs.test(repeat.row.index == 0, 'color:grey', '')">${row}</td>
+		<td tal:attributes="style python: test(repeat.row.index == 0, 'color:grey', '')">${row}</td>
 	</tr>
 </tal:for>
 </table>

@@ -1672,10 +1672,15 @@ class SpectrumQuery(TagHandler):
 
 	@staticmethod
 	def GetHitInfoSeek(f, query, hit):
-		f.seek(query + 4 + 4 + 2 + 1 + 4 + 4 + 4 + 4 + 4)
+		f.seek(query + 4 + 4 + 2 + 1 + 4 + 4)
+		precursor_neutral_mass = struct.unpack("=f", f.read(4))[0]
+		f.seek(4 + 4, 1)
 		spectrum = DecodeStringFromFile(f)
 		dic = SearchHit.GetInfoSeek(f, hit)
 		dic["spectrum"] = spectrum
+		dic["precursor_neutral_mass"] = precursor_neutral_mass
+		dic["query__offset"] = query
+		dic["hit__offset"] = hit
 		return dic
 
 
@@ -2264,6 +2269,12 @@ def SearchPeptide(FileName, peptide):
 		peptides -= 1
 	f.close()
 	return [scores, None]
+
+def GetHitInfo(FileName, query, hit):
+	f = open(FileName, "r")
+	info = SpectrumQuery.GetHitInfoSeek(f, query, hit)
+	f.close()
+	return info
 
 def GetScores(FileName, qoff, hoff):
 	f = open(FileName, "r")

@@ -10,14 +10,14 @@
 	<tal:if condition="python: info['total'] > len(results)">Displaying ${info.start}-${info.end} of ${info.matches} results</tal:if>
 	<br/>
 	<table id="results_${info.datafile}" border="1" style="width: 100%;">
-	<tr><tal:for repeat="col columns"><th id="results_${info.datafile}_column_${col.name}" onclick="TableManager.Sort('results_${info.datafile}','${col.name}');" tal:attributes="class python: 'sort' + funcs.test(sortcol==col.name, funcs.test(sortdsc, ' sort_dsc', ' sort_asc'), '')">${col.title}</th></tal:for></tr>
+	<tr><tal:for repeat="col columns"><th id="results_${info.datafile}_column_${col.name}" onclick="TableManager.Sort('results_${info.datafile}','${col.name}');" tal:attributes="class python: 'sort' + test(sortcol==col.name, test(sortdsc, ' sort_dsc', ' sort_asc'), '')">${col.title}</th></tal:for></tr>
 	<tal:for repeat="row results">
 		<tr tal:attributes="class string:info ${row.style}${repeat.row.odd}">
-			<td><span class="link" onclick="ShowSpectrum(${info.datafile}, '${info.type}', '${row.HitInfo.spectrum}', ${row.HitInfo.offset});">${row.HitInfo.spectrum}</span></td>
+			<td><span class="link" onclick="ShowSpectrum(${info.datafile}, '${info.type}', ${row.HitInfo.offset}, '${row.HitInfo.spectrum}');">${row.HitInfo.spectrum}</span></td>
 		</tr>
 	</tal:for>
 	</table>
 	<script>
-		TableManager.Add("results_${info.datafile}", "${sortcol}", <tal:echo content="python: funcs.test(sortdsc, 'false', 'true')"></tal:echo>, "${info.datafile}", "${url}");
+		TableManager.Add("results_${info.datafile}", "${sortcol}", <tal:echo content="python: test(sortdsc, 'false', 'true')"></tal:echo>, "${info.datafile}", "${url}");
 	</script>
 </tal:else>

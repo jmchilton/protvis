@@ -132,17 +132,34 @@ class Header:
 
 	@staticmethod
 	def get_spectrum(f, name):
-		[count, offset] = struct.unpack(f.read(4 + 4))
+		[count, offset] = struct.unpack("=II", f.read(4 + 4))
 		f.seek(offset)
 		i = 0
 		while i < count:
 			if DecodeStringFromFile(f) == name:
-				f.seek(struct.unpack(f.read(4)))
+				offset = struct.unpack("=I", f.read(4))
+				f.seek(offset)
 				info = Spectrum.get_info(f)
 				info["title"] = name
+				info["offset"] = offset
 				return info
+			else:
+				f.seek(4, 1)
 			i += 1
 		return None
+
+	@staticmethod
+	def get_spectrum_offset(f, name):
+		[count, offset] = struct.unpack("=II", f.read(4 + 4))
+		f.seek(offset)
+		i = 0
+		while i < count:
+			if DecodeStringFromFile(f) == name:
+				return struct.unpack("=I", f.read(4))[0]
+			else:
+				f.seek(4, 1)
+			i += 1
+		return -1
 
 	@staticmethod
 	def search_spectrums(f, stat):
@@ -158,10 +175,9 @@ class Header:
 			else:
 				f.seek(4, 1)
 			i += 1
-
 def ConvertFilename(filename):
 	return os.path.splitext(filename)[0] + ".mgfBIN"
-	
+
 def ToBinary(filename, dest = None, links = None):
 	import Reference
 	if dest == None:
@@ -199,20 +215,26 @@ def ToBinary(filename, dest = None, links = None):
 	f.close()
 	dest.close()
 	return Reference.FileType.MGF
-	
+
 def GetSpectrum(filename, spectrum):
 	f = open(filename, "r")
 	spec = Header.get_spectrum(f, spectrum)
 	f.close()
 	return spec
-	
+
 def GetSpectrumFromOffset(filename, offset):
 	f = open(filename, "r")
 	f.seek(offset)
 	spec = Spectrum.get_info(f)
 	f.close()
 	return spec
-	
+
+def GetOffsetFromSpectrum(filename, spectrum):
+	f = open(filename, "r")
+	offset = Header.get_spectrum_offset(f, spectrum)
+	f.close()
+	return offset
+
 def Search(filename, terms):
 	f = open(filename, "r")
 	stat = SearchStatus(terms)

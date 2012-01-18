@@ -10,10 +10,10 @@
 	<tal:if condition="python: info['total'] > len(results)">Displaying ${info.start}-${info.end} of ${info.matches} results</tal:if>
 	<br/>
 	<table id="results_${info.datafile}" border="1" style="width: 100%;">
-	<tr><tal:for repeat="col columns"><th id="results_${info.datafile}_column_${col.name}" onclick="TableManager.Sort('results_${info.datafile}','${col.name}');" tal:attributes="class python: 'sort' + funcs.test(sortcol==col.name, funcs.test(sortdsc, ' sort_dsc', ' sort_asc'), '')">${col.title}</th></tal:for></tr>
+	<tr><tal:for repeat="col columns"><th id="results_${info.datafile}_column_${col.name}" onclick="TableManager.Sort('results_${info.datafile}','${col.name}');" tal:attributes="class python: 'sort' + test(sortcol==col.name, test(sortdsc, ' sort_dsc', ' sort_asc'), '')">${col.title}</th></tal:for></tr>
 	<tal:for repeat="row results">
 		<tr tal:attributes="class string:info ${row.style}${repeat.row.odd}">
-			<td><span class="peptide_full">${row.HitInfo.peptide_prev_aa}<span id="peptide_${info.hash}_${repeat.row.index}" class="link peptide" onclick="SearchPeptide('${row.HitInfo.peptide}', ${info.datafile});" tipurl="${row.HitInfo.peptide}" tal:content="python: funcs.render_peptide(row.HitInfo)"></span>${row.HitInfo.peptide_next_aa}</span></td>
+			<td><span class="peptide_full">${row.HitInfo.peptide_prev_aa}<span id="peptide_${info.hash}_${repeat.row.index}" class="link peptide" onclick="SearchPeptide('${row.HitInfo.peptide}', ${info.datafile});" tipurl="${row.HitInfo.peptide}" tal:content="python: render_peptide(row.HitInfo)"></span>${row.HitInfo.peptide_next_aa}</span></td>
 			<td>
 				<tal:if condition="python: info['datas'] & 0x8"><span class="link" onclick="var prot = FindFilesWithDependancy(${info.datafile}, [10, 11])[0]; SwitchDataset(prot); LoadContents(prot, '/results?file=${info.file}&n=' + prot + '&type=prot&q=${row.HitInfo.protein}&max=50');">${row.HitInfo.protein}</span></tal:if>
 				<tal:else condition="python: not info['datas'] & 0x8">${row.HitInfo.protein}</tal:else>
@@ -21,7 +21,7 @@
 			<td>${row.HitInfo.massdiff}</td>
 			<td onclick="DisplayScore('${row.HitInfo.peptide}/${row.HitInfo.protein}', ${info.datafile}, ${row.QueryOffset}, ${row.HitOffset});" tal:content="python: row.HitInfo[info.score]"></td>
 		</tr>
-		<tal:if condition="python: funcs.try_get(row.HitInfo, 'protein_descr') != None">
+		<tal:if condition="python: try_get(row.HitInfo, 'protein_descr') != None">
 			<tr tal:attributes="class string:desc ${row.style}${repeat.row.odd}"><td tal:attributes="colspan python: len(columns)" tal:content="python: row.HitInfo['protein_descr']"></td></tr>
 		</tal:if>
 		<tal:if condition="python: row.HitMatches > 1">
@@ -30,7 +30,7 @@
 	</tal:for>
 	</table>
 	<script>
-		TableManager.Add("results_${info.datafile}", "${sortcol}", <tal:echo content="python: funcs.test(sortdsc, 'false', 'true')"></tal:echo>, "${info.datafile}", "${url}");
+		TableManager.Add("results_${info.datafile}", "${sortcol}", <tal:echo content="python: test(sortdsc, 'false', 'true')"></tal:echo>, "${info.datafile}", "${url}");
 		var ids = [<span tal:omit-tag="" tal:repeat="row results">"peptide_${info.hash}_${repeat.row.index}", </span>];
 		var tt = new dijit.DynamicTooltip({
 			connectId: ids,

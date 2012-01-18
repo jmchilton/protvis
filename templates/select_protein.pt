@@ -3,7 +3,7 @@
 <tr><tal:for repeat="col columns"><th>${col.title}</th></tal:for></tr>
 <tal:for repeat="row results">
 	<tr tal:attributes="class string:info row${repeat.row.odd}">
-		<td><span class="link" onclick="SearchPeptide('${row.peptide}');" tal:content="python: funcs.render_peptide(row)"><tal:for repeat="indes row.indistinguishable_peptide"><br/><tal:echo tal:content="python: funcs.render_peptide(indes)"></tal:echo></tal:for></span></td>
+		<td><span class="link" onclick="SearchPeptide('${row.peptide}');" tal:content="python: render_peptide(row)"><tal:for repeat="indes row.indistinguishable_peptide"><br/><tal:echo tal:content="python: render_peptide(indes)"></tal:echo></tal:for></span></td>
 		<td style="text-align:center;">${row.initial_probability}</td>
 	</tr>
 </tal:for>

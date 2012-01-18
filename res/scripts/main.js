@@ -55,20 +55,6 @@ function TableBuilder(id, /*optinal:*/columns) {
 		return this.HTML + '</table></div>';
 	}
 }
-
-/*function DecodeTableResponse(id, update, resp) {
-	var rows = resp.split('\n');
-	var info = eval(rows[0]);
-	if (info{"data"]) {
-		var table = new TableBuilder(id, update ? null : info["head"]);
-		var i = 1;
-		while (i < rows.length) {
-			r = rows[i].split('|');
-			++i;
-		}
-	} else {
-	}
-}*/
 			
 function executeAjaxResponse(response) {
 	var scripts = new Array();
@@ -88,7 +74,8 @@ function executeAjaxResponse(response) {
 			eval(scripts[i]);
 		} catch (e) {
 			if (console) {
-				console.log(e.description);
+				console.log(scripts[i]);
+				console.log(e);
 			}
 		}
 	}

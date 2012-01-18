@@ -28,6 +28,13 @@ MzMl = None #FIXME: delete when there is an MzMl module
 
 Parsers = { "mzml": MzMl, "mgf": MGF, "pep": PepXML, "prot": ProtXML }
 
+class Literal(object):
+    def __init__(self, s):
+        self.s = s
+
+    def __html__(self):
+        return self.s
+
 def test(cond, t, f):
 	if cond == True:
 		return t
@@ -142,7 +149,7 @@ class FileLinks:
 				flags |= 1
 		return flags
 
-def TemplateFunctions():
+def RendererGlobals(system):
 	def render_peptide(peptide):
 		try:
 			mods = peptide["modification_info"]
@@ -252,11 +259,13 @@ def Upload(request):
 def Convert(request):
 	#for when this is running on the same server as galaxy
 	#just use the local files directly
-	try:
+	#try:
 		query = DecodeQuery(request.query_string)
 		referencers = { "protxml": Reference.LoadChainProt, "pepxml": Reference.LoadChainPep, "mgf": Reference.LoadChainMgf, "mzml": Reference.LoadChainMzml }
 		files = referencers[query["type"]](binascii.unhexlify(query["file"]))
 		#Build the index file
+		if not os.path.exists("ConvertedFiles"):
+			os.makedirs("ConvertedFiles")
 		data = tempfile.NamedTemporaryFile(dir = ".", prefix = "ConvertedFiles/", delete = False)
 		threads = range(len(files))
 		links = {}
@@ -270,8 +279,8 @@ def Convert(request):
 			threads[i] = t
 		jobid = Jobs.Add(threads, files, data)
 		return render_to_response(templates + "upload.pt", { "file": data.name[len(converted):], "jobid": jobid }, request=request)
-	except:
-		return HTTPBadRequest()
+	#except:
+	#	return HTTPBadRequest()
 
 def QueryInitStatus(request):
 	try:
@@ -354,7 +363,7 @@ def ListResults(request):
 		except:
 			r.style = "row"
 	info = {"total": total, "matches": matches, "start": start + 1, "end": start + len(results), "type": t, "score": score, "file": query["file"], "datafile": query["n"], "query": query["q"], "hash": abs(hash(time.gmtime())), "datas": links.Types()}
-	return render_to_response(templates + t + "_results.pt", { "sortcol": sortcol, "sortdsc": reverse, "info": info, "results": results, "url": Literal(request.path_qs), "funcs": TemplateFunctions() }, request = request)
+	return render_to_response(templates + t + "_results.pt", { "sortcol": sortcol, "sortdsc": reverse, "info": info, "results": results, "url": Literal(request.path_qs) }, request = request)
 	#except:
 	#	return HTTPBadRequest()
 
@@ -369,6 +378,10 @@ def ListPeptide(request):
 
 	query = DecodeQuery(request.query_string)
 	fname = GetQueryFileName(query)
+
+	def ViewSpectrum(row):
+		return "ShowSpectrumFromPeptide(" + query["n"] + ", '" + row["spectrum"] + "', " + str(row["query__offset"]) + ", " + str(row["hit__offset"]) + ");"
+
 	#try:
 	int(query["n"])
 	[scores, results] = PepXML.SearchPeptide(fname + "_" + query["n"], query["peptide"])
@@ -427,9 +440,9 @@ def ListPeptide(request):
 	elif limit > 0:
 		results = results[:limit]
 	info = { "total": total, "start": start + 1, "end": start + len(results), "peptide": query["peptide"] }
-	columns = [{"name": "spectrum", "title": "Spectrum"}, {"name": "massdiff", "title": "Mass Diff"}, {"name": "score", "title": "Score"}, {"name": "engine", "title": "Search Engine"}, {"name": "engine_score", "title": "Engine Score"}]
+	columns = [{"name": "spectrum", "title": "Spectrum", "click": ViewSpectrum}, {"name": "massdiff", "title": "Mass Diff"}, {"name": "score", "title": "Score"}, {"name": "engine", "title": "Search Engine"}, {"name": "engine_score", "title": "Engine Score"}]
 	specs = render(templates + "pepxml_peptide_spectrums.pt", { "count": len(spectrums), "spectrums": spectrums}, request=request)
-	instances = render(templates + "pepxml_peptide.pt", { "info": info, "peptides": results, "columns": columns, "sortcol": sortcol, "sortdsc": reverse, "funcs": TemplateFunctions() }, request=request)
+	instances = render(templates + "pepxml_peptide.pt", { "info": info, "peptides": results, "columns": columns, "sortcol": sortcol, "sortdsc": reverse }, request=request)
 	return Response(specs + '<div id="peptide_results_list">' + instances + "</div>", request=request)
 	#except:
 	#	return HTTPBadRequest()
@@ -443,7 +456,7 @@ def SelectInfo(request):
 		parser = FileLinks(query["file"]).GetParser(int(query["n"]))
 		select = eval("parser.select_" + query["type"])
 		results = select(GetQueryFileName(query), query)
-		return render_to_response(templates + "select_" + query["type"] + ".pt", { "query": query, "results": results, "funcs": TemplateFunctions() }, request=request)
+		return render_to_response(templates + "select_" + query["type"] + ".pt", { "query": query, "results": results }, request=request)
 	except:
 		return HTTPBadRequest()
 
@@ -451,9 +464,85 @@ def Spectrum(request):
 	query = DecodeQuery(request.query_string)
 	fname = GetQueryFileName(query)
 	#try:
+	spectrum = query["spectrum"]
+	datafile = TryGet(query, "n")
+	filetype = TryGet(query, "type")
+	offset = TryGet(query, "off")
+	pep_datafile = TryGet(query, "pn")
+	pep_query_offset = TryGet(query, "pqoff")
+	pep_hit_offset = TryGet(query, "phoff")
+	if datafile == None:
+		links = FileLinks(query["file"])
+		possible = []
+		if pep_datafile == None:
+			for i in xrange(len(links.Links)):
+				l = links.Links[i]
+				if l.Type == Reference.FileType.MZML or l.Type == Reference.FileType.MGF:
+					possible.append(i)
+		else:
+			deps = links.Links[int(pep_datafile)].Depends
+			i = 0
+			while i < len(deps):
+				deps += links.Links[deps[i]].Depends
+				i += 1
+			for d in deps:
+				l = links.Links[d]
+				if l.Type == Reference.FileType.MZML or l.Type == Reference.FileType.MGF:
+					possible.append(d)
+		possible = list(set(possible))
+		print possible
+		for t in [Reference.FileType.MGF, Reference.FileType.MZML]:
+			for f in possible:
+				if links.Links[f].Type == t:
+					offset = MGF.GetOffsetFromSpectrum(fname + "_" + str(f), spectrum)
+					if offset >= 0:
+						datafile = f
+						filetype = Reference.FileType.NameBasic(t)
+						break
+	elif filetype == None:
+		filetype = FileLinks(query["file"]).Links[datafile].Type
+	if offset == None:
+		parser = Parsers[filetype]
+		parser.GetOffsetFromSpectrum(spectrum)
+	return render_to_response(templates + "spectrum.pt", { "file": query["file"], "type": filetype, "spectrum": spectrum, "datafile": datafile, "offset": offset, "pep_datafile": pep_datafile, "pep_query_offset": pep_query_offset, "pep_hit_offset": pep_hit_offset }, request=request)
+	#except:
+	#	return HTTPBadRequest()
+
+def Lorikeet(request):
+	query = DecodeQuery(request.query_string)
+	fname = GetQueryFileName(query)
+	#try:
 	parser = Parsers[query["type"]]
-	spectrum = parser.GetSpectrumFromOffset(fname + "_" + query["n"], int(query["off"]))
-	return render_to_response(templates + "spectrum.pt", { "query": query, "spectrum": spectrum, "funcs": TemplateFunctions() }, request=request)
+	spec = query["spectrum"].split(".")
+	pep_datafile = TryGet(query, "pn")
+	pep_query_offset = TryGet(query, "pqoff")
+	pep_hit_offset = TryGet(query, "phoff")
+	if pep_datafile != None and pep_query_offset != None and pep_hit_offset != None:
+		pep = PepXML.GetHitInfo(fname + "_" + pep_datafile, int(pep_query_offset), int(pep_hit_offset))
+		peptide = { "sequence": pep["peptide"], "precursor_neutral_mass": pep["precursor_neutral_mass"] }
+		if pep["modification_info"] != None and len(pep["modification_info"]) > 0:
+			nterm_mod = 0
+			cterm_mod = 0
+			mods = []
+			for mi in pep["modification_info"]:
+				if nterm_mod != None:
+					nterm = TryGet(mi, "mod_nterm_mass")
+					if nterm != None:
+						nterm_mod = nterm
+				if cterm_mod != None:
+					cterm = TryGet(mi, "mod_nterm_mass")
+					if cterm != None:
+						cterm_mod = cterm
+				mods += [{"index": m[0], "mass": m[1], "aa": pep["peptide"][m[0]]} for m in mi["mod_aminoacid_mass"]]
+			peptide["mods"] = mods
+			peptide["nterm"] = nterm_mod
+			peptide["cterm"] = cterm_mod
+		else:
+			peptide["mods"] = None
+	else:
+		peptide = None
+	spectrum = { "file": ".".join(spec[:-3]), "scan": spec[-3], "charge": spec[-1], "ions": parser.GetSpectrumFromOffset(fname + "_" + query["n"], int(query["off"])) }
+	return render_to_response(templates + "lorikeet.pt", { "query": query, "spectrum": spectrum, "peptide": peptide }, request=request)
 	#except:
 	#	return HTTPBadRequest()
 
@@ -462,7 +551,7 @@ def Tooltip(request):
 	query = DecodeQuery(request.query_string)
 	fname = GetQueryFileName(query)
 	if t == "peptide":
-		try:
+		#try:
 			int(query["n"]) #ensure it is an integer
 			[scores, results] = PepXML.SearchPeptide(fname + "_" + query["n"], query["peptide"])
 			score = PepXML.DefaultSortColumn(scores)
@@ -470,7 +559,7 @@ def Tooltip(request):
 				reverse = False
 			else:
 				reverse = True
-			results = sorted(results, key = lambda key: key[score], reverse = reverse)
+			results = sorted(results, key = lambda key: key[score[0]], reverse = reverse)
 			count = len(results)
 			shown = count
 			SearchEngines = { "X-Tandem": 0, "Mascot": 0, "Omssa": 0 }
@@ -485,7 +574,7 @@ def Tooltip(request):
 				results = results[:5]
 				shown = 5
 			for r in results:
-				r["score"] = r[score]
+				r["score"] = r[score[0]]
 				if "hyperscore" in r:
 					r["engine"] = "X-Tandem"
 					r["engine_score"] = str(r["hyperscore"])
@@ -505,16 +594,16 @@ def Tooltip(request):
 			if SearchEngines["Omssa"] == 0:
 				del SearchEngines["Omssa"]
 			info = { "shown": shown, "total": count, "engine": PepXML.SearchEngineName(scores) }
-			return render_to_response(templates + "pepxml_peptide_tooltip.pt", { "info": info, "peptides": results, "counts": SearchEngines.items(), "funcs": TemplateFunctions() }, request=request)
-		except:
-			return HTTPBadRequest()
+			return render_to_response(templates + "pepxml_peptide_tooltip.pt", { "info": info, "peptides": results, "counts": SearchEngines.items() }, request=request)
+		#except:
+		#	return HTTPBadRequest()
 	return HTTPNotFound()
 
 if __name__ == "__main__":
 	Threads = {}
 	JobsTotal = 0
 	ThreadsLock = Lock()
-	config = Configurator()
+	config = Configurator(renderer_globals_factory=RendererGlobals)
 	config.add_route("list", "/list/{type}/")
 	config.add_route("search_score", "/search/{type}/score/")
 	
@@ -526,6 +615,7 @@ if __name__ == "__main__":
 	config.add_route("peptide", "/peptide")
 	config.add_route("select", "/select")
 	config.add_route("spectrum", "/spectrum")
+	config.add_route("lorikeet", "/lorikeet")
 	config.add_route("tooltip", "/tooltip/{type}")
 	config.add_view(DisplayList, route_name="list")
 	#config.add_view(SearchHit, route_name="search_hit")
@@ -538,6 +628,7 @@ if __name__ == "__main__":
 	config.add_view(ListPeptide, route_name="peptide")
 	config.add_view(SelectInfo, route_name="select")
 	config.add_view(Spectrum, route_name="spectrum")
+	config.add_view(Lorikeet, route_name="lorikeet")
 	config.add_view(Tooltip, route_name="tooltip")
 	config.add_static_view("res", "res", cache_max_age=3600*24*7)
 	config.add_static_view("test", "test", cache_max_age=0)

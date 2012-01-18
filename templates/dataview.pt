@@ -326,9 +326,13 @@
 				}
 			}
 			
-			function ShowSpectrum(dataset, type, title, offset) {
+			function ShowSpectrum(dataset, type, offset, spectrum) {
 				SwitchDataset(dataset, "data_spectrum");
-				LoadContents("spectrum", "/spectrum?file=${file}&n=" + dataset + "&type=" + type + "&off=" + offset + "&title=" + title);
+				LoadContents("spectrum", "/spectrum?file=${file}&n=" + dataset + "&type=" + type + "&off=" + offset + "&spectrum=" + spectrum);
+			}
+			
+			function ShowSpectrumFromPeptide(pepn, spectrum, pep_qoff, pep_hoff) {
+				LoadContents("spectrum", "/spectrum?file=${file}&spectrum=" + spectrum + "&pn=" + pepn + "&pqoff=" + pep_qoff + "&phoff=" + pep_hoff);
 			}
 
 			function SelectInfo(title, type, params) {
