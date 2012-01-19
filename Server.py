@@ -307,7 +307,7 @@ def View(request):
 			index = links.GetTopInfo()
 			typename = Reference.FileType.NameBasic(index["type"])
 			index = index["index"]
-		files = "[" + ",".join(["{" + ",".join(["name:'" + os.path.split(l.Name)[1] + "'", "type:" + str(l.Type), "deps:[" + ",".join([str(d) for d in l.Depends]) + "]"]) + "}" for l in links]) + "]"
+		files = ",".join(["{" + ",".join(["name:'" + os.path.split(l.Name)[1] + "'", "type:" + test(l.Type == Reference.FileType.MISSING, "null", str(l.Type)), "deps:[" + ",".join([test(d < 65535, str(d), "-1") for d in l.Depends]) + "]"]) + "}" for l in links])
 		return render_to_response(templates + "dataview.pt", { "file": query["file"], "index": index, "type": typename, "files": files }, request=request)
 	except:
 		return HTTPBadRequest()
@@ -519,7 +519,7 @@ def Lorikeet(request):
 	pep_hit_offset = TryGet(query, "phoff")
 	if pep_datafile != None and pep_query_offset != None and pep_hit_offset != None:
 		pep = PepXML.GetHitInfo(fname + "_" + pep_datafile, int(pep_query_offset), int(pep_hit_offset))
-		peptide = { "sequence": pep["peptide"], "precursor_neutral_mass": pep["precursor_neutral_mass"] }
+		peptide = { "peptide": pep["peptide"], "precursor_neutral_mass": pep["precursor_neutral_mass"], "modification_info": pep["modification_info"] }
 		if pep["modification_info"] != None and len(pep["modification_info"]) > 0:
 			nterm_mod = 0
 			cterm_mod = 0

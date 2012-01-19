@@ -19,16 +19,16 @@
 						var left = -1;
 						try {
 							left = parseInt(res);
+							if (left == 0) {
+								ShowMessage("done");
+								window.location = "/view?file=${file}";
+							} else {
+								ShowMessageStatus(left);
+								setTimeout("Update();", 500);
+							}
 						} catch (err) {
 							ShowMessage("error");
 							return;
-						}
-						if (left == 0) {
-							ShowMessage("done");
-							window.location = "/view?file=${file}";
-						} else {
-							ShowMessageStaus(left);
-							setTimeout("Update();", 500);
 						}
 					},
 					error: function() {
@@ -55,9 +55,9 @@
 			}
 			
 			function ShowMessageStatus(left) {
-				if (left != Done) {
+				if (left != Complete) {
 					Complete = left;
-					dojo.byId("processing").innerHTML = "Please wait while your files are uploaded and processed.<p>" + left + " left to complete.</p>";
+					dojo.byId("processing").innerHTML = '<div class="dijitContentPaneLoading">Please wait while your files are uploaded and processed.</div>' + left + " left to complete.";
 				}
 				ShowMessage("processing");
 			}
@@ -68,28 +68,28 @@
 		</script>
 	</head>
 	<body class="claro">
-		Please wait
 		<noscript>
 			Your files are getting uploaded and processed.<br/>
-			It is not possible to automatically continue because your browser has javascript disabled.<br/>
-			Click <a href="/view/?file=${file}">here</a> in a few minutes to continue.
+			Javascript is required to explore your results. Please cunsoult your browsers help for details on how to enable it.
+			Click <a href="/view/?file=${file}">here</a> in a few minutes to continue to your results once Javascript is enabled.
 		</noscript>
-		<div id="uploading" class="dijitContentPaneLoading" style="display: none;">
-			Uploading your file to the server.
+		<div id="uploading" class="dijitContentPaneLoading">
+			Please Wait. Uploading your file to the server.
 		</div>
-		<div id="processing" class="dijitContentPaneLoading" visible="false" style="display: none;">
-			Processing your file for the first time.
+		<div id="processing" visible="false" style="display: none;">
+			<div class="dijitContentPaneLoading">Processing your file for the first time.</div>
 		</div>
 		<div id="done" visible="false" style="display: none;">
 			Finished.<br/>
-			Click <a href="/view/?file=${file}">here</a> if your browerser doesn't automatically continue within 5 seconds.
+			Click <a href="/view/?file=${file}">here</a> if your browser doesn't automatically continue within 5 seconds.
 		</div>
 		<div id="error" visible="false" style="display: none;">
 			An internal server error occured or this job has already been removed from the queue.<br/>
 			Try clicking <a href="/view/?file=${file}">here</a> to continue, or refresh this page.
 		</div>
 		<div id="error_net" visible="false" style="display: none;">
-			An error occured while contacting the server. Check your internet connection and try again.
+			An error occured while contacting the server.<br />
+			We will continue to attempt to contact the server.
 		</div>
 	</body>
 </html>

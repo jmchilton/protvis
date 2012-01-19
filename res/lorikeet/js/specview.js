@@ -139,15 +139,17 @@
 	var ionSeriesLabels = {a: [], b: [], c: [], x: [], y: [], z: []};
 	
 	
-	function getMaxInt() {
+	function getMaxInt(peaks) {
+		if (!peaks) {
+			peaks = options.peaks;
+		}
 		var maxInt = 0;
-		for(var j = 0; j < options.peaks.length; j += 1) {
-			var peak = options.peaks[j];
+		for(var j = 0; j < peaks.length; j += 1) {
+			var peak = peaks[j];
 			if(peak[1] > maxInt) {
 				maxInt = peak[1];
 			}
 		}
-		//alert(maxInt);
 		return maxInt;
 	}
 	
@@ -308,7 +310,16 @@
 	}
 	
 	function createPlot(datasets) {
-		
+		var maxInt = 0;
+		for (var i in datasets) {
+			var d = datasets[i];
+			var n = getMaxInt(d.data);
+			if (n > maxInt) {
+				maxInt = n;
+			}
+		}
+		plotOptions.yaxis.tickFormatter = function(val, axis) {return Math.round((val * 100)/maxInt)+"%";};
+        		
     	if(!zoomRange) {
     		plot = $.plot(container.find("#msmsplot"), datasets,  plotOptions);
     	}
@@ -316,7 +327,7 @@
     		var selectOpts = {};
     		if(container.find("#zoom_x").is(":checked"))
     			selectOpts.xaxis = { min: zoomRange.xaxis.from, max: zoomRange.xaxis.to };
-    		if(container.find("#zoom_y").is(":checked"))
+    		//if(container.find("#zoom_y").is(":checked"))
     			selectOpts.yaxis = { min: zoomRange.yaxis.from, max: zoomRange.yaxis.to };
     		
     		plot = $.plot(container.find("#msmsplot"), datasets,
@@ -346,7 +357,21 @@
 		// ZOOMING
 	    container.find("#msmsplot").bind("plotselected", function (event, ranges) {
 	    	zoomRange = ranges;
-	    	createPlot(getDatasets());
+    		var datasets = getDatasets();
+	    	if (!container.find("#zoom_y").attr("checked")) {
+	    		var maxInt = 0;
+				for (var i in datasets) {
+					var d = datasets[i].data;
+					for (var j in d) {
+						var v = d[j];
+						if (v[0] >= ranges.xaxis.from && v[0] <= ranges.xaxis.to && v[1] > maxInt) {
+							maxInt = v[1];
+						}
+					}
+				}
+				zoomRange.yaxis.to = maxInt * 1.05;
+	    	}
+	    	createPlot(datasets);
 	    });
 	    
 	    // ZOOM AXES
@@ -404,6 +429,10 @@
 		var neutralLossContainer = container.find("#nl_choice");
 		neutralLossContainer.find("input").click(function() {
 			selectedNeutralLossChanged = true;
+			plotAccordingToChoices();
+		});
+		
+		container.find("#hide_precursor").click(function() {
 			plotAccordingToChoices();
 		});
 		
@@ -539,6 +568,20 @@
 		});
 	}
 	
+	function filterPeaks(peaks) {
+		if (options.precursorMz && container.find("#hide_precursor").attr("checked")) {
+			var pks = peaks.slice(0);
+			for (var i = pks.length - 1; i >= 0; --i) {
+				var p = pks[i];
+				if (p[0] >= options.precursorMz - options.massError * 2) {
+					pks.splice(i, 1);
+				}
+			}
+			return pks;
+		}
+		return peaks;
+	}
+	
 	// -----------------------------------------------
 	// SELECTED DATASETS
 	// -----------------------------------------------
@@ -550,7 +593,7 @@
 		calculateTheoreticalSeries(selectedIonTypes);
 		
 		// add the un-annotated peaks
-		var data = [{data: options.peaks, color: "#bbbbbb", labelType: 'none'}];
+		var data = [{data: filterPeaks(options.peaks), color: "#bbbbbb", labelType: 'none'}];
 		
 		// add the annotated peaks
 		var seriesMatches = getSeriesMatches(selectedIonTypes);
@@ -932,7 +975,7 @@
 		container = $("#lorikeet_content");
 		container.addClass("lorikeet");
 		
-		var parentTable = '<table cellpadding="0" cellspacing="5"> ';
+		var parentTable = '<table cellpadding="0" cellspacing="5" width="100%"> ';
 		parentTable += '<tbody> ';
 	
 		// options table
@@ -949,7 +992,7 @@
 		
 		// placeholders for the ms/ms plot
 		parentTable += '<tr> ';
-		parentTable += '<td valign="top" id="optionsTable"></td>';
+		parentTable += '<td valign="top" id="optionsTable" width="1"></td>';
 		parentTable += '<td style="background-color: white; padding:5px; border:1px dotted #cccccc;" valign="middle" align="center"> '; 
 		parentTable += '<div id="msmsplot" align="bottom" style="width:'+options.width+'px;height:'+options.height+'px;"></div> ';
 		
@@ -963,7 +1006,7 @@
 		parentTable += '</td> ';
 		
 		// placeholder for the ion table
-		parentTable += '<td valign="top" id="ionTableLoc1" > ';
+		parentTable += '<td valign="top" id="ionTableLoc1" width="1" > ';
 		parentTable += '<div id="ionTableDiv">';
 		// placeholder for file name, scan number, modifications etc.
 		parentTable += '<div id="modinfo" style="margin-top:5px;"></div> ';
@@ -1364,6 +1407,13 @@
 		myTable+= '<input type="radio" name="peakLabelOpt" value="ion" checked="checked"/><b>Ion</b>';
 		myTable+= '<input type="radio" name="peakLabelOpt" value="mz"/><b>m/z</b><br/>';
 		myTable+= '<input type="radio" name="peakLabelOpt" value="none"/><b>None</b> ';
+		myTable+= '</div> ';
+		myTable += '</td> </tr> ';
+		
+		// precursor
+		myTable += '<tr><td class="optionCell"> ';
+		myTable+= '<div> Filter:<br/> ';
+		myTable+= '<input type="checkbox" value="precursor" id="hide_precursor" checked="checked"/>Precursor Ion';
 		myTable+= '</div> ';
 		myTable += '</td> </tr> ';
 

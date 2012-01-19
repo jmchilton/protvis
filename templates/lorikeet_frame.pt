@@ -29,8 +29,9 @@
 		<tal:else condition="python: peptide != None">
 			<script type="text/javascript">
 				$(document).ready(function () {
+					var peaks = ${spectrum.ions.ions};
 					$("#lorikeet").specview({
-						sequence: "${peptide.sequence}",
+						sequence: "${peptide.peptide}",
 						scanNum: ${spectrum.scan},
 						charge: ${spectrum.charge},
 						precursorMz: ${peptide.precursor_neutral_mass},
@@ -40,7 +41,7 @@
 							ntermMod: ${peptide.nterm},
 							ctermMod: ${peptide.cterm},
 						</tal:if>
-						peaks: ${spectrum.ions.ions}
+						peaks: peaks,
 					});	
 
 				});

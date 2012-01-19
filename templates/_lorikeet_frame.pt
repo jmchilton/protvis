@@ -1,0 +1,194 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+	<head>
+		<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+		<title>Lorikeet Spectrum Viewer</title>
+		<!--[if IE]><script language="javascript" type="text/javascript" src="/res/lorikeet/js/excanvas.min.js"></script><![endif]-->
+		<script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.4.2/jquery.min.js"></script>
+		<script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jqueryui/1.8.4/jquery-ui.min.js"></script>
+		<script type="text/javascript" src="/res/lorikeet/js/jquery.flot.js"></script>
+		<script type="text/javascript" src="/res/lorikeet/js/jquery.flot.selection.js"></script>
+		<script type="text/javascript" src="/res/lorikeet/js/specview.js"></script>
+		<script type="text/javascript" src="/res/lorikeet/js/peptide.js"></script>
+		<script type="text/javascript" src="/res/lorikeet/js/aminoacid.js"></script>
+		<script type="text/javascript" src="/res/lorikeet/js/ion.js"></script>
+		<link href="/res/lorikeet/css/lorikeet.css" type="text/css" rel="stylesheet" />
+		<tal:if condition="python: peptide == None">
+			<script type="text/javascript">
+				$(document).ready(function () {
+					new SpecView($("#lorikeet_content"), {							
+						scanNum: ${spectrum.scan},
+						charge: ${spectrum.charge},
+						fileName:"${spectrum.file}",
+						peaks: ${spectrum.ions.ions}
+					});	
+
+				});
+			</script>
+		</tal:if>
+		<tal:else condition="python: peptide != None">
+			<script type="text/javascript">
+				$(document).ready(function () {
+					new SpecView($("#lorikeet_content"), {
+						sequence: "${peptide.peptide}",
+						scanNum: ${spectrum.scan},
+						charge: ${spectrum.charge},
+						precursorMz: ${peptide.precursor_neutral_mass},
+						fileName:"${spectrum.file}",
+						<tal:if condition="python: peptide.mods != None">
+							variableMods: [<tal:for repeat="mod peptide.mods">{index: ${mod.index}, modMass: ${mod.mass}, aminoAcid: ${mod.aa}}, </tal:for>],
+							ntermMod: ${peptide.nterm},
+							ctermMod: ${peptide.cterm},
+						</tal:if>
+						peaks: ${spectrum.ions.ions}
+					});	
+
+				});
+			</script>
+		</tal:else>
+	</head>
+	<body>
+		<tal:var define="global charge_opt python: max(1, int(spectrum['charge']) - 1)"></tal:var>
+		<div id="lorikeet_content" class="lorikeet">
+			<table cellpadding="0" cellspacing="5" width="100%">
+			<tr>
+				<td style="background:none; padding:5px; border:none; text-align:center;" valign="bottom" align="center" colspan="3">
+					<tal:if condition="python: peptide != None">
+						<span style="font-weight:bold; color:#8B0000;" tal:content="python: render_peptide(peptide)"></span>
+						<span id="seqinfo"><!--placeholder for m/z, scan number etc--></span>
+					</tal:if>
+					<div id="fileinfo" style="width:100%; margin-top:5px;" class="font_small">
+						File: ${spectrum.file}, Scan: ${spectrum.scan},<tal:if condition="python: peptide != None"> Precursor m/z: ${peptide.precursor_neutral_mass},</tal:if> Charge: ${spectrum.charge}
+					</div>
+				</td>
+			</tr>
+			<tr>
+				<td valign="top" id="optionsTable" width="1px">
+					<table cellpadding="2" cellspacing="2">
+						<tr><td class="optionCell">
+							<b>Ions:</b>
+							<div id="ion_choice" style="margin-bottom: 10px">
+								<!-- a ions -->
+								<nobr>
+								<b>a</b>
+								<input type="checkbox" value="1" id="a_1"/>1<sup>+</sup>
+								<input type="checkbox" value="2" id="a_2"/>2<sup>+</sup>
+								<input type="checkbox" value="3" id="a_3"/>3<sup>+</sup>
+								</nobr>
+								<br/>
+								<!-- b ions -->
+								<nobr>
+								<b>b</b>
+								<input type="checkbox" value="1" id="b_1" checked="checked"/>1<sup>+</sup>
+								<tal:if condition="python: charge_opt >= 2"><input type="checkbox" value="2" id="b_2" checked="checked"/>2<sup>+</sup></tal:if>
+								<tal:else condition="python: charge_opt < 2"><input type="checkbox" value="2" id="b_2"/>2<sup>+</sup></tal:else>
+								<tal:if condition="python: charge_opt >= 3"><input type="checkbox" value="3" id="b_3" checked="checked"/>3<sup>+</sup></tal:if>
+								<tal:else condition="python: charge_opt < 3"><input type="checkbox" value="3" id="b_3"/>3<sup>+</sup></tal:else>
+								</nobr>
+								<br/>
+								<!-- c ions -->
+								<nobr>
+								<b>c</b>
+								<input type="checkbox" value="1" id="c_1"/>1<sup>+</sup>
+								<input type="checkbox" value="2" id="c_2"/>2<sup>+</sup>
+								<input type="checkbox" value="3" id="c_3"/>3<sup>+</sup>
+								</nobr>
+								<br/>
+								<!-- x ions -->
+								<nobr>
+								<b>x</b>
+								<input type="checkbox" value="1" id="x_1"/>1<sup>+</sup>
+								<input type="checkbox" value="2" id="x_2"/>2<sup>+</sup>
+								<input type="checkbox" value="3" id="x_3"/>3<sup>+</sup>
+								</nobr>
+								<br/>
+								<!-- y ions -->
+								<nobr>
+								<b>y</b>
+								<input type="checkbox" value="1" id="y_1" checked="checked"/>1<sup>+</sup>
+								<tal:if condition="python: charge_opt >= 2"><input type="checkbox" value="2" id="y_2" checked="checked"/>2<sup>+</sup></tal:if>
+								<tal:else condition="python: charge_opt < 2"><input type="checkbox" value="2" id="y_2"/>2<sup>+</sup></tal:else>
+								<tal:if condition="python: charge_opt >= 3"><input type="checkbox" value="3" id="y_3" checked="checked"/>3<sup>+</sup></tal:if>
+								<tal:else condition="python: charge_opt < 3"><input type="checkbox" value="3" id="y_3"/>3<sup>+</sup></tal:else>
+								</nobr>
+								<br/>
+								<!-- z ions -->
+								<nobr>
+								<b>z</b>
+								<input type="checkbox" value="1" id="z_1"/>1<sup>+</sup>
+								<input type="checkbox" value="2" id="z_2"/>2<sup>+</sup>
+								<input type="checkbox" value="3" id="z_3"/>3<sup>+</sup>
+								</nobr>
+								<br/>
+								<span id="deselectIonsLink" style="font-size:8pt;text-decoration: underline; color:sienna;cursor:pointer;">[Deselect All]</span>
+							</div>
+							<b>Neutral Loss:</b>
+							<div id="nl_choice">
+								<nobr> <input type="checkbox" value="h2o" id="h2o"/>
+								 H<sub>2</sub>O (<b>o</b>)
+								</nobr>
+								<br>
+								<nobr> <input type="checkbox" value="nh3" id="nh3"/>
+								 NH<sub>3</sub> (<b>*</b>)
+								</nobr>
+							</div>
+						</td></tr>
+						<tr><td class="optionCell">
+							<div> Mass Type:<br/>
+								<nobr>
+								<input type="radio" name="massTypeOpt" value="mono" checked="checked"/><b>Mono</b>
+								<input type="radio" name="massTypeOpt" value="avg"/><b>Avg</b>
+								</nobr>
+								</div>
+								<div style="margin-top:10px;">
+								<nobr>Mass Tol: <input id="massError" type="text" value="'+this.options.massError+'" size="4"/></nobr>
+								</div>
+								<div style="margin-top:10px;" align="center">
+								<input id="update" type="button" value="Update"/>
+							</div>
+						</td></tr>
+						<tr><td class="optionCell">
+							<div> Peak Assignment:<br/>
+							<input type="radio" name="peakAssignOpt" value="intense" checked="checked"/><b>Most Intense</b><br/>
+							<input type="radio" name="peakAssignOpt" value="close"/><b>Nearest Match</b>
+							</div>
+						</td></tr>
+						<tr><td class="optionCell">
+							<div> Peak Labels:<br/>
+								<input type="radio" name="peakLabelOpt" value="ion" checked="checked"/><b>Ion</b>
+								<input type="radio" name="peakLabelOpt" value="mz"/><b>m/z</b><br/>
+								<input type="radio" name="peakLabelOpt" value="none"/><b>None</b>
+							</div>
+						</td></tr>
+					</table>
+				</td>
+				<td style="background-color: white; padding:5px; border:1px dotted #cccccc;" valign="middle" align="center">
+					<div id="msmsplot" align="bottom" style="width:'+options.width+'px;height:'+options.height+'px;"><!--placeholders for the ms/ms plot--></div>
+					<div id="viewOptionsDiv" align="top" style="margin-top:15px;">
+						<nobr>
+						<span style="width:100%; font-size:8pt; margin-top:5px; color:sienna;">Click and drag in the plot to zoom</span>
+						X:<input id="zoom_x" type="checkbox" value="X" checked="checked"/>&nbsp;Y:<input id="zoom_y" type="checkbox" value="Y" />
+						&nbsp;<input id="resetZoom" type="button" value="Zoom Out" />&nbsp;<input id="printLink" type="button" value="Print" />
+						</nobr>
+						&nbsp;&nbsp;
+						<nobr>
+						<input id="enableTooltip" type="checkbox">Enable tooltip
+						</nobr>
+						<br>
+					</div>
+					<!--placeholder for ms1 plot (if data is available)-->
+					<!--if(options.ms1peaks && options.ms1peaks.length > 0) {
+						<div id="msplot" style="width:'+options.width+'px;height:100px;"></div>
+					}-->
+				</td>
+				<td valign="top" id="ionTableLoc1" width="1px">
+					<div id="ionTableDiv"><!--placeholder for the ion table-->
+					<!--placeholder for file name, scan number, modifications etc.-->
+					<div id="modinfo" style="margin-top:5px;"></div>
+					</div>
+				</td>
+			</tr>
+			</table>
+		</div>
+	</body>
+</html>

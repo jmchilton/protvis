@@ -1,0 +1,33 @@
+<div id="lorikeet_content" class="lorikeet">
+	<table cellpadding="0" cellspacing="5" width="100%">
+	<!--options table-->
+	<tr>
+		<!--placeholder for sequence, m/z, scan number etc-->
+		<td style="background:none; padding:5px; border:none;" valign="bottom" align="center" colspan="3"> 
+			<div id="seqinfo" style="width:100%;"></div>
+			<!--placeholder for file name, scan number and charge-->
+			<div id="fileinfo" style="width:100%;"></div>
+		</td>
+	</tr>
+	<!--placeholders for the ms/ms plot-->
+	<tr>
+		<td valign="top" id="optionsTable" width="1px"></td>
+		<td style="background-color: white; padding:5px; border:1px dotted #cccccc;" valign="middle" align="center">
+			<div id="msmsplot" align="bottom" style="width:'+options.width+'px;height:'+options.height+'px;"></div>
+			<!--placeholder for viewing options (zoom, plot size etc.)-->
+			<div id="viewOptionsDiv" align="top" style="margin-top:15px;"></div>
+			<!--placeholder for ms1 plot (if data is available)-->
+			<!--if(options.ms1peaks && options.ms1peaks.length > 0) {
+				<div id="msplot" style="width:'+options.width+'px;height:100px;"></div>
+			}-->
+		</td>
+		<!--placeholder for the ion table-->
+		<td valign="top" id="ionTableLoc1" width="1px">
+			<div id="ionTableDiv">
+			<!--placeholder for file name, scan number, modifications etc.-->
+			<div id="modinfo" style="margin-top:5px;"></div>
+			</div>
+		</td>
+	</tr>
+	</table>
+</div>

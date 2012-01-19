@@ -1,0 +1,36 @@
+#!/bin/sh
+
+if [ "`which node`" != "" ]; then 
+	engine=node
+elif [ "`which java`" != "" ]; then 
+	engine=java
+else
+	echo "node (nodejs) or java is required to compile dojo"
+	exit
+fi
+
+common_flags="bin=$engine action=release profile=protvis releaseDir=../../../../res releaseName=dojo"
+if [ "$1" = "release" ]; then
+	build_flags="$common_flags cssOptimize=comments optimize=shrinksafe layerOptimize=shrinksafe stripConsole=normal"
+elif [ "$1" = "debug" ]; then
+	build_flags="$common_flags layerOptimize=falsy"
+else
+	echo "Unknown build type. Options are: debug release"
+	exit
+fi
+
+dojo_src="dojo-release-1.7.1-src"
+cd compile
+if [ ! -d "$dojo_src" ]; then
+	wget http://download.dojotoolkit.org/release-1.7.1/$dojo_src.tar.gz
+	tar -xf $dojo_src.tar.gz
+	rm $dojo_src.tar.gz
+fi
+cp -rf dojo-extras/* $dojo_src
+rm -rf ../res/dojo
+cd $dojo_src/util/buildscripts
+echo "./build.sh $build_flags"
+./build.sh $build_flags
+cd ../../../../res/dojo
+rm -f `find . | grep "\.uncompressed\.js$"`
+rm build-report.txt

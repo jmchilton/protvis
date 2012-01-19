@@ -175,7 +175,9 @@ FlowChart = function(parent, files, OnSelect) {
 		for (var f in files) {
 			var deps = files[f]["deps"]
 			for (var d in deps) {
-				c = MakeConnection(files[f], files[deps[d]]);
+				if (deps[d] >= 0) {
+					c = MakeConnection(files[f], files[deps[d]]);
+				}
 			}
 		}
 		var jumplen = 2;

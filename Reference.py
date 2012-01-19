@@ -98,6 +98,7 @@ def SearchXml(fname, elems, handler):
 
 class FileType:
 	#higher numbers are more specific than lower numbers. e.g. PEPXML_INTERPROPHET > PEPXML_COMPARE > PEPXML > UNKNOWN
+	MISSING = -1
 	UNKNOWN = 0
 	MZML = 1
 	MGF = 2

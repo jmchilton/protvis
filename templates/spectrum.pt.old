@@ -1,0 +1,11 @@
+<div id="spectrum_mgf" style="width: 100%; height:400px;"></div>
+<tal:if condition="spectrum.intensity">
+	<script>
+		RenderSpectrumGraph("${query.title}", "spectrum_mgf", ${spectrum.ions});
+	</script>
+</tal:if>
+<tal:else condition="not: spectrum.intensity">
+	<script>
+		RenderSpectrumLine("${query.title}", "spectrum_mgf", ${spectrum.ions});
+	</script>
+</tal:else>
