@@ -9,6 +9,10 @@ tr.row {background-color: #E9E9FF;}
 tr.rowodd {background-color: #DDDDFF;}
 tr.decoy {background-color: #FFE9E9;}
 tr.decoyodd {background-color: #FFDDDD;}
+tr.stuck {background-color: #E9FFE9;}
+tr.stuckodd {background-color: #DDFFDD;}
+tr.stuckover {background-color: #C9FFC9;}
+tr.stuckoverodd {background-color: #BBFFBB;}
 .notice {background-color: #E9E9FF;}
 .noticeodd {background-color: #DDDDFF;}
 .indistinguishable {font-weight: bold;color: green;text-decoration: underline;cursor: pointer;}

@@ -15,6 +15,7 @@
 			dojo.require("dojo._base.connect");
 			dojo.require("dijit.DynamicTooltip");
 			dojo.require("dojox.html.ellipsis");
+			dojo.require("dojox.gfx");
 			
 			var Location = function(dataset, table) {
 				if (!table) {
@@ -57,6 +58,7 @@
 			var ResultsVisible;
 			var Files = [${files}];
 			var Flowchart;
+			var Coverages = {};
 
 			function InArray(arr, e) {
 				for (var i in arr) {

@@ -905,7 +905,7 @@ class Protein(TagHandler):
 	def GetPeptides(f, off):
 		f.seek(off)
 		[_1, OptionalFlags, peptide__count, _2, _3, _4, _5] = struct.unpack("=IBHHHHd", f.read(4 + 1 + 2 + 2 + 2 + 2 + 8))
-		EatStringFromFile(f)
+		protein = DecodeStringFromFile(f)
 		EatStringFromFile(f)
 		if OptionalFlags & 0x01:
 			f.read(8)
@@ -922,7 +922,7 @@ class Protein(TagHandler):
 		while i < peptide__count:
 			peptides.append(Peptide.GetInfo(f))
 			i += 1
-		return peptides
+		return [protein, peptides]
 
 	@staticmethod
 	def GetIndistinguishable(f, off):
@@ -1467,10 +1467,23 @@ def Search(FileName, terms):
 	return [0, stat.Total, stat.Results]
 
 def select_protein(BaseFile, query):
+	import subprocess
+	import parameters
+
+	def FindProteinSequence(seq):
+		for f in parameters.PROTEIN_DATABASES:
+			p = subprocess.Popen(["bin/blastdbcmd", "-db", f, "-entry", seq], stdout=subprocess.PIPE)
+			(out, err) = p.communicate()
+			print out
+			p.stdout.close()
+			if len(out) > 0:
+				return "".join(out.split("\n")[1:])
+		return None
+
 	f = open(BaseFile + "_" + query["n"], "r")
-	peptides = Protein.GetPeptides(f, int(query["off"]))
+	[protein, peptides] = Protein.GetPeptides(f, int(query["off"]))
 	f.close()
-	return { "rows": peptides, "sequence": sequence }
+	return { "rows": peptides, "sequence": FindProteinSequence(protein) }
 
 def select_indistinguishable_protein(BaseFile, query):
 	f = open(BaseFile + "_" + query["n"], "r")

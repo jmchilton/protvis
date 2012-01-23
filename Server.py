@@ -17,6 +17,7 @@ import struct
 from Common import EncodeStringToFile, DecodeStringFromFile, TryGet, EncodeTermsBasic, EncodeTermsAdvanced
 import ProtXML, PepXML, MGF
 import time
+import subprocess
 import parameters
 
 templates = os.path.realpath(os.path.dirname(__file__))+ "/templates/"
@@ -601,6 +602,15 @@ def Tooltip(request):
 
 if __name__ == "__main__":
 	#check to make sure everything is set up properly
+	if len(parameters.PROTEIN_DATABASES) > 0:
+		print " + Indexing protein databases"
+		for f in parameters.PROTEIN_DATABASES:
+			p = subprocess.Popen(["bin/blastdbcmd", "-db", f, "-info"], stderr=subprocess.PIPE, stdout=subprocess.PIPE)
+			(out, err) = p.communicate()
+			p.stderr.close()
+			p.stdout.close()
+			if len(err) > 0:
+				subprocess.call(["bin/makeblastdb", "-in", f, "-parse_seqids"])
 	
 	Threads = {}
 	JobsTotal = 0
@@ -636,4 +646,5 @@ if __name__ == "__main__":
 	config.add_static_view("test", "test", cache_max_age=0)
 	app = config.make_wsgi_app()
 	server = make_server(parameters.HOST, parameters.PORT, app)
+	print "Server is going up now"
 	server.serve_forever()

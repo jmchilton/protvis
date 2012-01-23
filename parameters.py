@@ -28,6 +28,7 @@ SPECTRUM_REGEX = r"(.+?)(\.mzML)?\.[0-9]+\.[0-9]+\.[0-9]+"
 
 #A list of .fasta files which contain the sequences for all the proteins
 #These databases will be indexed with blast+
+#For performance you should place the most likely database to match a protein first
 PROTEIN_DATABASES = []
 
 ### There are no options beyond this point ###
