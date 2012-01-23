@@ -1474,7 +1474,6 @@ def select_protein(BaseFile, query):
 		for f in parameters.PROTEIN_DATABASES:
 			p = subprocess.Popen(["bin/blastdbcmd", "-db", f, "-entry", seq], stdout=subprocess.PIPE)
 			(out, err) = p.communicate()
-			print out
 			p.stdout.close()
 			if len(out) > 0:
 				return "".join(out.split("\n")[1:])
