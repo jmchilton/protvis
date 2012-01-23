@@ -1,0 +1,59 @@
+1. Quick Installation
+
+  Quick installation is only avaliable for unix systems. Windows users must follow the manual installation instructions in Section 2
+  For easy installation there you can use the script
+  ./setup.sh
+  This will attempt to install python, setuptools and virtualenv through your distributions package manager if they are not present.
+  blast+ is downloaded and installed into bin/ if they are not present on your system
+
+  The system is installed into a virtual environment in the current working directory.
+  This will also install pyramid and a number of other dependancies into the virtual environment. No permissions are required for installing these packages
+
+  Once installed you can run the server with
+  ./run
+
+2. Manual Installation
+
+  The recommended method is to install into a virtual environment away from your system python, but it is possible to run from your system python
+  
+  Minimum requirements:
+
+  PACKAGE    PACKAGE MANAGER NAME  ALTERNATE INSTALLATION
+  python     python                http://python.org/download/
+  setuptools python-setuptools     http://peak.telecommunity.com/dist/ez_setup.py
+
+  Recommended packages
+
+  PACKAGE    PACKAGE MANAGER NAME   ALTERNATE INSTALLATION
+  virtualenv python-virtualenv      easy_install "virtualenv"
+  blast+                            ftp://ftp.ncbi.nlm.nih.gov/blast/executables/blast+/LATEST
+
+  2.1 Setting up with a virtual environment
+    Install virtualenv with either your package manager, or the easy_install script, then from the root directory of protvis run
+    virtualenv --no-site-packages env
+    cd env
+    bin/easy_install pyramid
+    #now run the server
+    cd ..
+    ./run
+
+  2.2 Installing into your system python
+    easy_install pyramid
+    #now run the server
+    ./Server.py
+
+  2.3 Installing blast+ (Optional)
+    blast+ allows protvis to generate coverage graphs for peptides in a protein
+
+    If blast+ is already installed on your system you need to make links to it in the bin/ directory
+    ln -s `which makeblastdb` bin/makeblastdb
+    ln -s `which blastdbcmd` bin/blastdbcmd
+
+    If you don't have blast+ and do not wish to install it into your system, you can download the latest version from
+    ftp://ftp.ncbi.nlm.nih.gov/blast/executables/blast+/LATEST and extract makeblastdb and blastdbcmd into bin/
+
+    Restart the HTTP server once installed for changes to take effect
+
+3. Development
+  The script ./dojo_build is for recompiling the dojo library if you add additional dojo dependencies.
+  This script requires either java or node. If neither is installed you will be given the option to install one of them in the script

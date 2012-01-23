@@ -8,7 +8,7 @@
 		<link id="themeStyles" href="/res/dojo/dojox/html/resources/ellipsis.css" type="text/css" rel="stylesheet" />
 		<script type="text/javascript" src="/res/dojo/dojo/dojo.js" data-dojo-config="parseOnLoad: true"></script>
 		<script type="text/javascript" src="/res/scripts/flowchart.js"></script>
-		<script type="text/javascript" src="/res/scripts/specview.js"></script>
+		<!--<script type="text/javascript" src="/res/scripts/specview.js"></script>-->
 		<script type="text/javascript">
 			dojo.require("dojo.fx");
 			dojo.require("dijit.Dialog");
@@ -22,6 +22,26 @@
 				}
 				this.Dataset = dataset;
 				this.Table = table;
+			}
+			
+			Element.prototype.byId = function(id) {
+				function ChildById(e, id) {
+					if (e.children) {
+						for (var i in e.children) {
+							var c = e.children[i];
+							if (c.id == id) {
+								return c;
+							}
+							var found = ChildById(c, id);
+							if (found) {
+								return found;
+							}
+						}
+					}
+					return null;
+				}
+			
+				return ChildById(this, id);
 			}
 
 			var DetailsDialog;
@@ -352,10 +372,6 @@
 				DetailsDialog.show();
 			}
 
-			function DisplayProtein(protein, datafile, off) {
-				SelectInfo("Peptides in " + protein, "protein", { datafile: datafile, params: "off=" + off });
-			}
-
 			function DisplayIndistinguishableProtein(protein, datafile, off) {
 				SelectInfo("Proteins indistinguishable from " + protein, "indistinguishable_protein", { datafile: datafile, params: "off=" + off, width: 400 });
 			}
@@ -370,6 +386,26 @@
 			
 			function DisplayScore(protein, peptide, datafile, qoff, hoff) {
 				SelectInfo("Hit Scores for " + protein + "/" + peptide, "scores", { datafile: datafile, params: "qoff=" + qoff + "&hoff=" + hoff });
+			}
+
+			function ListProteinPeptides(hash, index, protein, datafile, off) {
+				var cell = dojo.byId(hash).byId(index).byId("peptide");
+				dojo.xhrGet({
+					url: "/select?file=${file}&type=protein&n=" + datafile + "&off=" + off,
+					load: function(results) {
+						cell.byId("best").style.display = "none";
+						cell = cell.byId("all");
+						//cell.style.display = "";
+						cell.innerHTML = results;
+						dojo.fx.wipeIn({ node: cell }).play();
+						executeAjaxResponse(results);
+					},
+					error: function() {
+						cell = cell.byId("all");
+						cell.style.display = "";
+						cell.innerHTML = '<span class="error">Error contacting the server</span>';
+					}
+				});
 			}
 
 			function ReturnToResults() {

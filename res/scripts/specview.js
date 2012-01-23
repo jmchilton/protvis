@@ -1,5 +1,5 @@
-dojo.require("dojox.charting.widget.Chart2D");
-dojo.require("dojox.charting.widget.Legend");
+/*dojo.require("dojox.charting.widget.Chart2D");
+dojo.require("dojox.charting.widget.Legend");*/
 //dojo.require("dojox.charting.MouseInteractionSupport");
 
 strokes = [ "red", "green", "blue" ];

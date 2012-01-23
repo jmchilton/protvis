@@ -1,10 +1,13 @@
-<tal:var define="global columns python: [{'name':'peptide', 'title': 'Peptide'}, {'name': 'initial_probability', 'title': 'Initial Probability'}]"></tal:var>
-<table id="select_protein_results" border="1" style="width: 100%;">
-<tr><tal:for repeat="col columns"><th>${col.title}</th></tal:for></tr>
-<tal:for repeat="row results">
-	<tr tal:attributes="class string:info row${repeat.row.odd}">
+<tal:var define="global columns python: [{'name':'peptide', 'title': 'Peptide'}, {'name': 'initial_probability', 'title': 'Initial Probability', 'width':'170px'}]"></tal:var>
+<tal:var define="global hash python: abs(hash(','.join([r['peptide'] for r in results.rows])))"></tal:var>
+<div id="coverage_${hash}"></div>
+<table id="select_protein_results" border="1" style="width: 100%;" class="info">
+<tr><tal:for repeat="col columns"><th tal:attributes="style python: test(try_get(col, 'width') != None, 'width:'+test(try_get(col, 'width') != None, try_get(col, 'width'), ''), '')">${col.title}</th></tal:for></tr>
+<tal:for repeat="row results.rows">
+	<tr tal:attributes="class string:row${repeat.row.odd}">
 		<td><span class="link" onclick="SearchPeptide('${row.peptide}');" tal:content="python: render_peptide(row)"><tal:for repeat="indes row.indistinguishable_peptide"><br/><tal:echo tal:content="python: render_peptide(indes)"></tal:echo></tal:for></span></td>
 		<td style="text-align:center;">${row.initial_probability}</td>
 	</tr>
 </tal:for>
 </table>
+<script>RenderCoverage("coverage_${hash}", "${result.sequence}", [<tal:for repeat="row results.rows"><tal:if condition="python: repeat.row.index > 0">,</tal:if>"${row.peptide}"</tal:for>]);</script>

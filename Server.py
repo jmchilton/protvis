@@ -13,16 +13,16 @@ import urllib
 import re
 from HttpUtil import *
 import Reference
-import conf
 import struct
 from Common import EncodeStringToFile, DecodeStringFromFile, TryGet, EncodeTermsBasic, EncodeTermsAdvanced
 import ProtXML, PepXML, MGF
 import time
+import parameters
 
 templates = os.path.realpath(os.path.dirname(__file__))+ "/templates/"
 converted = os.path.realpath(os.path.dirname(__file__))+ "/ConvertedFiles/"
-decoy_regex = re.compile(conf.DECOY_REGEX)
-spectrum_regex = re.compile(conf.SPECTRUM_REGEX)
+decoy_regex = re.compile(parameters.DECOY_REGEX)
+spectrum_regex = re.compile(parameters.SPECTRUM_REGEX)
 
 MzMl = None #FIXME: delete when there is an MzMl module
 
@@ -452,13 +452,13 @@ def SelectInfo(request):
 	for c in query["type"]:
 		if (c < 'a' or c > 'z') and c != '_':
 			raise HTTPUnauthorized()
-	try:
-		parser = FileLinks(query["file"]).GetParser(int(query["n"]))
-		select = eval("parser.select_" + query["type"])
-		results = select(GetQueryFileName(query), query)
-		return render_to_response(templates + "select_" + query["type"] + ".pt", { "query": query, "results": results }, request=request)
-	except:
-		return HTTPBadRequest()
+	#try:
+	parser = FileLinks(query["file"]).GetParser(int(query["n"]))
+	select = eval("parser.select_" + query["type"])
+	results = select(GetQueryFileName(query), query)
+	return render_to_response(templates + "select_" + query["type"] + ".pt", { "query": query, "results": results }, request=request)
+	#except:
+	#	return HTTPBadRequest()
 
 def Spectrum(request):
 	query = DecodeQuery(request.query_string)
@@ -600,6 +600,8 @@ def Tooltip(request):
 	return HTTPNotFound()
 
 if __name__ == "__main__":
+	#check to make sure everything is set up properly
+	
 	Threads = {}
 	JobsTotal = 0
 	ThreadsLock = Lock()
@@ -633,5 +635,5 @@ if __name__ == "__main__":
 	config.add_static_view("res", "res", cache_max_age=3600*24*7)
 	config.add_static_view("test", "test", cache_max_age=0)
 	app = config.make_wsgi_app()
-	server = make_server(conf.HOST, conf.PORT, app)
+	server = make_server(parameters.HOST, parameters.PORT, app)
 	server.serve_forever()

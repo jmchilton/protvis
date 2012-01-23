@@ -1,5 +1,6 @@
 define([
 	"dojo/_base/declare", // declare
+	"./Tooltip",
 ], function(declare, domClass, MenuItem, template){
 
 	return declare("dijit.DynamicTooltip", dijit.Tooltip, {

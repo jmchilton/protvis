@@ -2,9 +2,9 @@ import binascii
 import os
 import xml.sax
 import xml.parsers.expat
-import conf;
+import parameters;
 
-GalaxyPath = conf.GALAXY_ROOT + "/database/files/"
+GalaxyPath = parameters.GALAXY_ROOT + "/database/files/"
 
 class IncludedFile:
 	class FileInfo:

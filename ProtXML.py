@@ -837,8 +837,9 @@ class Protein(TagHandler):
 			s.SearchItemString("protein_name", protein_name)
 			EatStringFromFile(f) #don't care about group_sibling_id
 			if OptionalFlags & 0x01:
-				#struct.unpack("=d", f.read(8))
-				f.read(8) #ignore this
+				[percent_coverage] = struct.unpack("=d", f.read(8))
+			else:
+				percent_coverage = None
 			if OptionalFlags & 0x02:
 				#struct.unpack("=i", f.read(4))
 				f.read(4) #ignore this
@@ -886,6 +887,7 @@ class Protein(TagHandler):
 					indistinguishable = IndistinguishableProtein.GetInfoAll(f, indistinguishable_protein__count)
 				f.seek(StartPos + RecordSize)
 			if result != None:
+				result.HitInfo["percent_coverage"] = percent_coverage
 				result.HitInfo["indistinguishable_protein"] = indistinguishable
 				if TryGet(result.HitInfo, "protein") == None:
 					if protein == None:
@@ -1468,7 +1470,7 @@ def select_protein(BaseFile, query):
 	f = open(BaseFile + "_" + query["n"], "r")
 	peptides = Protein.GetPeptides(f, int(query["off"]))
 	f.close()
-	return peptides
+	return { "rows": peptides, "sequence": sequence }
 
 def select_indistinguishable_protein(BaseFile, query):
 	f = open(BaseFile + "_" + query["n"], "r")
