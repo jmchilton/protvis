@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 super() {
 	if [ "`which sudo` 2>/dev/null" != "" ]; then
@@ -39,9 +39,9 @@ bin_need() {
 
 py_need() {
 	echo "Checking for $1 package"
-	python 2>&1 >/dev/null <<%%%
-	import $1
-	%%%
+	python 2>&1 1>/dev/null <<%%%
+import $1
+%%%
 	if [ $? -eq 1 ]; then
 		echo "$1 is not installed. Installing it now."
 		get "$1" "$2"
@@ -57,12 +57,12 @@ py_need "virtualenv" "easy_install virtualenv"
 echo "Checking for blast+"
 mkdir bin 2>/dev/null
 PATH=$PATH:./bin/
-if [ "`which makeblastdb 2>/dev/null`" == "" || "`which blastdbcmd 2>/dev/null`" == "" ]; then
+if [ "`which makeblastdb 2>/dev/null`" == "" ] || [ "`which blastdbcmd 2>/dev/null`" == "" ]; then
 	if [ "`uname`" == "Linux" ]; then
 		if [ "`uname -p`" == "x86_64" ]; then
-			$arch="x64"
+			arch="x64"
 		else
-			$arch="ia32"
+			arch="ia32"
 		fi
 		wget ftp://ftp.ncbi.nlm.nih.gov/blast/executables/blast+/2.2.25/ncbi-blast-2.2.25+-$arch-linux.tar.gz
 		tar xf ncbi-blast-2.2.25+-$arch-linux.tar.gz
@@ -88,7 +88,7 @@ bin/easy_install pyramid
 
 echo "The environment has been set up"
 
-cd res
+cd ../res
 rm dojo 2>/dev/null
 ln -s dojo_mini dojo
 cd ..
