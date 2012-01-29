@@ -2185,13 +2185,7 @@ class MsmsPipelineAnalysis(TagHandler):
 
 #externally usable functions
 
-def ConvertFilename(FileName):
-	return os.path.splitext(FileName)[0] + ".pepBIN"
-
-def IsConverted(FileName):
-	return os.path.isfile(ConvertFilename(FileName))
-
-def ToBinary(FileName, Dest = None, Links = None):
+def ToBinary(f, Dest = None, Links = None):
 	"""
 	struct _PeptideInstance {
 		String Peptide;
@@ -2207,16 +2201,12 @@ def ToBinary(FileName, Dest = None, Links = None):
 	}
 	"""
 	import Reference
-	if Dest == None:
-		Dest = open(ConvertFilename(FileName), "w")
 	Dest.write(struct.pack("=I", 0))
 	stat = EncodingStatus(Links)
 	parser = xml.sax.make_parser()
 	parser.setFeature("http://xml.org/sax/features/external-general-entities", False)
 	parser.setContentHandler(SaxHandler(Dest, stat))
-	f = open(FileName, "r")
 	parser.parse(f)
-	f.close()
 	EndPos = Dest.tell()
 	Dest.seek(0)
 	Dest.write(struct.pack("=I", EndPos))
@@ -2227,7 +2217,6 @@ def ToBinary(FileName, Dest = None, Links = None):
 		Dest.write(struct.pack("=H", len(offsets)))
 		for hit, query in offsets:
 			Dest.write(struct.pack("=II", hit, query))
-	Dest.close()
 	if stat.IncludedScores & 0x800:
 		return Reference.FileType.PEPXML_INTERPROPHET
 	elif stat.IncludedScores & 0x400:

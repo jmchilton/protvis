@@ -1442,19 +1442,13 @@ def ConvertFilename(FileName):
 def IsConverted(FileName):
 	return os.path.isfile(ConvertFilename(FileName))
 
-def ToBinary(FileName, Dest = None, Links = None):
+def ToBinary(f, Dest, Links = None):
 	import Reference
-	if Dest == None:
-		Dest = open(ConvertFilename(FileName), "w")
-	#Dest.write(struct.pack("=I", 0))
 	stat = EncodingStatus(Links)
 	parser = xml.sax.make_parser()
 	parser.setFeature("http://xml.org/sax/features/external-general-entities", False)
 	parser.setContentHandler(SaxHandler(Dest, stat))
-	f = open(FileName, "r")
 	parser.parse(f)
-	f.close()
-	Dest.close()
 	return Reference.FileType.PROTXML_PROTEINPROPHET
 
 def Search(FileName, terms):

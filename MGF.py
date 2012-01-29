@@ -175,14 +175,9 @@ class Header:
 			else:
 				f.seek(4, 1)
 			i += 1
-def ConvertFilename(filename):
-	return os.path.splitext(filename)[0] + ".mgfBIN"
 
-def ToBinary(filename, dest = None, links = None):
+def ToBinary(f, dest = None, links = None):
 	import Reference
-	if dest == None:
-		dest = open(ConvertFilename(filename), "w")
-	f = open(filename, "r")
 	header = Header(dest)
 	spectrum = None
 	while True:
@@ -212,7 +207,6 @@ def ToBinary(filename, dest = None, links = None):
 		else:
 			raise ValueError(line)
 	header.end()
-	f.close()
 	dest.close()
 	return Reference.FileType.MGF
 

@@ -16,6 +16,8 @@
 			dojo.require("dijit.DynamicTooltip");
 			dojo.require("dojox.html.ellipsis");
 			dojo.require("dojox.gfx");
+			dojo.require("dojox.form.Uploader");
+			dojo.require("dojox.form.uploader.plugins.IFrame");
 			
 			var Location = function(dataset, table) {
 				if (!table) {
@@ -98,44 +100,44 @@
 
 			function GetTypeName(type, full) {
 				if (full) {
-					switch (type) {
+					var missing = (type & 0x80) ? " [missing]" : "";
+					switch (type & 0x7F) {
 						case 1:
-							return "MZML";
+							return "MZML" + missing;
 						case 2:
-							return "MGF";
+							return "MGF" + missing;
 						case 3:
-							return "PepXML";
+							return "PepXML" + missing;
 						case 4:
-							return "Mascot";
+							return "Mascot" + missing;
 						case 5:
-							return "Omssa";
+							return "Omssa" + missing;
 						case 6:
-							return "X! Tandem";
+							return "X! Tandem" + missing;
 						case 7:
-							return "PepXML Comparison";
+							return "PepXML Comparison" + missing;
 						case 8:
-							return "PeptideProphet";
+							return "PeptideProphet" + missing;
 						case 9:
-							return "InterProphet";
+							return "InterProphet" + missing;
 						case 10:
-							return "ProtXML";
+							return "ProtXML" + missing;
 						case 11:
-							return "ProteinProphet";
+							return "ProteinProphet" + missing;
 						default:
-							return "";
+							return "Unknown" + missing;
 					}
 				} else {
-					if (type <= 0) {
-						return "";
-					} else if (type == 1) {
+					if (type == 1) {
 						return "mzml";
 					} else if (type == 2) {
 						return "mgf";
 					} else if (type <= 9) {
 						return "pep";
-					} else {
+					} else if (type <= 11) {
 						return "prot";
 					}
+					return "";
 				}
 			}
 			
@@ -391,23 +393,55 @@
 			}
 
 			function ListProteinPeptides(hash, index, protein, datafile, off) {
-				var cell = dojo.byId(hash).byId(index).byId("peptide");
-				dojo.xhrGet({
-					url: "/select?file=${file}&type=protein&n=" + datafile + "&off=" + off,
-					load: function(results) {
-						cell.byId("best").style.display = "none";
-						cell = cell.byId("all");
-						//cell.style.display = "";
-						cell.innerHTML = results;
-						dojo.fx.wipeIn({ node: cell }).play();
-						executeAjaxResponse(results);
-					},
-					error: function() {
-						cell = cell.byId("all");
-						cell.style.display = "";
-						cell.innerHTML = '<span class="error">Error contacting the server</span>';
-					}
-				});
+				var elem = dojo.byId(hash).byId(index).byId("peptide");
+				var all = elem.byId("all");
+				if (all.children.length > 0) {
+					dojo.fx.combine([
+						dojo.fx.wipeOut({ node: elem.byId("best") }),
+						dojo.fx.wipeIn({ node: all })
+					]).play();
+				} else {
+					dojo.xhrGet({
+						url: "/select?file=${file}&type=protein&n=" + datafile + "&off=" + off,
+						load: function(results) {
+							all.innerHTML = results;
+							dojo.fx.combine([
+								dojo.fx.wipeOut({ node: elem.byId("best") }),
+								dojo.fx.wipeIn({ node: all })
+							]).play();
+							executeAjaxResponse(results);
+						},
+						error: function() {
+							all.innerHTML = '<span class="error">Error contacting the server</span>';
+							dojo.fx.wipeIn({ node: all }).play();
+						}
+					});
+				}
+			}
+			
+			function AddFile(n) {
+				var status = dojo.byId("missing_status_" + n);
+				dojo.io.iframe.send({
+						form: "missing_form_" + n,
+						load: function(response, ioArgs) {
+							status.innerHTML = response;
+							dojo.fx.wipeIn({ node: status }).play();
+							executeAjaxResponse(response);
+							return response;
+						},
+						error: function(response, ioArgs) {
+							status.innerHTML = '<span class="error">An error occured while uploading your file<' + '/span>';
+							dojo.fx.wipeIn({ node: status }).play();
+							return response;
+						}
+					});
+			}
+
+			function HideProteinPeptides(elem) {
+				dojo.fx.combine([
+					dojo.fx.wipeOut({ node: elem.byId("all") }),
+					dojo.fx.wipeIn({ node: elem.byId("best") })
+				]).play();
 			}
 
 			function ReturnToResults() {
@@ -421,7 +455,9 @@
 				Flowchart = new FlowChart(dojo.byId("navigation_graph"), Files, function(evt, file) {
 					var type = GetTypeName(file["type"], false);
 					SwitchDataset(file["index"]);
-					LoadContents(file["index"], "/results?file=${file}&n=" + file["index"] + "&type=" + type + "&q=&max=50");
+					if (dojo.byId("data_" + file["index"]).children.length == 0) {
+						LoadContents(file["index"], "/results?file=${file}&n=" + file["index"] + "&type=" + type + "&q=&max=50");
+					}
 					Flowchart.Select(file["index"]);
 				});
 				Flowchart.Select(${index});
@@ -430,8 +466,13 @@
 		<script type="text/javascript" src="/res/scripts/main.js"></script>
 	</head>
 	<body class="claro">
-		<div id="navigation_graph" style="width:100%; height:auto; overflow:auto; text-align:center;"></div>
-		<br/>
+		<div id="selectBtn"></div>
+		<tal:if condition="python: nfiles > 1">
+			<div id="navigation">
+				<div id="navigation_graph" style="width:100%; height:auto; overflow:auto; text-align:center;"></div>
+				<br/>
+			</div>
+		</tal:if>
 		<div id="searching" style="width: 100%;" class="dijitContentPaneLoading">Searching... Please wait</div>
 		<tal:for repeat="n python:range(index)"><div id="data_${n}" style="width:100%;height:0;display:none;"></div></tal:for>
 		<div id="data_${index}" style="width:100%"></div>

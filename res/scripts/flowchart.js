@@ -16,14 +16,30 @@ FlowChart = function(parent, files, OnSelect) {
 	
 	var columns = new Array();
 	var obj = this;
+	var ruler = document.createElement('div');
+	ruler.setAttribute("style", "position:absolute; visibility:hidden; height:auto; width:auto; font:bold 14px Arial; white-space:nowrap;");
+	dojo.byId(parent).appendChild(ruler);
+	
+	function StringClip(str, width) {
+		ruler.innerHTML = str;
+		if (ruler.clientWidth <= width) {
+			return str;
+		}
+		i = str.length;
+		do {
+			ruler.innerHTML = str.substr(0, --i) + "…";
+		} while (ruler.clientWidth > width && i > 0);
+		return str.substr(0, i) + "…";
+	}
 	
 	function MakeBox(file) {
-		var color = Colors[file["index"] % Colors.length];//file["missing"] ? "gray" : "black";
+		var missing = file["type"] & 0x80;
+		var color = missing ? "#808080" : Colors[file["index"] % Colors.length];//file["missing"] ? "gray" : "black";
 		var mat = obj.Matrix.translate(file["x"], file["y"]);
 		var g = obj.Surface.createGroup().setTransform(mat);
 		var box = g.createRect({x:-BoxWidth/2, y:-BoxHeight/2, width:BoxWidth, height:BoxHeight, r:5}).setFill({type:"linear", y1:-BoxHeight * 0.75, x2:0, y2:BoxHeight, colors:[{offset:0, color:"white"}, {offset:1, color:color}]}).setStroke({color:"black", width:2});
-		var title = g.createText({x:0, y:-3, text:file["name"], align:"middle"}).setFont({family:"Arial", size:"14px", weight:"bold"}).setFill("black");
-		var type = g.createText({x:0, y:14, text:GetTypeName(file["type"], true), align:"middle"}).setFont({family:"Arial", size:"12px"}).setFill("black");
+		var title = g.createText({x:0, y:-3, text:StringClip(file["name"], BoxWidth - 6), align:"middle"}).setFont({family:"Arial", size:"14px", weight:"bold"}).setFill("black");
+		var type = g.createText({x:0, y:14, text:GetTypeName(file["type"], true), align:"middle"}).setFont({family:"Arial", size:"12px"}).setFill(missing ? "red" : "black");
 		if (OnSelect) {
 			g.connect("onmousedown", this, function(evt) { OnSelect(evt, file); });
 		}
@@ -69,14 +85,14 @@ FlowChart = function(parent, files, OnSelect) {
 					minpos = s;
 				}
 			}
-			return minpos;
+			return minpos + 1;
 		}
 		
-		function RouteConnectionInline(file1, file2, stroke) {
+		function _RouteConnectionInline(col1, file2, path, side) {
 			//find a list of all the bokes we must route past
 			var boxes = new Array();
-			var y = file1["y"];
-			for (var col = file1["col"] + 1; col < file2["col"]; ++col) {
+			var y = file2["y"];
+			for (var col = col1 + 1; col < file2["col"]; ++col) {
 				var box = null;
 				for (var c in columns[col]) {
 					if (files[columns[col][c]]["y"] == y) {
@@ -87,34 +103,34 @@ FlowChart = function(parent, files, OnSelect) {
 				boxes.push(box);
 			}
 			//find the path which has the most space and least crossovers
-			var fulltop = 0, maxtop = 0;
-			var fullbot = 0, maxbot = 0;
-			for (var b in boxes) {
-				if (boxes[b] != null) {
-					maxtop = Math.max(maxtop, CountConnections(boxes[b]["slots_top"]));
-					maxbot = Math.max(maxbot, CountConnections(boxes[b]["slots_bot"]));
-					if (boxes[b]["slots_top"].length >= BoxSlots) {
-						++fulltop;
-					}
-					if (boxes[b]["slots_bot"].length >= BoxSlots) {
-						++fullbot;
+			if (!side) {
+				var fulltop = 0, maxtop = 0;
+				var fullbot = 0, maxbot = 0;
+				for (var b in boxes) {
+					if (boxes[b] != null) {
+						maxtop = Math.max(maxtop, CountConnections(boxes[b]["slots_top"]));
+						maxbot = Math.max(maxbot, CountConnections(boxes[b]["slots_bot"]));
+						if (boxes[b]["slots_top"].length >= BoxSlots) {
+							++fulltop;
+						}
+						if (boxes[b]["slots_bot"].length >= BoxSlots) {
+							++fullbot;
+						}
 					}
 				}
+				side = fulltop < fullbot || (fulltop == fullbot && maxtop <= maxbot) ? -1 : 1;
 			}
-			var side = fulltop < fullbot || (fulltop == fullbot && maxtop <= maxbot) ? -1 : 1;
 			var slot = side < 0 ? "slots_top" : "slots_bot";
-			var path = obj.Surface.createPath().setStroke(stroke);
-			var x1 = file1["x"] + BoxWidth / 2;
-			var y1 = y;
+			var x1 = path.last.x;
+			var y1 = path.last.y;
 			var b, x2, y2;
-			path.moveTo(x1, y1);
 			for (var i in boxes) {
 				b = boxes[i];
 				x2 = b["x"] - BoxWidth / 2;
 				y2 = y + side * (BoxHeight / 2 + NextSlot(b, slot) * BoxSlotSpacing);
 				path.curveTo(Lerp(x1, x2, 0.8), y1, Lerp(x2, x1, 0.8), y2, x2, y2); //draw the curved start
-				path.curveTo(x2 + BoxWidth, y2, x2, y2, x2 + BoxWidth, y2); //draw the straight line segment
 				x1 = x2 + BoxWidth;
+				path.lineTo(x1, y2); //draw the straight line segment
 				y1 = y2;
 			}
 			x2 = file2["x"] - BoxWidth / 2;
@@ -122,13 +138,55 @@ FlowChart = function(parent, files, OnSelect) {
 			path.curveTo(Lerp(x1, x2, 0.8), y1, Lerp(x2, x1, 0.8), y, x2, y);
 		}
 		
-		function RouteConnection(file1, file2, stroke) {
-			var x1 = file2["x"] - BoxWidth / 2 - BoxHSpacing;
-			var x2 = file2["x"] - BoxWidth / 2;
-			obj.Surface.createLine({x1:file1["x"] + BoxWidth/2, y1:file1["y"], x2:x1, y2:file1["y"]}).setStroke(stroke);
+		function RouteConnectionInline(file1, file2, stroke) {
 			var path = obj.Surface.createPath().setStroke(stroke);
-			path.moveTo(x1, file1["y"]);
-			path.curveTo(Lerp(x1, x2, 0.8), file1["y"], Lerp(x2, x1, 0.8), file2["y"], x2, file2["y"]);
+			var x1 = file1["x"] + BoxWidth / 2;
+			path.moveTo(x1, file2["y"]);
+			_RouteConnectionInline(file1["col"], file2, path, 0);
+		}
+		
+		function RouteConnection(file1, file2, stroke) {
+			var path = obj.Surface.createPath().setStroke(stroke);
+			var curcol = file1["col"];
+			var x1 = file1["x"] + BoxWidth / 2;
+			var y1 = file1["y"];
+			path.moveTo(x1, y1);
+			while (true) {
+				var sign = file2["y"] > y1 ? 1 : -1;
+				var heightdiff = Math.abs(file2["y"] - y1);
+				++curcol;
+				var closest = heightdiff;
+				var closesti = -1;
+				for (var i in columns[curcol]) {
+					var c = columns[curcol][i];
+					if (Math.abs(files[c]["y"] - y1) <= closest && (files[c]["y"] - y1) * sign > 0) {
+						closest = Math.abs(files[c]["y"] - y1);
+						closesti = i;
+					}
+				}
+				if (closesti < 0) {
+					x1 += BoxWidth + BoxHSpacing;
+					path.lineTo(x1, y1);
+				} else {
+					var b = columns[curcol][closesti];
+					//x1 += BoxWidth + BoxHSpacing;
+					y1 = files[b]["y"];
+					var slot = sign < 0 ? "slots_bot" : "slots_top";
+					var x2 = x1 + BoxHSpacing;
+					var y2 = y1 + -sign * (BoxHeight / 2 + NextSlot(obj.Nodes[b], slot) * BoxSlotSpacing);
+					path.curveTo(Lerp(path.last.x, x2, 0.8), path.last.y, Lerp(x2, path.last.x, 0.8), y2, x2, y2); //draw the curved start
+					x1 = x2 + BoxWidth;
+					path.lineTo(x1, y2);
+				}
+				if (file2["col"] - curcol == 1) {
+					break;
+				} else if (file2["y"] == y1) {
+					_RouteConnectionInline(curcol, file2, path, -sign);
+					return;
+				}
+			}
+			var x2 = file2["x"] - BoxWidth / 2;
+			path.curveTo(Lerp(path.last.x, x2, 0.8), path.last.y, Lerp(x2, path.last.x, 0.8), file2["y"], x2, file2["y"]);
 		}
 		
 		function MakeConnection(file1, file2) {
@@ -144,7 +202,6 @@ FlowChart = function(parent, files, OnSelect) {
 					path.curveTo(Lerp(x1, x2, 0.8), file1["y"], Lerp(x2, x1, 0.8), file2["y"], x2, file2["y"]);
 				}
 			} else {
-				//FIXME: this won't work for everything
 				if (file2["y"] == file1["y"]) {
 					var direct = true;
 					for (var col = file1["col"] + 1; col < file2["col"]; ++col) {
@@ -273,6 +330,10 @@ FlowChart = function(parent, files, OnSelect) {
 			this.Nodes[index].type.setFill("white");
 		}
 		this.Selected = index;
+	}
+
+	this.UpdateStatus = function(index, status) {
+		this.Nodes[index].type.rawNode.textContent = status;
 	}
 	
 	var x = BoxWidth / 2 + 10;

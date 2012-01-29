@@ -25,8 +25,11 @@
 						<tal:if condition="python: row.PeptideMatches > 1">
 							&nbsp;&nbsp;<span class="more" onclick="ListProteinPeptides('${info.hash}', '${repeat.row.index}', '${row.HitInfo.protein}', ${info.datafile}, ${row.ProteinOffset});"><span tal:omit-tag="" tal:content="python: row.PeptideMatches-1"></span> more</span>
 						</tal:if>
+						<tal:else condition="python: row.PeptideMatches == 1">
+							&nbsp;&nbsp;<span class="more" onclick="ListProteinPeptides('${info.hash}', '${repeat.row.index}', '${row.HitInfo.protein}', ${info.datafile}, ${row.ProteinOffset});">Show coverage</span>
+						</tal:else>
 					</div>
-					<div id="all"></div>
+					<div id="all" style="display: none;"></div>
 				</td>
 				<td style="text-align:center;">
 					<tal:if condition="python: row.HitInfo['percent_coverage'] != None">${row.HitInfo.percent_coverage}%</tal:if>

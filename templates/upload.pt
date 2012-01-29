@@ -19,6 +19,9 @@
 						var left = -1;
 						try {
 							left = parseInt(res);
+							if (isNaN(left)) {
+								throw new Exception();
+							}
 							if (left == 0) {
 								ShowMessage("done");
 								window.location = "/view?file=${file}";
@@ -89,7 +92,7 @@
 		</div>
 		<div id="error_net" visible="false" style="display: none;">
 			An error occured while contacting the server.<br />
-			We will continue to attempt to contact the server.
+			We will continue trying to contact the server.
 		</div>
 	</body>
 </html>

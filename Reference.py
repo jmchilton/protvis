@@ -98,7 +98,7 @@ def SearchXml(fname, elems, handler):
 
 class FileType:
 	#higher numbers are more specific than lower numbers. e.g. PEPXML_INTERPROPHET > PEPXML_COMPARE > PEPXML > UNKNOWN
-	MISSING = -1
+	MISSING = 0x80 #any types with 0x80 set are missing
 	UNKNOWN = 0
 	MZML = 1
 	MGF = 2
@@ -128,7 +128,7 @@ class FileType:
 			FileType.PROTXML_PROTEINPROPHET: "protpro"
 		}
 		try:
-			return switch[t]
+			return switch[t & 0x7F]
 		except:
 			return "aux"
 
@@ -148,7 +148,7 @@ class FileType:
 			FileType.PROTXML_PROTEINPROPHET: "prot"
 		}
 		try:
-			return switch[t]
+			return switch[t & 0x7F]
 		except:
 			return "aux"
 
@@ -246,8 +246,9 @@ def PepReferences(fname, IncludedFiles):
 	deps = range(len(files))
 	for i in deps:
 		f = files[i]
+		valid = ["mzml", "mzxml", "mgf", "pepxml", "pep", "xml"]
 		try:
-			info = ValidateFilename(IncludedFiles, f[0], ["mzml", "mzxml", "mgf", "pepxml", "pep", "xml"])
+			info = ValidateFilename(IncludedFiles, f[0], valid)
 			deps[i] = info.Name
 			if info.Type == FileType.PEPXML:
 				IncludedFiles.Set(fname, FileType.PEPXML_COMPARE)
@@ -258,7 +259,17 @@ def PepReferences(fname, IncludedFiles):
 			if not info.Exists:
 				_References(t, info.Name, IncludedFiles)
 		except:
-			deps[i] = None
+			exts = f[0].split(".")
+			ext = []
+			j = len(exts) - 1
+			while j >= 0:
+				if exts[j] in valid:
+					ext.append(exts[j])
+					j -= 1
+				else:
+					break
+			IncludedFiles.Add(f[0], FileType.FromExtensions(ext) | FileType.MISSING)
+			deps[i] = f[0]
 			print("Can't open referenced file: " + f[0])
 	IncludedFiles.SetDepends(fname, deps)
 	IncludedFiles.StepOut()
@@ -274,14 +285,25 @@ def ProtReferences(fname, IncludedFiles):
 	deps = range(len(files))
 	for i in deps:
 		f = files[i]
+		valid = ["pepxml", "pep", "xml"]
 		try:
-			info = ValidateFilename(IncludedFiles, f, ["pepxml", "pep", "xml"])
+			info = ValidateFilename(IncludedFiles, f, valid)
 			deps[i] = info.Name
 			#IncludedFiles.Add(info.Name, FileType.PEPXML)
 			if not info.Exists:
 				PepReferences(info.Name, IncludedFiles)
 		except:
-			deps[i] = None
+			exts = f.split(".")
+			ext = []
+			i = len(exts) - 1
+			while i >= 0:
+				if exts[i] in valid:
+					ext.append(exts[i])
+					--i
+				else:
+					break
+			IncludedFiles.Add(f, FileType.FromExtensions(ext) | FileType.MISSING)
+			deps[i] = f
 			print("Can't open referenced file: " + f)
 	IncludedFiles.SetDepends(fname, deps)
 	IncludedFiles.StepOut()

@@ -1,5 +1,6 @@
 <tal:var define="global columns python: [{'name':'peptide', 'title': 'Peptide'}, {'name': 'initial_probability', 'title': 'Initial Probability', 'width':'170px'}]"></tal:var>
 <tal:var define="global hash python: abs(hash(','.join([r['peptide'] for r in results.rows])))"></tal:var>
+<span class="more" onclick="HideProteinPeptides(this.parentElement.parentElement);">Hide</span>
 <div id="coverage_${hash}"></div>
 <table id="select_protein_results" border="1" style="width: 100%;" class="info">
 <tr><tal:for repeat="col columns"><th tal:attributes="style python: test(try_get(col, 'width') != None, 'width:'+test(try_get(col, 'width') != None, try_get(col, 'width'), ''), '')">${col.title}</th></tal:for></tr>

@@ -1,0 +1,23 @@
+syntax: regexp
+
+# Backup files
+.*~$
+
+
+
+syntax: glob
+
+.hg
+
+# Python bytecode
+*.pyc
+
+#temporary/dev files
+bin
+ConvertedFiles
+ignore
+env
+conf.py
+res/dojo_compile
+res/dojo
+compile/dojo-release*
