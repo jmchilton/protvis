@@ -1,0 +1,76 @@
+This file could not be found while initializing your results.<br/>
+If you have a copy of the file you can upload it with the form below.<br/>
+<form id="missing_form_${query.n}" action="/add?file=${query.file}&n=${query.n}" onsubmit="return false;" enctype="multipart/form-data">
+	File: <input id="selectBtn${query.n}" type="file" /> <span id="fileToUpload${query.n}"></span><br/>
+	Type: 
+	<select name="type" id="missing_type_${query.n}">
+		<option id="missing_type_${query.n}_0" value="0">Auto-detect</option>
+		<option id="missing_type_${query.n}_1" value="1">MZML</option>
+		<option id="missing_type_${query.n}_2" value="2">MGF</option>
+		<option id="missing_type_${query.n}_3" value="3">PepXML</option>
+		<option id="missing_type_${query.n}_10" value="10">ProtXML</option>
+	</select>
+	<br/>
+	<tal:if condition="python: len(similar) > 0">
+		<br/>
+		Is this the same dataset as any of these others?<br/>
+		<tal:for repeat="s similar">
+			<input type="checkbox" name="similar" value="${s.index}" /> ${s.name}<br/>
+		</tal:for>
+		<br/>
+	</tal:if>
+	<input type="submit" value="Upload" onclick="Flowchart.UpdateStatus(${query.n}, 'Uploading (0%)', 'green'); return true;" />
+</form>
+<div id="missing_status_${query.n}" style="display:none;"></div>
+<script>
+var type = Files[${query.n}].type & 0x7F;
+if (type >= 10) {
+	dojo.byId("missing_type_${query.n}_10").setAttribute("selected", "selected");
+} else if (type >= 3) {
+	dojo.byId("missing_type_${query.n}_3").setAttribute("selected", "selected");
+} else if (type == 2) {
+	dojo.byId("missing_type_${query.n}_2").setAttribute("selected", "selected");
+} else if (type == 1) {
+	dojo.byId("missing_type_${query.n}_1").setAttribute("selected", "selected");
+} else {
+	dojo.byId("missing_type_${query.n}_0").setAttribute("selected", "selected");
+}
+uploader${query.n} = new dojox.form.Uploader({
+	name:"data",
+	label:"Select File",
+	uploadUrl:"/add?file=${query.file}&n=${query.n}",
+}, "selectBtn${query.n}");
+uploader${query.n}.startup();
+
+dojo.connect(uploader${query.n}, "onChange", function(data) {
+	dojo.forEach(data, function(d) {
+		var size = d.size;
+		var n = 0;
+		var scales = ["B", "KB", "MB", "GB"]
+		while (size > 1024 && n < scales.length) {
+			size /= 1024;
+			++n;
+		}
+		dojo.byId("fileToUpload${query.n}").innerHTML = d.name + " (" + size.toFixed(n > 0 ? 2 : 0) + " " + scales[n] + ")";
+	});
+});
+
+dojo.connect(uploader${query.n}, "onProgress", function(data) {
+	dojo.forEach(data, function(d) {
+		Flowchart.UpdateStatus(${query.n}, "Uploading (" + d.percent + ")", "green");
+	});
+});
+
+dojo.connect(uploader${query.n}, "onComplete", function(data) {
+	dojo.forEach(data, function(d) {
+	});
+});
+
+dojo.connect(uploader${query.n}, "onError", function(data) {
+	Flowchart.UpdateStatus(${query.n}, "Upload Error", "red");
+});
+
+/*dojo.connect(uploader${query.n}, "onAbort", function(data) {
+	Flowchart.UpdateStatus(${query.n}, "[Missing]", "red");
+});*/
+</script>
