@@ -290,7 +290,6 @@ FlowChart = function(parent, files, OnSelect) {
 			var deps = files[file].deps;
 			if (deps && deps.length > 0) {
 				for (var d in deps) {
-					console.log(deps[d]+": "+files[deps[d]].parent+" == "+file);
 					if (files[deps[d]].parent == file) {
 						OffsetChain(files, columns, deps[d], col + 1, y);
 					}
