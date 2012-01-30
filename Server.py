@@ -290,37 +290,47 @@ def QueryInitStatus(req):
 		return Response("-\r\n", request=req)
 
 def AddFile(req):
-	links = FileLinks(req.GET["file"])
-	n = req.GET["n"]
-	l = links[int(n)]
-	try:
-		s = req.POST["datas[]"]
-	except:
+	#try:
+		links = FileLinks(req.GET["file"])
+		n = req.GET["n"]
+		l = links[int(n)]
 		try:
-			s = req.POST["data0"]
+			s = req.POST["datas[]"]
 		except:
 			try:
-				s = req.POST["data"]
+				s = req.POST["data0"]
 			except:
-				return HTTPBadRequest()
-	s = s.file
-	s.seek(0)
-	d = open(req.GET["file"] + "_" + n, "w")
-	t = l.Type & 0x7F
-	s.seek(0)
-	if l.Type == Reference.FileType.UNKNOWN:
-		t = Reference.GuessType(s)
-		if t == Reference.FileType.UNKNOWN:
-			return "File type could not be determined"
+				try:
+					s = req.POST["data"]
+				except:
+					return HTTPBadRequest()
+		s = s.file
 		s.seek(0)
-		
-	t2 = GetTypeParser(t).ToBinary(s, d, links)
-	if t2 > t:
-		t = t2
-	d.close()
-	l.Type = t
-	links.Write(req.GET["file"])
-	return Response("test\r\n", request=req)
+		d = open(GetQueryFileName(req.GET) + "_" + n, "w")
+		t = l.Type & 0x7F
+		if t == Reference.FileType.UNKNOWN:
+			t = TryGet(req.POST, "type")
+			if t != None and int(t) != 0:
+				t = int(t)
+			else:
+				t = Reference.GuessType(s)
+				if t == Reference.FileType.UNKNOWN:
+					return HTTPUnsupportedMediaType("File type could not be determined")
+				s.seek(0)
+		s.seek(0)
+		t2 = GetTypeParser(t).ToBinary(s, d, links)
+		if t2 > t:
+			t = t2
+		d.close()
+		l.Type = t
+		same = TryGet(req.POST, "similar")
+		if same != None:
+			same = same.split(",")
+			#FIXME: merge
+		links.Write(req.GET["file"])
+		return Response("test\r\n", request=req)
+	#except:
+	#	return HTTPBadRequest()
 
 def View(req):
 	try:
@@ -350,7 +360,36 @@ def ListResults(req):
 	#try:
 	n = req.GET["n"]
 	if links.Links[int(n)].Type & Reference.FileType.MISSING:
+		exts = ["mzml", "mzxml", "mgf", "pepxml", "pep", "protxml", "prot", "xml"]
+		mypath = os.path.split(links.Links[int(n)].Name)
+		myname = mypath[1].split(".")
+		j = len(myname) - 1
+		while j >= 0:
+			if myname[j].lower() in exts:
+				del myname[j]
+			else:
+				break
+			j -= 1
+		myname = ".".join(myname)
+		n = int(n)
 		similar = []
+		i = 0
+		for l in links.Links:
+			if l.Type == Reference.FileType.MISSING and i != n:
+				name = os.path.split(l.Name)
+				if name[0] == mypath[0]:
+					name = name[1].split(".")
+					j = len(name) - 1
+					while j >= 0:
+						if name[j].lower() in exts:
+							del name[j]
+						else:
+							break
+						j -= 1
+					name = ".".join(name)	
+					if name == myname:
+						similar.append({"index":i, "name":os.path.basename(l.Name)})
+			i += 1
 		return render_to_response(templates + "missing_results.pt", { "links": links, "query": req.GET, "similar": similar }, request = req)
 	else:
 		t = req.GET["type"]

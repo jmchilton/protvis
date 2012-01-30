@@ -354,3 +354,15 @@ def LoadChainMzml(fname):
 	IncludedFiles = IncludedFile(fname, FileType.MZML)
 	MzmlReferences(fname, IncludedFiles)
 	return IncludedFiles.Items()
+
+def GuessType(f):
+	head = f.read(2048)
+	if "<mzML" in head:
+		return FileType.MZML
+	elif "BEGIN IONS" in head.upper():
+		return FileType.MGF
+	elif "<msms_pipeline_analysis" in head:
+		return FileType.PEPXML
+	elif "<protein_summary" in head:
+		return FileType.PROTXML
+	return FileType.UNKNOWN

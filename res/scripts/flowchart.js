@@ -49,13 +49,13 @@ FlowChart = function(parent, files, OnSelect) {
 			g.connect("onmousedown", this, function(evt) { OnSelect(evt, file); });
 		}
 		g.rawNode.setAttribute("cursor", "pointer");
-		return { box:box, title:title, type:type, g:g, mat:mat, slots_top:[], slots_bot:[], x:file.x, y:file.y, title_shaddow:title_shaddow, type_shaddow:type_shaddow, missing:missing };
+		return { box:box, title:title, type:type, g:g, mat:mat, slots_top:[], slots_bot:[], x:file.x, y:file.y, title_shaddow:title_shaddow, type_shaddow:type_shaddow, missing:missing, type_color:missing ? "red" : "black" };
 	}
 	
 	function BoxFromPosition(col, y) {
 		col = columns[col]
 		for (var b in col) {
-			if (files[col[b]]["y"] == file1["y"]) {
+			if (files[col[b]].y == file1.y) {
 				return files[col[b]];
 			}
 		}
@@ -118,7 +118,7 @@ FlowChart = function(parent, files, OnSelect) {
 						if (boxes[b].slots_top.length >= BoxSlots) {
 							++fulltop;
 						}
-						if (boxes[b].slots_bot.length >= BoxSlots) {
+						if (boxes[b].slots_bot.length >= BoxSlots) {type_color
 							++fullbot;
 						}
 					}
@@ -339,7 +339,7 @@ FlowChart = function(parent, files, OnSelect) {
 			this.Nodes[this.Selected].title_shaddow.setFill("transparent").setStroke({width:0});
 			this.Nodes[this.Selected].type_shaddow.setFill("transparent").setStroke({width:0});
 			this.Nodes[this.Selected].title.setFill("black");
-			this.Nodes[this.Selected].type.setFill(this.Nodes[this.Selected].missing ? "red" : "black");
+			this.Nodes[this.Selected].type.setFill(this.Nodes[this.Selected].type_color);
 		}
 		if (index >= 0) {
 			var col = new dojo._base.Color([90,90,90]);
@@ -349,13 +349,16 @@ FlowChart = function(parent, files, OnSelect) {
 				this.Nodes[index].type_shaddow.setFill(col).setStroke({color:col, width:2});
 			}
 			this.Nodes[index].title.setFill("white");
-			this.Nodes[index].type.setFill(this.Nodes[index].missing ? "red" : "white");
+			this.Nodes[index].type.setFill(this.Nodes[index].type_color == "black" ? "white" : this.Nodes[index].type_color);
 		}
 		this.Selected = index;
 	}
 
-	this.UpdateStatus = function(index, status) {
+	this.UpdateStatus = function(index, status, color) {
 		this.Nodes[index].type.rawNode.textContent = status;
+		this.Nodes[index].type_shaddow.rawNode.textContent = status;
+		this.Nodes[index].type_color = color;
+		this.Nodes[index].type.setFill(index == this.Selected && this.Nodes[index].type_color == "black" ? "white" : this.Nodes[index].type_color);
 	}
 	
 	var x = BoxWidth / 2 + 10;
