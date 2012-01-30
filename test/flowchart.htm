@@ -57,7 +57,7 @@
 			}
 			
 			dojo.ready(function() {
-				new FlowChart(dojo.byId("graph_1"), [
+				/*new FlowChart(dojo.byId("graph_1"), [
 					{name:'dataset_46.dat',type:1,deps:[]},    //0
 					{name:'dataset_50.dat',type:6,deps:[0]},   //1
 					{name:'dataset_47.dat',type:2,deps:[]},    //2
@@ -90,6 +90,37 @@
 					{name:'dataset_55.dat',type:9,deps:[0,1,2,3,4,5,6]}, //7
 					{name:'dataset_56.dat',type:11,deps:[7]},  //8
 					{name:'dataset_aa.dat',type:1,deps:[]}     //9
+				]);*/
+				new FlowChart(dojo.byId("graph_2"), [
+					{name:'MT272-KnobsSDS-extracted_BAF.d_pk.mzML.mzML',type:128,deps:[]},	//0
+					{name:'dataset_2637.dat',type:6,deps:[0]},								//1
+					{name:'dataset_2636.dat',type:2,deps:[]},								//2
+					{name:'dataset_2643.dat',type:5,deps:[2]},								//3
+					{name:'dataset_2651.dat',type:4,deps:[2]},								//4
+					{name:'MT617-Knobs10%SDS_BAF.d_pk.mzML.mzML',type:128,deps:[]},			//5
+					{name:'dataset_2639.dat',type:6,deps:[5]},								//6
+					{name:'dataset_2638.dat',type:2,deps:[]},								//7
+					{name:'dataset_2646.dat',type:5,deps:[7]},								//8
+					{name:'dataset_2653.dat',type:4,deps:[7]},								//9
+					{name:'MT649-Knobs2%SDS_BAF.d_pk.mzML.mzML',type:128,deps:[]},			//10
+					{name:'dataset_2641.dat',type:6,deps:[10]},								//11
+					{name:'dataset_2640.dat',type:2,deps:[]},								//12
+					{name:'dataset_2649.dat',type:5,deps:[12]},								//13
+					{name:'dataset_2655.dat',type:4,deps:[12]},								//14
+					{name:'MT272-KnobsSDS-extracted_BAF.d_pk.mzML',type:128,deps:[]},		//15
+					{name:'dataset_2644.dat',type:8,deps:[0,1,15]},							//16
+					{name:'dataset_2652.dat',type:8,deps:[2,3]},							//17
+					{name:'dataset_2657.dat',type:8,deps:[2,4]},							//18
+					{name:'MT617-Knobs10%SDS_BAF.d_pk.mzML',type:128,deps:[]},				//19
+					{name:'dataset_2647.dat',type:7,deps:[19,5,6]},							//20
+					{name:'dataset_2654.dat',type:8,deps:[8,7]},							//21
+					{name:'dataset_2658.dat',type:8,deps:[9,7]},							//22
+					{name:'MT649-Knobs2%SDS_BAF.d_pk.mzML',type:128,deps:[]},				//23
+					{name:'dataset_2650.dat',type:8,deps:[10,11,23]},						//24
+					{name:'dataset_2656.dat',type:8,deps:[12,13]},							//25
+					{name:'dataset_2659.dat',type:8,deps:[12,14]},							//26
+					{name:'dataset_2678.dat',type:9,deps:[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,16,17,18,20,21,22,24,25,26]}, //27
+					{name:'dataset_2679.dat',type:11,deps:[27]}								//28
 				]);
 				/*BROKEN: old data which does not inculde correct connections for the missing files
 				console.log("----------------------");

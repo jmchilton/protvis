@@ -173,14 +173,14 @@ FlowChart = function(parent, files, OnSelect) {
 						closesti = i;
 					}
 				}
-				var b = columns[curcol][closesti];
-				if (file2.y != files[b].y) {
-					sgn = sign;
-				}
 				if (closesti < 0) {
 					x1 += BoxWidth + BoxHSpacing;
 					path.lineTo(x1, y1);
 				} else {
+					var b = columns[curcol][closesti];
+					if (file2.y != files[b].y) {
+						sgn = sign;
+					}
 					//x1 += BoxWidth + BoxHSpacing;
 					y1 = files[b].y;
 					if (file2.y != y1) {
@@ -349,7 +349,7 @@ FlowChart = function(parent, files, OnSelect) {
 		}
 		if (index >= 0) {
 			var col = new dojo._base.Color("black");
-			this.Nodes[index].box.setStroke({color:"white", width:2});
+			this.Nodes[index].box.setStroke({color:"grey", width:2});
 			this.Nodes[index].title_shaddow.setFill(col).setStroke({color:col, width:1.25});
 			this.Nodes[index].title_shaddow.rawNode.setAttribute("filter", "url(#text_shadow_filter)");
 			if (this.Nodes[index].type_color == "black") {
