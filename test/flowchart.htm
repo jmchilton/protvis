@@ -57,6 +57,8 @@
 			}
 			
 			dojo.ready(function() {
+				var logger = console.log;
+				console.log = function() {};
 				new FlowChart(dojo.byId("graph_1"), [
 					{name:'dataset_46.dat',type:1,deps:[]},    //0
 					{name:'dataset_50.dat',type:6,deps:[0]},   //1
@@ -68,6 +70,7 @@
 					{name:'dataset_55.dat',type:9,deps:[0,1,2,3,4,5,6]}, //7
 					{name:'dataset_56.dat',type:11,deps:[7]}   //8
 				]);
+				/*console.log("----------------------");
 				new FlowChart(dojo.byId("graph_2"), [
 					{name:'dataset_46.dat',type:1,deps:[]},
 					{name:'dataset_50.dat',type:6,deps:[0]},
@@ -79,6 +82,8 @@
 					{name:'dataset_55.dat',type:9,deps:[0,1,2,3,4,5,6]},
 					{name:'dataset_56.dat',type:11,deps:[7]}
 				]);
+				console.log("----------------------");*/
+				console.log = logger;
 				new FlowChart(dojo.byId("graph_2"), [
 					{name:'dataset_46.dat',type:1,deps:[9]},   //0
 					{name:'dataset_50.dat',type:6,deps:[0]},   //1
@@ -91,6 +96,8 @@
 					{name:'dataset_56.dat',type:11,deps:[7]},  //8
 					{name:'dataset_aa.dat',type:1,deps:[]}     //9
 				]);
+				/*BROKEN: old data which does not inculde correct connections for the missing files
+				console.log("----------------------");
 				new FlowChart(dojo.byId("graph_2"), [
 					{name:'dataset_1231.dat',type:6,deps:[-1]},   //0
 					{name:'dataset_1233.dat',type:1,deps:[]},     //1
@@ -112,7 +119,7 @@
 					{name:'dataset_1259.dat',type:8,deps:[8,-1]}, //17
 					{name:'dataset_1309.dat',type:9,deps:[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,-1]}, //18
 					{name:'dataset_1310.dat',type:11,deps:[18]}   //19
-				]);
+				]);*/
 			});
 		</script>
 	</head>

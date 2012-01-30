@@ -118,7 +118,7 @@ FlowChart = function(parent, files, OnSelect) {
 						if (boxes[b].slots_top.length >= BoxSlots) {
 							++fulltop;
 						}
-						if (boxes[b].slots_bot.length >= BoxSlots) {type_color
+						if (boxes[b].slots_bot.length >= BoxSlots) {
 							++fullbot;
 						}
 					}
@@ -290,7 +290,10 @@ FlowChart = function(parent, files, OnSelect) {
 			var deps = files[file].deps;
 			if (deps && deps.length > 0) {
 				for (var d in deps) {
-					OffsetChain(files, columns, deps[d], col + 1, y);
+					console.log(deps[d]+": "+files[deps[d]].parent+" == "+file);
+					if (files[deps[d]].parent == file) {
+						OffsetChain(files, columns, deps[d], col + 1, y);
+					}
 				}
 			}
 		}
@@ -309,26 +312,28 @@ FlowChart = function(parent, files, OnSelect) {
 			var height = 0;
 			var heights = new Array();
 			for (var d = 0; d < deps.length;) {
-				var h = GetBoxHeight(columns, files, col + 1, deps[d]);
-				if (h > 0) {
-					heights.push(h);
-					height += h;
-					++d;
+				if (files[deps[d]].parent == file) {
+					var h = GetBoxHeight(columns, files, col + 1, deps[d]);
+					if (h > 0) {
+						heights.push(h);
+						height += h;
+						++d;
+					} else {
+						deps.splice(d, 1);
+					}
 				} else {
 					deps.splice(d, 1);
 				}
 			}
-			if (deps.length > 1) {
-				var a;
-				a = 0;
+			if (deps.length > 0) {
+				var offset = -CalcGroupHeight(height) / 2;
+				for (var d in deps) {
+					var h = CalcGroupHeight(heights[d]);
+					OffsetChain(files, columns, deps[d], col + 1, offset + h / 2);
+					offset += h + BoxVSpacing;
+				}
+				return height;
 			}
-			var offset = -CalcGroupHeight(height) / 2;
-			for (var d in deps) {
-				var h = CalcGroupHeight(heights[d]);
-				OffsetChain(files, columns, deps[d], col + 1, offset + h / 2);
-				offset += h + BoxVSpacing;
-			}
-			return height;
 		}
 		return 1;
 	}
@@ -370,6 +375,7 @@ FlowChart = function(parent, files, OnSelect) {
 		indices.push(i);
 		files[i]["index"] = i;
 		files[i]["y"] = 10;
+		files[i]["parent"] = -1;
 	}
 	indices.sort(ReverseSort);
 	while (indices.length > 0) {
@@ -391,6 +397,19 @@ FlowChart = function(parent, files, OnSelect) {
 		}
 		indices = SubtractArray(indices, is);
 		x += BoxWidth + BoxHSpacing;
+	}
+	//find closest parent nodes
+	for (var col = columns.length - 2; col >= 0; --col) {
+		for (var c in columns[col]) {
+			var b = columns[col][c];
+			var deps = files[b].deps;
+			for (var dep in deps) {
+				var d = deps[dep];
+				if (files[d].parent < 0) {
+					files[d].parent = b;
+				}
+			}
+		}
 	}
 	//layout each column
 	var height = GetBoxHeight(columns, files, 0, columns[0][0]);
