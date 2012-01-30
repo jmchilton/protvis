@@ -344,13 +344,17 @@ FlowChart = function(parent, files, OnSelect) {
 			this.Nodes[this.Selected].type_shaddow.setFill("transparent").setStroke({width:0});
 			this.Nodes[this.Selected].title.setFill("black");
 			this.Nodes[this.Selected].type.setFill(this.Nodes[this.Selected].type_color);
+			this.Nodes[this.Selected].title_shaddow.rawNode.setAttribute("filter", "");
+			this.Nodes[this.Selected].type_shaddow.rawNode.setAttribute("filter", "");
 		}
 		if (index >= 0) {
-			var col = new dojo._base.Color([90,90,90]);
+			var col = new dojo._base.Color("black");
 			this.Nodes[index].box.setStroke({color:"white", width:2});
-			this.Nodes[index].title_shaddow.setFill(col).setStroke({color:col, width:2});
-			if (!this.Nodes[index].missing) {
-				this.Nodes[index].type_shaddow.setFill(col).setStroke({color:col, width:2});
+			this.Nodes[index].title_shaddow.setFill(col).setStroke({color:col, width:1.25});
+			this.Nodes[index].title_shaddow.rawNode.setAttribute("filter", "url(#text_shadow_filter)");
+			if (this.Nodes[index].type_color == "black") {
+				this.Nodes[index].type_shaddow.setFill(col).setStroke({color:col, width:1.25});
+				this.Nodes[index].type_shaddow.rawNode.setAttribute("filter", "url(#text_shadow_filter)");
 			}
 			this.Nodes[index].title.setFill("white");
 			this.Nodes[index].type.setFill(this.Nodes[index].type_color == "black" ? "white" : this.Nodes[index].type_color);
@@ -416,6 +420,15 @@ FlowChart = function(parent, files, OnSelect) {
 	OffsetChain(files, columns, columns[0][0], 0, height / 2);
 
 	this.Surface = dojox.gfx.createSurface(parent, 10 + BoxHSpacing * (columns.length - 1) + BoxWidth * columns.length + 10, height + 6 + BoxSlots * BoxSlotSpacing);
+	var filter = document.createElementNS("http://www.w3.org/2000/svg", "filter");
+	filter.id = "text_shadow_filter";
+	filter.setAttribute("x", "0");
+	filter.setAttribute("y", "0");
+	var blur = document.createElementNS("http://www.w3.org/2000/svg", "feGaussianBlur");
+	blur.setAttribute("in", "SourceGraphic");
+	blur.setAttribute("stdDeviation", "2.5");
+	filter.appendChild(blur);
+	this.Surface.defNode.appendChild(filter);
 	for (var f in files) {
 		this.Nodes.push(MakeBox(files[f]));
 	}
