@@ -51,7 +51,7 @@ class Spectrum:
 
 	def end(self):
 		pepmass = None
-		intensity = self.ions[0][1]
+		intensity = TryGet(TryGet(self.ions, 0), 1)
 		for p in self.params:
 			if p.name == "PEPMASS":
 				pepmass = float(p.value)

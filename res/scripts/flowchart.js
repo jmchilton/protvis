@@ -8,6 +8,7 @@ var BoxWidth = 140;
 var BoxHeight = 45;
 var BoxHSpacing = 50, BoxVSpacing = (BoxSlots * 2 + 1) * BoxSlotSpacing, BoxVSize = BoxVSpacing + BoxHeight;
 var Colors = [ "#ff5900", "#0d56ff", "#4dde00", "#a600a6", "#ff9700", "#2618b1", "#1049a9", "#009999", "#e9003a" ];
+//[255, 89, 0], [13, 86, 255], [77, 222, 0], [166, 0, 166], [255, 151, 0], [38, 24, 177], [16, 73, 169], [0, 153, 153], [233, 0, 58]
 
 FlowChart = function(parent, files, OnSelect) {
 	this.Surface = null;
@@ -21,6 +22,14 @@ FlowChart = function(parent, files, OnSelect) {
 	ruler.setAttribute("style", "position:absolute; visibility:hidden; height:auto; width:auto; font:bold 14px Arial; white-space:nowrap;");
 	dojo.byId(parent).appendChild(ruler);
 	
+	function Shade(col, fact) {
+		function pad(x) {
+			return x.length == 1 ? "0" + x : x;
+		}
+		var c = parseInt(col.substr(1), 16);
+		return "#" + pad(Math.round((c >> 16) * fact).toString(16)) + pad(Math.round(((c >> 8) & 0xFF) * fact).toString(16)) + pad(Math.round((c & 0xFF) * fact).toString(16));
+	}
+	
 	function StringClip(str, width) {
 		ruler.innerHTML = str;
 		if (ruler.clientWidth <= width) {
@@ -32,7 +41,7 @@ FlowChart = function(parent, files, OnSelect) {
 		} while (ruler.clientWidth > width && i > 0);
 		return str.substr(0, i) + "…";
 	}
-	
+
 	function MakeBox(file) {
 		var missing = file.type & 0x80;
 		var color = missing ? "#808080" : Colors[file.index % Colors.length];
@@ -349,7 +358,7 @@ FlowChart = function(parent, files, OnSelect) {
 		}
 		if (index >= 0) {
 			var col = new dojo._base.Color("black");
-			this.Nodes[index].box.setStroke({color:"grey", width:2});
+			this.Nodes[index].box.setStroke({color:this.Nodes[index].missing ? "grey" : Shade(Colors[index % Colors.length], 0.65), width:2});
 			this.Nodes[index].title_shaddow.setFill(col).setStroke({color:col, width:1.25});
 			this.Nodes[index].title_shaddow.rawNode.setAttribute("filter", "url(#text_shadow_filter)");
 			if (this.Nodes[index].type_color == "black") {
