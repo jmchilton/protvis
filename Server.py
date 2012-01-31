@@ -188,10 +188,14 @@ class ConverterThread(Thread):
 		self.Type = Reference.FileType.UNKNOWN
 
 	def run(self):
-		s = open(self.Source, "r")
+		opened = False
+		if not isinstance(self.Source, file):
+			s = open(self.Source, "r")
+			opened = True
 		d = open(self.Dest, "w")
 		self.Type = self.Module.ToBinary(s, d, self.Links)
-		s.close()
+		if opened:
+			s.close()
 		d.close()
 
 
@@ -249,9 +253,38 @@ def SearchScores(req):
 		rows += "\n" + str(val) + " " + names[name];
 	return Response(rows, request=req)
 
+def Index(req):
+	#for when this is used as a standalone tool
+	return render_to_response(templates + "index.pt", { }, request=req)
+
 def Upload(req):
 	#uploading from a remote server
-	return HTTPBadRequest()
+	try:
+		fs = req.POST.getall("uploadedfiles[]")
+		for f in fs:
+			f.file.seek(0)
+		files = Reference.ChainGroup([[f.filename, f.file] for f in fs])
+		#Build the index file
+		if not os.path.exists("ConvertedFiles"):
+			os.makedirs("ConvertedFiles")
+		data = tempfile.NamedTemporaryFile(dir = ".", prefix = "ConvertedFiles/", delete = False)
+		threads = range(len(files))
+		links = {}
+		for i in threads:
+			links[files[i].Name] = i
+		#Now generate all the data files
+		for i in threads:
+			f = files[i]
+			if f.Type & Reference.FileType.MISSING:
+				threads[i] = None
+			else:
+				t = ConverterThread(GetTypeParser(f.Type), f.Stream, data.name + "_" + str(i), links) #FIXME: Security
+				t.start()
+				threads[i] = t
+		jobid = Jobs.Add(threads, files, data)
+		return Response('{"file":"' + data.name[len(converted):] + '","jobid":' + jobid + '}\r\n')
+	except:
+		return Response('{"error":"Internal server error"}\r\n')
 
 def Convert(req):
 	#for when this is running on the same server as galaxy
@@ -683,6 +716,7 @@ if __name__ == "__main__":
 	config.add_route("list", "/list/{type}/")
 	config.add_route("search_score", "/search/{type}/score/")
 	
+	config.add_route("index", "/")
 	config.add_route("upload", "/init")
 	config.add_route("convert", "/init_local")
 	config.add_route("query_init", "/query_init")
@@ -697,6 +731,7 @@ if __name__ == "__main__":
 	config.add_view(DisplayList, route_name="list")
 	#config.add_view(SearchHit, route_name="search_hit")
 	config.add_view(SearchScores, route_name="search_score")
+	config.add_view(Index, route_name="index")
 	config.add_view(Upload, route_name="upload")
 	config.add_view(Convert, route_name="convert")
 	config.add_view(QueryInitStatus, route_name="query_init")

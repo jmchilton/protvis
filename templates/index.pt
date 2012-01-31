@@ -1,0 +1,57 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xmlns:tal="http://xml.zope.org/namespaces/tal">
+	<head>
+		<meta http-equiv="content-type" content="text/html; charset=utf-8" />
+		<title>ProtVis</title>
+		<link href="/res/dojo/dijit/themes/dijit.css" rel="stylesheet" />
+		<link id="themeStyles" href="/res/dojo/dijit/themes/claro/claro.css" type="text/css" rel="stylesheet" />
+		<link href="/res/dojo/dojox/form/resources/UploaderInteractiveFileList.css" rel="stylesheet" />
+		<script type="text/javascript" src="/res/dojo/dojo/dojo.js" data-dojo-config="parseOnLoad: true"></script>
+		<script type="text/javascript">
+			dojo.require("dojo.fx");
+			dojo.require("dojox.form.AppendUploader");
+			dojo.require("dojox.form.uploader.plugins.IFrame");
+			dojo.require("dojox.form.uploader.InteractiveFileList");
+
+			dojo.addOnLoad(function(){
+				var uploader = dijit.byId("uploader");
+				dojo.connect(uploader, "onComplete", function(dataArray){
+					if (dataArray["file"]) {
+						window.location = "/view?file=" + dataArray["file"];
+					} else {
+						dojo.byId("error").innerHTML = dataArray["error"]
+					}
+				});
+				if (require.has('file-multiple')){
+					if (uploader.addDropTarget && uploader.uploadType=='html5'){
+						dojo.byId("dragdrop").innerHTML = "or Drag and Drop files, then ";
+						uploader.addDropTarget(uploader.domNode.parentNode);
+						//override functions so that we append to the list of files
+						uploader._drop = function(e) {
+							dojo.stopEvent(e);
+							if (!uploader._files) {
+								uploader._files = new Array();
+							}
+							for (var i = 0; i < e.dataTransfer.files.length; ++i) {
+								uploader._files.push(e.dataTransfer.files[i]);
+							}
+							fs = uploader._files;
+							uploader.onChange(uploader.getFileList());
+						}
+					}
+				}
+			});
+		</script>
+	</head>
+	<body class="claro">
+		<noscript>
+			You need javascript enabled in to be able to use this tool.
+		</noscript>
+		<form  method="post" action="/init" id="uploadForm" enctype="multipart/form-data">
+			<input class="browseButton" name="uploadedfile" multiple="true" type="file" dojoType="dojox.form.AppendUploader" label="Select" isDebug="true" id="uploader" /><span id="dragdrop"></span>
+			<input type="submit" label="Upload" dojoType="dijit.form.Button" />
+			<div id="error" style="font-weight:bold; color:red;"></div>
+			<div id="files" dojoType="dojox.form.uploader.InteractiveFileList" uploaderId="uploader"></div>
+		</form>
+	</body>
+</html>

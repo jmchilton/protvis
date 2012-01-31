@@ -40,6 +40,7 @@ except:
 
 #Check settings for porential issues
 import subprocess
+import os.path
 
 if len(PROTEIN_DATABASES) == 0:
 	print " * No protein databases specified. Users will not be able to view the coverage graph."
@@ -50,3 +51,6 @@ try:
 	subprocess.call(["bin/makeblastdb", "-h"], stderr=subprocess.STDOUT, stdout=subprocess.PIPE)
 except:
 	print " * blast+ cannot be found or is not working correctly. Users will not be able to view the coverage graph."
+
+if GALAXY_ROOT != "" and not os.path.exists(GALAXY_ROOT + "database"):
+	print " * Galaxy could not be found or accessed at " + GALAXY_ROOT + ". Galaxy integration will not work."

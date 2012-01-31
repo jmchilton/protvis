@@ -355,6 +355,9 @@ def LoadChainMzml(fname):
 	MzmlReferences(fname, IncludedFiles)
 	return IncludedFiles.Items()
 
+def LoadChainGroup(files):
+	return []
+
 def GuessType(f):
 	head = f.read(2048)
 	if "<mzML" in head:
