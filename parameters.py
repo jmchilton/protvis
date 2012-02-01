@@ -52,5 +52,5 @@ try:
 except:
 	print " * blast+ cannot be found or is not working correctly. Users will not be able to view the coverage graph."
 
-if GALAXY_ROOT != "" and not os.path.exists(GALAXY_ROOT + "database"):
+if GALAXY_ROOT != "" and not os.path.exists(GALAXY_ROOT + "/database"):
 	print " * Galaxy could not be found or accessed at " + GALAXY_ROOT + ". Galaxy integration will not work."

@@ -48,21 +48,23 @@ class JobManager:
 		self.NextJobID = 0
 		self.ThreadsLock = Lock()
 
-	def Add(self, threads, files, data):
+	def Add(self, threads, f, files, data):
 		self.ThreadsLock.acquire()
 		jobid = self.NextJobID
 		self.NextJobID += 1
-		self.Jobs[jobid] = { "index": data, "files": [[threads[i], files[i]] for i in xrange(len(threads))] }
+		self.Jobs[jobid] = { "index": data, "file": f, "files": [[threads[i], files[i]] for i in xrange(len(threads))] }
 		self.ThreadsLock.release()
 		return jobid
 
-	def QueryStatus(self, jobid):
+	def QueryStatus(self, f, jobid):
 		self.ThreadsLock.acquire()
 		try:
 			job = self.Jobs[jobid]
 		except:
 			self.ThreadsLock.release()
 			raise
+		if job["file"] != f:
+			raise ValueError()
 		alive = 0
 		for t, _ in job["files"]:
 			if t != None:
@@ -189,7 +191,10 @@ class ConverterThread(Thread):
 
 	def run(self):
 		opened = False
-		if not isinstance(self.Source, file):
+		if isinstance(self.Source, file):
+			s = self.Source
+			s.seek(0)
+		else:
 			s = open(self.Source, "r")
 			opened = True
 		d = open(self.Dest, "w")
@@ -259,11 +264,11 @@ def Index(req):
 
 def Upload(req):
 	#uploading from a remote server
-	try:
+	#try:
 		fs = req.POST.getall("uploadedfiles[]")
 		for f in fs:
 			f.file.seek(0)
-		files = Reference.ChainGroup([[f.filename, f.file] for f in fs])
+		files = Reference.LoadChainGroup([[f.filename, f.file] for f in fs])
 		#Build the index file
 		if not os.path.exists("ConvertedFiles"):
 			os.makedirs("ConvertedFiles")
@@ -275,16 +280,17 @@ def Upload(req):
 		#Now generate all the data files
 		for i in threads:
 			f = files[i]
-			if f.Type & Reference.FileType.MISSING:
+			if f.Type & Reference.FileType.MISSING or f.Type == Reference.FileType.UNKNOWN:
 				threads[i] = None
 			else:
 				t = ConverterThread(GetTypeParser(f.Type), f.Stream, data.name + "_" + str(i), links) #FIXME: Security
 				t.start()
 				threads[i] = t
-		jobid = Jobs.Add(threads, files, data)
-		return Response('{"file":"' + data.name[len(converted):] + '","jobid":' + jobid + '}\r\n')
-	except:
-		return Response('{"error":"Internal server error"}\r\n')
+		f = data.name[len(converted):]
+		jobid = Jobs.Add(threads, f, files, data)
+		return Response('{"file":"' + f + '","jobid":' + str(jobid) + '}\r\n')
+	#except:
+	#	return Response('{"error":"Internal server error"}\r\n')
 
 def Convert(req):
 	#for when this is running on the same server as galaxy
@@ -308,14 +314,15 @@ def Convert(req):
 				t = ConverterThread(GetTypeParser(f.Type), f.Name, data.name + "_" + str(i), links) #FIXME: Security
 				t.start()
 				threads[i] = t
-		jobid = Jobs.Add(threads, files, data)
-		return render_to_response(templates + "upload.pt", { "file": data.name[len(converted):], "jobid": jobid }, request=req)
+		f = data.name[len(converted):]
+		jobid = Jobs.Add(threads, f, files, data)
+		return render_to_response(templates + "upload.pt", { "file": f, "jobid": str(jobid) }, request=req)
 	#except:
 	#	return HTTPBadRequest()
 
 def QueryInitStatus(req):
 	try:
-		alive = Jobs.QueryStatus(int(req.GET["id"]))
+		alive = Jobs.QueryStatus(req.GET["file"], int(req.GET["id"]))
 		return Response(str(alive) + "\r\n", request=req)
 	except HTTPException:
 		raise

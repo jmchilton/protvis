@@ -15,7 +15,7 @@
 
 			function Update() {
 				dojo.xhrGet({
-					url: "/query_init?id=${jobid}",
+					url: "/query_init?file=${file}&id=${jobid}",
 					load: function(res) {
 						var left = -1;
 						try {
@@ -43,7 +43,7 @@
 			}
 			
 			function ShowMessage(id) {
-				var ids = ["uploading", "processing", "done", "error", "error_net"]
+				var ids = ["processing", "done", "error", "error_net"]
 				if (Active < 0 || id != ids[Active]) {
 					var actions = Array(ids.length)
 					for (i = 0; i < ids.length; ++i) {
@@ -54,32 +54,30 @@
 							Active = i;
 						}
 					}
-					dojo.fx.combine([actions[0], actions[1], actions[2], actions[3], actions[4]]).play();
+					dojo.fx.combine(actions).play();
 				}
 			}
 			
 			function ShowMessageStatus(left) {
 				if (left != Complete) {
 					Complete = left;
-					dojo.byId("processing").innerHTML = '<div class="dijitContentPaneLoading">Please wait while your files are uploaded and processed.</div>' + left + " left to complete.";
+					dojo.byId("processing").innerHTML = '<div class="dijitContentPaneLoading">Please wait while your files are processed.</div>' + left + " left to complete.";
 				}
 				ShowMessage("processing");
 			}
 			
 			dojo.ready(function() {
+				ShowMessageStatus("processing");
 				setTimeout("Update();", 500);
 			});
 		</script>
 	</head>
 	<body class="claro">
 		<noscript>
-			Your files are getting uploaded and processed.<br/>
+			Your files are getting processed.<br/>
 			Javascript is required to explore your results. Please cunsoult your browsers help for details on how to enable it.
 			Click <a href="/view/?file=${file}">here</a> in a few minutes to continue to your results once Javascript is enabled.
 		</noscript>
-		<div id="uploading" class="dijitContentPaneLoading">
-			Please Wait. Uploading your file to the server.
-		</div>
 		<div id="processing" visible="false" style="display: none;">
 			<div class="dijitContentPaneLoading">Processing your file for the first time.</div>
 		</div>

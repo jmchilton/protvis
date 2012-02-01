@@ -169,8 +169,10 @@ class Header:
 		i = 0
 		while i < count:
 			title = DecodeStringFromFile(f)
-			stat.SearchItemString("title", title)
-			if stat.IsMatched():
+			#print title
+			s = stat.copy()
+			s.SearchItemString("title", title)
+			if s.IsMatched():
 				stat.Results.append(Result(title, struct.unpack("=I", f.read(4))[0]))
 			else:
 				f.seek(4, 1)
@@ -231,6 +233,7 @@ def GetOffsetFromSpectrum(filename, spectrum):
 
 def Search(filename, terms):
 	f = open(filename, "r")
+	print terms
 	stat = SearchStatus(terms)
 	specs = Header.search_spectrums(f, stat)
 	f.close()

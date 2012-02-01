@@ -2,42 +2,46 @@ import binascii
 import os
 import xml.sax
 import xml.parsers.expat
-import parameters;
+import parameters
 
 GalaxyPath = parameters.GALAXY_ROOT + "/database/files/"
 
 class IncludedFile:
 	class FileInfo:
-		def __init__(self, t, index, level):
+		def __init__(self, t, index, level, stream):
 			self.Type = t
 			self.Index = index
 			self.Level = level
+			self.Stream = stream
 			self.Depends = []
 
-		def Refernece(self, index, level):
+		def Reference(self, index, level):
 			if (level > self.Level):
 				self.Level = level
 				self.Index = index
 				return True
 			return False
 
-	def __init__(self, fname, ftype):
-		self.Files = { fname: IncludedFile.FileInfo(ftype, 0, 0) }
+	def __init__(self, fname = None, ftype = None):
+		if fname != None and ftype != None:
+			self.Files = { unicode(fname): IncludedFile.FileInfo(ftype, 0, 0) }
+		else:
+			self.Files = {}
 		self.Counter = 1
 		self.Level = 0
 
-	def Add(self, fname, ftype):
-		self.Files[fname] = IncludedFile.FileInfo(ftype, self.Counter, self.Level)
+	def Add(self, fname, ftype, stream = None):
+		self.Files[unicode(fname)] = IncludedFile.FileInfo(ftype, self.Counter, self.Level, stream)
 		self.Counter += 1
 
 	def Get(self, fname):
-		f = self.Files[fname]
+		f = self.Files[unicode(fname)]
 		if (f.Reference(self.Counter, self.Level)):
 			self.Counter += 1
 		return f
 
 	def Set(self, fname, ftype):
-		self.Files[fname].Type = ftype
+		self.Files[unicode(fname)].Type = ftype
 
 	def StepIn(self):
 		self.Level += 1
@@ -55,17 +59,25 @@ class IncludedFile:
 			return -1
 
 		class IncludedFile:
-			def __init__(self, f, t, deps):
+			def __init__(self, f, t, deps, stream):
 				self.Name = f
 				self.Type = t
 				self.Depends = deps
+				self.Stream = stream
 
 		files = [[f, fi] for f, fi in self.Files.items()]
 		files = sorted(files, key=lambda flist: flist[1].Index, reverse=True)
-		return [IncludedFile(f, fi.Type, list(set([IndexOf(files, d) for d in fi.Depends]))) for f, fi in files]
+		return [IncludedFile(f, fi.Type, list(set([IndexOf(files, unicode(d)) for d in fi.Depends])), fi.Stream) for f, fi in files]
 
 	def SetDepends(self, fname, depends):
-		self.Files[fname].Depends = depends
+		self.Files[unicode(fname)].Depends = depends
+
+	def TouchDeps(self, fname):
+		f = self.Files[unicode(fname)]
+		if (f.Reference(self.Counter, self.Level)):
+			self.Counter += 1
+		for d in f.Depends:
+			self.TouchDeps(d)
 
 class SaxHandler(xml.sax.ContentHandler):
 	def __init__(self, elems, handler):
@@ -83,17 +95,25 @@ class SaxHandler(xml.sax.ContentHandler):
 		return
 
 def SearchXml(fname, elems, handler):
+	def DummyClose(f):
+		return
 	parser = xml.sax.make_parser()
 	parser.setFeature("http://xml.org/sax/features/external-general-entities", False)
 	parser.setContentHandler(SaxHandler(elems, handler))
-	f = open(fname, "r")
+	try:
+		f = fname.Stream
+		f.seek(0)
+		close = DummyClose
+	except:
+		f = open(fname, "r")
+		close = file.close
 	try:
 		parser.parse(f)
-		f.close()
+		close(f)
 	except StopIteration:
-		f.close()
+		close(f)
 	except:
-		f.close()
+		close(f)
 		raise
 
 class FileType:
@@ -164,19 +184,19 @@ class FileType:
 			return FileType.MGF
 		return FileType.UNKNOWN
 
-def ValidateFilename(IncludedFiles, fname, exts = None):
-	class ValidFile:
-		def __init__(self, Name, Type, Exists):
-			self.Name = Name
-			self.Type = Type
-			self.Exists = Exists
 
+class ValidFile:
+	def __init__(self, Name, Type, Exists):
+		self.Name = Name
+		self.Type = Type
+		self.Exists = Exists
+
+def ValidateFilename(IncludedFiles, fname, exts = None):
 	fname = os.path.abspath(fname)
 	if not fname.startswith(GalaxyPath):
 		raise ValueError(fname)
-	f = None
 	ext = []
-	while f == None:
+	while True:
 		try:
 			t = IncludedFiles.Get(fname)
 			_t = FileType.FromExtensions(ext)
@@ -203,15 +223,15 @@ def ValidateFilename(IncludedFiles, fname, exts = None):
 				else:
 					raise IOError(fname)
 
-def MzmlReferences(fname, IncludedFiles):
+def MzmlReferences(fname, IncludedFiles, Validator):
 	IncludedFiles.StepIn()
 	IncludedFiles.StepOut()
 
-def MgfReferences(fname, IncludedFiles):
+def MgfReferences(fname, IncludedFiles, Validator):
 	IncludedFiles.StepIn()
 	IncludedFiles.StepOut()
 
-def PepReferences(fname, IncludedFiles):
+def PepReferences(fname, IncludedFiles, Validator):
 	IncludedFiles.StepIn()
 	files = []
 	def _HandleProtFind(name, attr):
@@ -248,7 +268,7 @@ def PepReferences(fname, IncludedFiles):
 		f = files[i]
 		valid = ["mzml", "mzxml", "mgf", "pepxml", "pep", "xml"]
 		try:
-			info = ValidateFilename(IncludedFiles, f[0], valid)
+			info = Validator(IncludedFiles, f[0], valid)
 			deps[i] = info.Name
 			if info.Type == FileType.PEPXML:
 				IncludedFiles.Set(fname, FileType.PEPXML_COMPARE)
@@ -256,8 +276,10 @@ def PepReferences(fname, IncludedFiles):
 			if f[1] != FileType.UNKNOWN:
 				t = f[1]
 				IncludedFiles.Set(info.Name, f[1])
-			if not info.Exists:
-				_References(t, info.Name, IncludedFiles)
+			if info.Exists:
+				IncludedFiles.TouchDeps(info.Name)
+			else:
+				_References(t, info.Name, IncludedFiles, Validator)
 		except:
 			exts = f[0].split(".")
 			ext = []
@@ -274,7 +296,7 @@ def PepReferences(fname, IncludedFiles):
 	IncludedFiles.SetDepends(fname, deps)
 	IncludedFiles.StepOut()
 
-def ProtReferences(fname, IncludedFiles):
+def ProtReferences(fname, IncludedFiles, Validator):
 	IncludedFiles.StepIn()
 	files = []
 	def _HandleProtFind(name, attr):
@@ -287,11 +309,13 @@ def ProtReferences(fname, IncludedFiles):
 		f = files[i]
 		valid = ["pepxml", "pep", "xml"]
 		try:
-			info = ValidateFilename(IncludedFiles, f, valid)
+			info = Validator(IncludedFiles, f, valid)
 			deps[i] = info.Name
 			#IncludedFiles.Add(info.Name, FileType.PEPXML)
-			if not info.Exists:
-				PepReferences(info.Name, IncludedFiles)
+			if info.Exists:
+				IncludedFiles.TouchDeps(info.Name)
+			else:
+				PepReferences(info.Name, IncludedFiles, Validator)
 		except:
 			exts = f.split(".")
 			ext = []
@@ -308,7 +332,7 @@ def ProtReferences(fname, IncludedFiles):
 	IncludedFiles.SetDepends(fname, deps)
 	IncludedFiles.StepOut()
 
-def _References(t, fname, IncludedFiles):
+def _References(t, fname, IncludedFiles, Validator):
 	switch = {
 		FileType.MZML: MzmlReferences,
 		FileType.MGF: MgfReferences,
@@ -325,38 +349,101 @@ def _References(t, fname, IncludedFiles):
 		func = switch[t]
 	except:
 		return
-	return func(fname, IncludedFiles)
+	return func(fname, IncludedFiles, Validator)
 
 def LoadChainProt(fname):
 	if not os.path.abspath(fname).startswith(GalaxyPath):
 		raise ValueError(fname)
 	IncludedFiles = IncludedFile(fname, FileType.PROTXML)
-	ProtReferences(fname, IncludedFiles)
+	ProtReferences(fname, IncludedFiles, ValidateFilename)
 	return IncludedFiles.Items()
 
 def LoadChainPep(fname):
 	if not os.path.abspath(fname).startswith(GalaxyPath):
 		raise ValueError(fname)
 	IncludedFiles = IncludedFile(fname, FileType.PEPXML)
-	PepReferences(fname, IncludedFiles)
+	PepReferences(fname, IncludedFiles, ValidateFilename)
 	return IncludedFiles.Items()
 
 def LoadChainMgf(fname):
 	if not os.path.abspath(fname).startswith(GalaxyPath):
 		raise ValueError(fname)
 	IncludedFiles = IncludedFile(fname, FileType.MGF)
-	MgfReferences(fname, IncludedFiles)
+	MgfReferences(fname, IncludedFiles, ValidateFilename)
 	return IncludedFiles.Items()
 
 def LoadChainMzml(fname):
 	if not os.path.abspath(fname).startswith(GalaxyPath):
 		raise ValueError(fname)
 	IncludedFiles = IncludedFile(fname, FileType.MZML)
-	MzmlReferences(fname, IncludedFiles)
+	MzmlReferences(fname, IncludedFiles, ValidateFilename)
 	return IncludedFiles.Items()
 
 def LoadChainGroup(files):
-	return []
+	class OpenFile:
+		def __init__(self, f, s):
+			self.Name = f
+			self.Stream = s
+
+		def __str__(self):
+			return self.Name
+
+		def __unicode__(self):
+			return self.Name
+
+	class AvaliableFile(OpenFile):
+		def __init__(self, f):
+			OpenFile.__init__(self, f[0], f[1])
+			self.NeedsProcessing = True
+
+		def __eq__(self, o):
+			return (isinstance(o, AvaliableFile)  and o.Name == self.Name) or o == self.Name
+
+	files = [AvaliableFile(f) for f in files]
+
+	def NameValidator(IncludedFiles, fname, exts = None):
+		fname = os.path.split(fname)[1]
+		ext = []
+		while True:
+			f = None
+			for _f in files:
+				if _f.Name == fname:
+					f = _f
+			try:
+				t = IncludedFiles.Get(fname)
+				_t = FileType.FromExtensions(ext)
+				if _t > t:
+					t = _t
+					IncludedFiles.Set(fname, _t)
+				return ValidFile(OpenFile(fname, f.Stream), t, True)
+			except:
+				if f != None:
+					t = FileType.FromExtensions(ext)
+					IncludedFiles.Add(fname, t, f.Stream)
+					f.NeedsProcessing = 0
+					return ValidFile(OpenFile(fname, f.Stream), t, False)
+				else:
+					if exts == None:
+						raise IOError(fname)
+					split = os.path.splitext(fname)
+					if len(split[1]) > 0:
+						e = split[1][1:].lower()
+						if e in exts:
+							ext.append(e)
+							fname = split[0]
+						else:
+							raise IOError(fname)
+					else:
+						raise IOError(fname)
+	IncludedFiles = IncludedFile()
+	for f in files:
+		if f.NeedsProcessing:
+			f.Stream.seek(0)
+			t = GuessType(f.Stream)
+			IncludedFiles.Add(f.Name, t, f.Stream)
+			if t != FileType.UNKNOWN:
+				_References(t, f, IncludedFiles, NameValidator)
+	return IncludedFiles.Items()
 
 def GuessType(f):
 	head = f.read(2048)

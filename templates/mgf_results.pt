@@ -1,5 +1,5 @@
 <tal:var define="global columns python: [{'name':'spectrum', 'title': 'Spectrum'}]"></tal:var>
-<form id="filter_pepxml_${info.hash}_basic" onsubmit="FilterCurrent(document.getElementById('filter_pepxml_${info.hash}').value); return false;">
+<form id="filter_mgf_${info.hash}_basic" onsubmit="FilterCurrent(document.getElementById('filter_mgf_${info.hash}').value); return false;">
 	Filter: <input type="text" id="filter_mgf_${info.hash}" value="${info.query}" />&nbsp;<input type="submit" value="Filter" />
 </form>
 <br/>

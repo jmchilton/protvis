@@ -318,7 +318,7 @@
 			
 			function FilterCurrent(filter) {
 				if (CurrentContents != null) {
-					LoadContents(CurrentContents["container"], CurrentContents["url"] + "q=" + filter);
+					LoadContents(CurrentContents["container"], CurrentContents["url"] + "q=" + encodeURIComponent(filter));
 				}
 			}
 			

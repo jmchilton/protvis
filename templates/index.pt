@@ -12,12 +12,18 @@
 			dojo.require("dojox.form.AppendUploader");
 			dojo.require("dojox.form.uploader.plugins.IFrame");
 			dojo.require("dojox.form.uploader.InteractiveFileList");
+			
+			var jobid = "";
+			var file = "";
 
 			dojo.addOnLoad(function(){
 				var uploader = dijit.byId("uploader");
 				dojo.connect(uploader, "onComplete", function(dataArray){
 					if (dataArray["file"]) {
-						window.location = "/view?file=" + dataArray["file"];
+						jobid = dataArray["jobid"];
+						file = dataArray["file"];
+						ShowMessage("processing");
+						setTimeout("Update();", 500);
 					} else {
 						dojo.byId("error").innerHTML = dataArray["error"]
 					}
@@ -40,18 +46,104 @@
 						}
 					}
 				}
+				dojo.byId("uploadForm").setAttribute("style", "");
 			});
+
+			//converting
+			var Active = -1;
+			var Complete = -1;
+
+			function Update() {
+				dojo.xhrGet({
+					url: "/query_init?file=" + file + "&id=" + jobid,
+					load: function(res) {
+						var left = -1;
+						try {
+							left = parseInt(res);
+							if (isNaN(left)) {
+								throw new Exception();
+							}
+							if (left == 0) {
+								ShowMessage("done");
+								window.location = "/view?file=" + file;
+							} else {
+								ShowMessageStatus(left);
+								setTimeout("Update();", 500);
+							}
+						} catch (err) {
+							ShowMessage("error");
+							return;
+						}
+					},
+					error: function() {
+						ShowMessage("error_net");
+						setTimeout("Update();", 2000);
+					}
+				});
+			}
+			
+			function ShowMessage(id) {
+				var ids = ["uploader", "processing", "done", "error", "error_net"]
+				if (Active < 0 || id != ids[Active]) {
+					var actions = Array(ids.length)
+					for (i = 0; i < ids.length; ++i) {
+						if (id != ids[i]) {
+							actions[i] = dojo.fx.wipeOut({ node: dojo.byId(ids[i]) });
+						} else {
+							actions[i] = dojo.fx.wipeIn({ node: dojo.byId(ids[i]) });
+							Active = i;
+						}
+					}
+					dojo.fx.combine(actions).play();
+				}
+			}
+			
+			function ShowMessageStatus(left) {
+				if (left != Complete) {
+					Complete = left;
+					dojo.byId("processing").innerHTML = '<div class="dijitContentPaneLoading">Please wait while your files are processed.</div>' + left + " left to complete.";
+				}
+				ShowMessage("processing");
+			}
 		</script>
 	</head>
 	<body class="claro">
-		<noscript>
-			You need javascript enabled in to be able to use this tool.
-		</noscript>
-		<form  method="post" action="/init" id="uploadForm" enctype="multipart/form-data">
-			<input class="browseButton" name="uploadedfile" multiple="true" type="file" dojoType="dojox.form.AppendUploader" label="Select" isDebug="true" id="uploader" /><span id="dragdrop"></span>
-			<input type="submit" label="Upload" dojoType="dijit.form.Button" />
-			<div id="error" style="font-weight:bold; color:red;"></div>
-			<div id="files" dojoType="dojox.form.uploader.InteractiveFileList" uploaderId="uploader"></div>
-		</form>
+		<h1><center>Welcome to ProtVis</center></h1>
+		<div style="float:right; width:550px;">
+			<fieldset>
+				<legend>Upload files</legend>
+				<div id="uploader">
+					<noscript>
+						You need javascript enabled in to be able to use this tool.
+					</noscript>
+					<form method="post" action="/init" id="uploadForm" enctype="multipart/form-data" style="display:none;">
+						<input class="browseButton" name="uploadedfile" multiple="true" type="file" dojoType="dojox.form.AppendUploader" label="Select" isDebug="true" id="uploader" /><span id="dragdrop"></span>
+						<input type="submit" label="Upload" dojoType="dijit.form.Button" />
+						<div id="error" style="font-weight:bold; color:red;"></div>
+						<div id="files" dojoType="dojox.form.uploader.InteractiveFileList" uploaderId="uploader"></div>
+					</form>
+				</div>
+				<div id="processing" visible="false" style="display: none;">
+					<div class="dijitContentPaneLoading">Processing your file for the first time.</div>
+				</div>
+				<div id="done" visible="false" style="display: none;">
+					Finished.<br/>
+					Click <a href="/view/?file=${file}">here</a> if your browser doesn't automatically continue within 5 seconds.
+				</div>
+				<div id="error" visible="false" style="display: none;">
+					An internal server error occured or this job has already been removed from the queue.<br/>
+					Try clicking <a href="/view/?file=${file}">here</a> to continue, or refresh this page.
+				</div>
+				<div id="error_net" visible="false" style="display: none;">
+					An error occured while contacting the server.<br />
+					We will continue trying to contact the server.
+				</div>
+				<div clear="all"></div>
+			</fieldset>
+		</div>
+		<span>
+			You can use the form on the right to upload files and start viewing them straight away.<br/>
+			If galaxy is configured you can use ProtVis directly from within your galaxy history
+		<span>
 	</body>
 </html>
