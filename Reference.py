@@ -22,9 +22,9 @@ class IncludedFile:
 				return True
 			return False
 
-	def __init__(self, fname = None, ftype = None):
+	def __init__(self, fname = None, ftype = None, stream = None):
 		if fname != None and ftype != None:
-			self.Files = { unicode(fname): IncludedFile.FileInfo(ftype, 0, 0) }
+			self.Files = { unicode(fname): IncludedFile.FileInfo(ftype, 0, 0, stream) }
 		else:
 			self.Files = {}
 		self.Counter = 1
