@@ -17,7 +17,7 @@ define([
 				tooltipWidget: this,
 				load: function(response, ioArgs) {
 					this.tooltipWidget.label = response;
-					if (isOpen) {
+					if (this.isOpen) {
 						this.tooltipWidget.close();
 						this.tooltipWidget.open(node);
 					}
@@ -46,12 +46,12 @@ define([
 		},
 		
 		open: function(/*DomNode*/ target){
- 			isOpen = true;
+ 			this.isOpen = true;
 			this.inherited(arguments);
 		},
 		
 		close: function(){
- 			isOpen = false;
+ 			this.isOpen = false;
 			this.inherited(arguments);
 		}
 	});

@@ -178,7 +178,7 @@ def RendererGlobals(system):
 		return Literal(pep)
 		
 
-	return { "test": test, "render_peptide": render_peptide, "try_get": TryGet }
+	return { "test": test, "render_peptide": render_peptide, "try_get": TryGet, "urlencode": urllib.quote }
 
 class ConverterThread(Thread):
 	def __init__(self, mod, src, dst, links):
@@ -605,7 +605,7 @@ def Spectrum(req):
 					if offset >= 0:
 						datafile = f
 						filetype = Reference.FileType.NameBasic(t)
-						break
+						break	
 	elif filetype == None:
 		filetype = FileLinks(req.GET["file"]).Links[datafile].Type
 	if offset == None:
