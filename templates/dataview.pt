@@ -449,11 +449,32 @@
 				SwitchDataset(LastDataset);
 			}
 
+			function ToggleNavigation() {
+				var node = dojo.byId("navigation_graph");
+				if (node.style.display == "") {
+					dojo.byId("navigation_toggle_sh").innerHTML = "Show";
+					dojo.fx.wipeOut({ node: node }).play();
+				} else {
+					dojo.byId("navigation_toggle_sh").innerHTML = "Hide";
+					dojo.fx.wipeIn({ node: node }).play();
+				}
+			}
+
 			dojo.ready(function() {
 				// Populate content initially
 				LoadContents("${index}", "/results?file=${file}&n=${index}&type=${type}&q=&max=50");
 				DetailsDialog = new dijit.Dialog({ style: "width: 400px" });
 				<tal:if condition="python: nfiles > 1">
+					var got = 0;
+					for (i in Files) {
+						if ((Files[i].type & 0x80) == 0) {
+							++got;
+						}
+					}
+					if (got <= 1) {
+						dojo.byId("navigation_toggle_sh").innerHTML = "Show";
+						dojo.byId("navigation_graph").style.display = "none";
+					}
 					Flowchart = new FlowChart(dojo.byId("navigation_graph"), Files, function(evt, file) {
 						var type = GetTypeName(file["type"], false);
 						SwitchDataset(file["index"]);
@@ -472,6 +493,7 @@
 		<div id="selectBtn"></div>
 		<tal:if condition="python: nfiles > 1">
 			<div id="navigation">
+				<div class="more" onclick="ToggleNavigation();"><span id="navigation_toggle_sh">Hide</span> Nagivation</div>
 				<div id="navigation_graph" style="width:100%; height:auto; overflow:auto; text-align:center;"></div>
 				<br/>
 			</div>

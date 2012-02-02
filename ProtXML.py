@@ -357,7 +357,8 @@ class PeptideParentProtein(TagHandler):
 		i = 0
 		while i < count:
 			TRACEPOS("PeptideParentProtein.SearchAll(", i, "): ", f.tell())
-			stat.SearchItemString("peptide_parent_protein", DecodeStringFromFile(f))
+			s=DecodeStringFromFile(f)
+			stat.SearchItemString("peptide_parent_protein", s)
 			i += 1
 
 	@staticmethod

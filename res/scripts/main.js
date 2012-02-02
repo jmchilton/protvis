@@ -127,9 +127,11 @@ RenderCoverage = function(chartdiv, sequence, peptides) {
 	this.Group = this.Surface.createGroup();
 	this.Stuck = new Array(peptides.length);
 	this.Boxes = new Array(peptides.length);
+	this.Offsets = new Array(peptides.length);
 	for (var i in peptides) {
 		var p = peptides[i];
-		this.Boxes[i] = this.Group.createRect({x:sequence.indexOf(p), y:0, width:p.length, height:Height}).setFill([0, 0, 255, 0.3]);
+		this.Offsets[i] = sequence.indexOf(p);
+		this.Boxes[i] = this.Group.createRect({x:this.Offsets[i], y:0, width:p.length, height:Height}).setFill([0, 0, 255, 0.3]);
 		this.Stuck[i] = 0;
 	}
 	this.Surface.connect("onmousemove", this, function(evt) {
