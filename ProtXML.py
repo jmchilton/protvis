@@ -661,7 +661,7 @@ class Peptide(TagHandler):
 			EndPos = f.tell()
 			f.seek(BestOffset)
 			BestInfo = Peptide.GetInfo(f)
-			f.seek(BestOffset)
+			f.seek(EndPos)
 			return [BestOffset, BestInfo, matches]
 		return [0, None, 0]
 

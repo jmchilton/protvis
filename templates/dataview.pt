@@ -453,15 +453,17 @@
 				// Populate content initially
 				LoadContents("${index}", "/results?file=${file}&n=${index}&type=${type}&q=&max=50");
 				DetailsDialog = new dijit.Dialog({ style: "width: 400px" });
-				Flowchart = new FlowChart(dojo.byId("navigation_graph"), Files, function(evt, file) {
-					var type = GetTypeName(file["type"], false);
-					SwitchDataset(file["index"]);
-					if (dojo.byId("data_" + file["index"]).children.length == 0) {
-						LoadContents(file["index"], "/results?file=${file}&n=" + file["index"] + "&type=" + type + "&q=&max=50");
-					}
-					Flowchart.Select(file["index"]);
-				});
-				Flowchart.Select(${index});
+				<tal:if condition="python: nfiles > 1">
+					Flowchart = new FlowChart(dojo.byId("navigation_graph"), Files, function(evt, file) {
+						var type = GetTypeName(file["type"], false);
+						SwitchDataset(file["index"]);
+						if (dojo.byId("data_" + file["index"]).children.length == 0) {
+							LoadContents(file["index"], "/results?file=${file}&n=" + file["index"] + "&type=" + type + "&q=&max=50");
+						}
+						Flowchart.Select(file["index"]);
+					});
+					Flowchart.Select(${index});
+				</tal:if>
 			});
 		</script>
 		<script type="text/javascript" src="/res/scripts/main.js"></script>

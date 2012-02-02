@@ -352,34 +352,55 @@ FlowChart = function(parent, files, OnSelect) {
 
 	this.Select = function(index) {
 		if (this.Selected >= 0) {
-			this.Nodes[this.Selected].box.setStroke({color:"black", width:2});
-			this.Nodes[this.Selected].title_shaddow.setFill("transparent").setStroke({width:0});
-			this.Nodes[this.Selected].type_shaddow.setFill("transparent").setStroke({width:0});
-			this.Nodes[this.Selected].title.setFill("black");
-			this.Nodes[this.Selected].type.setFill(this.Nodes[this.Selected].type_color);
-			this.Nodes[this.Selected].title_shaddow_g.rawNode.setAttribute("filter", "");
-			this.Nodes[this.Selected].type_shaddow_g.rawNode.setAttribute("filter", "");
+			var n = this.Nodes[this.Selected];
+			n.box.setStroke({color:"black", width:2});
+			n.title_shaddow.setFill("transparent").setStroke({width:0});
+			n.type_shaddow.setFill("transparent").setStroke({width:0});
+			n.title.setFill("black");
+			n.type.setFill(n.type_color);
+			n.title_shaddow_g.rawNode.setAttribute("filter", "");
+			n.type_shaddow_g.rawNode.setAttribute("filter", "");
 		}
 		if (index >= 0) {
 			var col = new dojo._base.Color("black");
-			this.Nodes[index].box.setStroke({color:this.Nodes[index].missing ? "grey" : Shade(Colors[index % Colors.length], 0.65), width:2});
-			this.Nodes[index].title_shaddow.setFill(col).setStroke({color:col, width:1.25});
-			this.Nodes[index].title_shaddow_g.rawNode.setAttribute("filter", "url(#text_shadow_filter)");
-			if (this.Nodes[index].type_color == "black") {
-				this.Nodes[index].type_shaddow.setFill(col).setStroke({color:col, width:1.25});
-				this.Nodes[index].type_shaddow_g.rawNode.setAttribute("filter", "url(#text_shadow_filter)");
+			var n = this.Nodes[index];
+			n.box.setStroke({color:n.missing ? "grey" : Shade(Colors[index % Colors.length], 0.65), width:2});
+			n.title_shaddow.setFill(col).setStroke({color:col, width:1.25});
+			n.title_shaddow_g.rawNode.setAttribute("filter", "url(#text_shadow_filter)");
+			if (n.type_color == "black") {
+				n.type_shaddow.setFill(col).setStroke({color:col, width:1.25});
+				n.type_shaddow_g.rawNode.setAttribute("filter", "url(#text_shadow_filter)");
 			}
-			this.Nodes[index].title.setFill("white");
-			this.Nodes[index].type.setFill(this.Nodes[index].type_color == "black" ? "white" : this.Nodes[index].type_color);
+			n.title.setFill("white");
+			n.type.setFill(n.type_color == "black" ? "white" : n.type_color);
 		}
 		this.Selected = index;
 	}
 
 	this.UpdateStatus = function(index, status, color) {
-		this.Nodes[index].type.rawNode.textContent = status;
-		this.Nodes[index].type_shaddow.rawNode.textContent = status;
-		this.Nodes[index].type_color = color;
-		this.Nodes[index].type.setFill(index == this.Selected && this.Nodes[index].type_color == "black" ? "white" : this.Nodes[index].type_color);
+		var n = this.Nodes[index];
+		n.type.rawNode.textContent = status;
+		n.type_shaddow.rawNode.textContent = status;
+		n.type_color = color;
+		n.type.setFill(index == this.Selected && n.type_color == "black" ? "white" : n.type_color);
+	}
+	
+	this.FixChrome = function() {
+		function Fix(n) {
+			var x = n.rawNode.getAttribute("x");
+			n.rawNode.setAttribute("x", parseInt(x) + 1);
+			n.rawNode.setAttribute("x", x);
+		}
+		for (node in this.Nodes) {
+			var n = this.Nodes[node];
+			Fix(n.title);
+			Fix(n.title_shaddow);
+			Fix(n.type);
+			Fix(n.type_shaddow);
+		}
+		if (this.Selected >= 0) {
+			this.Select(this.Selected);
+		}
 	}
 	
 	var x = BoxWidth / 2 + 10;
@@ -446,4 +467,7 @@ FlowChart = function(parent, files, OnSelect) {
 		this.Nodes.push(MakeBox(files[f]));
 	}
 	ConnectBoxes(files);
+	if (dojo.isWebKit) {
+		setTimeout(function() { obj.FixChrome(); }, 50);
+	}
 }
