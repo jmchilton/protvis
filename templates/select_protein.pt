@@ -1,4 +1,4 @@
-<tal:var define="global columns python: [{'name':'peptide', 'title': 'Peptide'}, {'name': 'initial_probability', 'title': 'Initial Probability', 'width':'160px'}, {'name': '', 'title': 'Position', 'width':'90px'}]"></tal:var>
+<tal:var define="global columns python: [{'name':'peptide', 'title': 'Peptide'}, {'name': 'initial_probability', 'title': 'Initial Probability', 'width':'160px'}, {'name': '', 'title': 'Position', 'width':'90px'}, {'name': '', 'title': 'Length', 'width':'90px'}]"></tal:var>
 <tal:var define="global hash python: abs(hash(','.join([r['peptide'] for r in results.rows])))"></tal:var>
 <span class="more" onclick="HideProteinPeptides(this.parentElement.parentElement);">Hide</span>
 <div id="coverage_${hash}"></div>
@@ -9,6 +9,7 @@
 		<td><span class="link" onclick="SearchPeptide('${row.peptide}');" tal:content="python: render_peptide(row)"><tal:for repeat="indes row.indistinguishable_peptide"><br/><tal:echo tal:content="python: render_peptide(indes)"></tal:echo></tal:for></span></td>
 		<td style="text-align:center;">${row.initial_probability}</td>
 		<td id="coverage_${hash}_${repeat.row.index}_pos" style="text-align:center;"></td>
+		<td style="text-align:center;"><tal:echo content="python: len(row['peptide'])"></tal:echo></td>
 	</tr>
 </tal:for>
 </table>
