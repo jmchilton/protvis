@@ -229,6 +229,40 @@ def DisplayList(req):
 	except:
 		return HTTPNotFound()
 
+def SortPeptides(results, sortcol, score, reverse = False):
+	if sortcol == "score":
+		def Comparator(a, b):
+			try:
+				_a = a[score]
+				try:
+					_b = b[score]
+					if _a < _b:
+						return -1
+					elif _a == _b:
+						_a = a["pvalue"]
+						_b = b["pvalue"]
+						if _a < _b:
+							return -1
+						elif _a == _b:
+							return 0
+						return 1
+					return 1
+				except:
+					return 1
+			except:
+				if score in b:
+					return -1
+				_a = a["pvalue"]
+				_b = b["pvalue"]
+				if _a < _b:
+					return -1
+				elif _a == _b:
+					return 0
+				return 1
+		return sorted(results, cmp = Comparator, reverse=reverse)
+	else:
+		return sorted(results, key = lambda key: key[sortcol], reverse=reverse)
+
 def SearchScores(req):
 	fname = GetQueryFileName(req.GET)
 	try:
@@ -510,7 +544,7 @@ def ListPeptide(req):
 	SearchEngines = { "X-Tandem": 0, "Mascot": 0, "Omssa": 0 }
 	spectrums = {}
 	for r in results:
-		r["score"] = r[score]
+		r["score"] = TryGet(r, score)
 		if "hyperscore" in r:
 			r["engine"] = "X-Tandem"
 			r["engine_score"] = str(r["hyperscore"])
@@ -532,7 +566,7 @@ def ListPeptide(req):
 		except:
 			spectrums[spec] = 1
 	spectrums = sorted([Spec(k, v) for k, v in spectrums.items()], reverse = True, key = lambda spec: spec.Count)
-	results = sorted(results, key = lambda key: key[sortcol], reverse = test(test(sortcol == "score", score, sortcol) in reverses, not reverse, reverse))
+	results = SortPeptides(results, sortcol, score, test(test(sortcol == "score", score, sortcol) in reverses, not reverse, reverse))
 	try:
 		start = int(req.GET["start"])
 	except:
@@ -659,12 +693,8 @@ def Tooltip(req):
 		#try:
 			int(req.GET["n"]) #ensure it is an integer
 			[scores, results] = PepXML.SearchPeptide(fname + "_" + req.GET["n"], req.GET["peptide"])
-			score = PepXML.DefaultSortColumn(scores)
-			if score == "expect":
-				reverse = False
-			else:
-				reverse = True
-			results = sorted(results, key = lambda key: key[score[0]], reverse = reverse)
+			[score, reverses] = PepXML.DefaultSortColumn(scores)
+			results = SortPeptides(results, "score", score, score in reverses)
 			count = len(results)
 			shown = count
 			SearchEngines = { "X-Tandem": 0, "Mascot": 0, "Omssa": 0 }
@@ -679,7 +709,7 @@ def Tooltip(req):
 				results = results[:5]
 				shown = 5
 			for r in results:
-				r["score"] = r[score[0]]
+				r["score"] = TryGet(r, score)
 				if "hyperscore" in r:
 					r["engine"] = "X-Tandem"
 					r["engine_score"] = str(r["hyperscore"])

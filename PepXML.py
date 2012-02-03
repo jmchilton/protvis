@@ -372,65 +372,6 @@ class SearchScoreSummary(TagHandler):
 		return None
 
 class PeptideprophetResult(TagHandler):
-	"""//Deprecated
-	struct PeptideprophetResult {
-		float probability;
-		BYTE OptionalFlags;
-		String all_ntt_prob; //ONLY IF (OptionalFlags & 0x01)
-		String analysis; //ONLY IF (OptionalFlags & 0x02)
-		SearchScoreSummary search_score_summary; //ONLY IF (OptionalFlags & 0x04)
-	}
-	"""
-
-	"""def __init__(self, stream, stat, attr):
-		TRACEPOSXML(stream, "PeptideprophetResult.__init__(): ")
-		all_ntt_prob = TryGet(attr, "all_ntt_prob")
-		analysis = TryGet(attr, "analysis")
-		self.OptionalFlags = EncodeOptional(all_ntt_prob, analysis)
-		self.OptionalPos = stream.tell() + 4
-		stream.write(struct.pack("=fB", float(attr["probability"]), 0))
-		if all_ntt_prob != None:
-			EncodeStringToFile(stream, all_ntt_prob)
-		if analysis != None:
-			EncodeStringToFile(stream, analysis)
-
-	def End(self):
-		EndPos = self.Stream.tell()
-		self.Stream.seek(self.OptionalPos)
-		self.Stream.write(struct.pack("=B", self.OptionalFlags))
-		self.Stream.seek(EndPos)
-
-	def BeginChild(self, name):
-		if name == "search_score_summary":
-			if self.OptionalFlags & 0x04:
-				raise IndexError("search_score_summary[1]")
-			self.OptionalFlags |= 0x04
-			return self.Stream
-		raise ValueError(name)
-
-	@staticmethod
-	def SearchAll(f, stat, count):
-		i = 0
-		while i < count:
-			i += 1
-
-	@staticmethod
-	def GetInfoAll(f, count):
-		i = 0
-		results = []
-		while i < count:
-			TRACEPOS("PeptideprophetResult.GetInfoAll(", i, "): ", f.tell())
-			[probability, OptionalFlags] = struct.unpack("=fB", f.read(4 + 1))
-			res = { "probability": probability }
-			if OptionalFlags & 0x01:
-				res["all_ntt_prob"] = DecodeStringFromFile(f)
-			if OptionalFlags & 0x02:
-				res["analysis"] = DecodeStringFromFile(f)
-			if OptionalFlags & 0x04:
-				res["search_score_summary"] = SearchScoreSummary.GetInfoAll(f)
-			results.append(res)
-			i += 1
-		return results"""
 	def __init__(self, stream, stat, attr):
 		stream["pp_prob"] = attr["probability"]
 
@@ -440,66 +381,6 @@ class PeptideprophetResult(TagHandler):
 		raise ValueError(name)
 	
 class InterprophetResult(TagHandler):
-	"""//Deprecated
-	struct InterprophetResult {
-		float probability;
-		BYTE OptionalFlags;
-		String all_ntt_prob; //ONLY IF (OptionalFlags & 0x01)
-		String analysis; //ONLY IF (OptionalFlags & 0x02)
-		SearchScoreSummary search_score_summary; //ONLY IF (OptionalFlags & 0x04)
-	}
-	"""
-
-	"""def __init__(self, stream, stat, attr):
-		TRACEPOSXML(stream, "InterprophetResult.__init__(): ")
-		all_ntt_prob = TryGet(attr, "all_ntt_prob")
-		analysis = TryGet(attr, "analysis")
-		self.OptionalFlags = EncodeOptional(all_ntt_prob, analysis)
-		self.OptionalPos = stream.tell() + 4
-		stream.write(struct.pack("=fB", float(attr["probability"]), 0))
-		if all_ntt_prob != None:
-			EncodeStringToFile(stream, all_ntt_prob)
-		if analysis != None:
-			EncodeStringToFile(stream, analysis)
-
-	def End(self):
-		EndPos = self.Stream.tell()
-		self.Stream.seek(self.OptionalPos)
-		self.Stream.write(struct.pack("=B", self.OptionalFlags))
-		self.Stream.seek(EndPos)
-
-	def BeginChild(self, name):
-		if name == "search_score_summary":
-			if self.OptionalFlags & 0x04:
-				raise IndexError("search_score_summary[1]")
-			self.OptionalFlags |= 0x04
-			return self.Stream
-		raise ValueError(name)
-
-	@staticmethod
-	def SearchAll(f, stat, count):
-		i = 0
-		while i < count:
-			i += 1
-
-	@staticmethod
-	def GetInfoAll(f, count):
-		i = 0
-		results = []
-		while i < count:
-			TRACEPOS("InterprophetResult.GetInfoAll(", i, "): ", f.tell())
-			[probability, OptionalFlags] = struct.unpack("=fB", f.read(4 + 1))
-			res = { "probability": probability }
-			if OptionalFlags & 0x01:
-				res["all_ntt_prob"] = DecodeStringFromFile(f)
-			if OptionalFlags & 0x02:
-				res["analysis"] = DecodeStringFromFile(f)
-			if OptionalFlags & 0x04:
-				res["search_score_summary"] = SearchScoreSummary.GetInfoAll(f)
-			results.append(res)
-			i += 1
-		return results"""
-	
 	def __init__(self, stream, stat, attr):
 		stream["ip_prob"] = attr["probability"]
 
@@ -546,105 +427,8 @@ class XpressratioResult(TagHandler):
 
 class AnalysisResult(TagHandler):
 	"""
-	struct AnalysisResult {
-		BYTE OptionalFlags; //0x01 for peptideprophet, 0x02 for interprophet, 0x04 for asapratio, 0x08 for xpressratio
-		float peptideprophet_probability; //ONLY IF (OptionalFlags & 0x01)
-		float interprophet_probability; //ONLY IF (OptionalFlags & 0x02)
-		float asapratio_probability; //ONLY IF (OptionalFlags & 0x04)
-		float xpressratio_probability; //ONLY IF (OptionalFlags & 0x08)
-	}
-	//Deprecated
-	struct AnalysisResult {
-		String analysis;
-		//DWORD id;
-		WORD peptideprophet_result__count;
-		WORD interprophet_result__count;
-		WORD asapratio_result__count;
-		WORD xpressratio_result__count;
-		PeptideprophetResult peptideprophet_result;
-		InterprophetResult interprophet_result;
-		AsapratioResult asapratio_result;
-		XpressratioResult xpressratio_result;
-	}
+	Appends to dictionary in Stream for any scores defined
 	"""
-
-	"""def __init__(self, stream, stat, attr):
-		TRACEPOSXML(stream, "AnalysisResult.__init__(): ")
-		EncodeStringToFile(stream, attr["analysis"])
-		self.PPCount = 0
-		self.IPCount = 0
-		self.ARCount = 0
-		self.XRCount = 0
-		self.PeptideprophetResult = None
-		self.InterprophetResult = None
-		self.AsapratioResult = None
-		self.XpressratioResult = None
-
-	def End(self):
-		self.Stream.write(struct.pack("=HHHH", self.PPCount, self.IPCount, self.ARCount, self.XRCount))
-		if self.PeptideprophetResult != None:
-			self.Stream.write(self.PeptideprophetResult.getvalue())
-		if self.InterprophetResult != None:
-			self.Stream.write(self.InterprophetResult.getvalue())
-		if self.AsapratioResult != None:
-			self.Stream.write(self.AsapratioResult.getvalue())
-		if self.XpressratioResult != None:
-			self.Stream.write(self.XpressratioResult.getvalue())
-
-	def BeginChild(self, name):
-		if name == "peptideprophet_result":
-			if self.PeptideprophetResult == None:
-				self.PeptideprophetResult = StringIO()
-			self.PPCount += 1
-			return self.PeptideprophetResult
-		if name == "interprophet_result":
-			if self.InterprophetResult == None:
-				self.InterprophetResult = StringIO()
-			self.IPCount += 1
-			return self.InterprophetResult
-		if name == "asapratio_result":
-			if self.AsapratioResult == None:
-				self.AsapratioResult = StringIO()
-			self.ARCount += 1
-			return self.AsapratioResult
-		if name == "xpressratio_result":
-			if self.XpressratioResult == None:
-				self.XpressratioResult = StringIO()
-			self.XRCount += 1
-			return self.XpressratioResult
-
-	@staticmethod
-	def SearchAll(f, stat, count):
-		i = 0
-		while i < count:
-			TRACEPOS("AnalysisResult.SearchAll(", i, "): ", f.tell())
-			DecodeStringFromFile(f) #FIXME: Search this?
-			[peptideprophet_result__count, interprophet_result__count, asapratio_result__count, xpressratio_result__count] = struct.unpack("=HHHH", f.read(2 + 2 + 2 + 2))
-			if peptideprophet_result__count > 0:
-				PeptideprophetResult.SearchAll(f, stat, peptideprophet_result__count)
-			if interprophet_result__count > 0:
-				InterprophetResult.SearchAll(f, stat, interprophet_result__count)
-			if asapratio_result__count > 0:
-				AsapratioResult.SearchAll(f, stat, asapratio_result__count)
-			if xpressratio_result__count > 0:
-				XpressratioResult.SearchAll(f, stat, xpressratio_result__count)
-			i += 1
-
-	@staticmethod
-	def GetInfo(f):
-		TRACEPOS("AnalysisResult.GetInfo(): ", f.tell())
-		info = {}
-		info["analysis"] = DecodeStringFromFile(f)
-		[peptideprophet_result__count, interprophet_result__count, asapratio_result__count, xpressratio_result__count] = struct.unpack("=HHHH", f.read(2 + 2 + 2 + 2))
-		if peptideprophet_result__count > 0:
-			info["peptideprophet_result"] = PeptideprophetResult.GetInfoAll(f, peptideprophet_result__count)
-		if interprophet_result__count > 0:
-			info["interprophet_result"] = InterprophetResult.GetInfoAll(f, interprophet_result__count)
-		if asapratio_result__count > 0:
-			info["asapratio_result"] = AsapratioResult.GetInfoAll(f, asapratio_result__count)
-		if xpressratio_result__count > 0:
-			info["xpressratio_result"] = XpressratioResult.GetInfoAll(f, xpressratio_result__count)
-		return info"""
 		
 	def __init__(self, stream, stat, attr):
 		self.Had = 0
@@ -674,39 +458,6 @@ class AnalysisResult(TagHandler):
 			else:
 				self.Had |= 0x08
 			return self.Stream
-
-	"""@staticmethod
-	def SearchAll(f, stat, count):
-		i = 0
-		while i < count:
-			TRACEPOS("AnalysisResult.SearchAll(", i, "): ", f.tell())
-			DecodeStringFromFile(f) #FIXME: Search this?
-			[peptideprophet_result__count, interprophet_result__count, asapratio_result__count, xpressratio_result__count] = struct.unpack("=HHHH", f.read(2 + 2 + 2 + 2))
-			if peptideprophet_result__count > 0:
-				PeptideprophetResult.SearchAll(f, stat, peptideprophet_result__count)
-			if interprophet_result__count > 0:
-				InterprophetResult.SearchAll(f, stat, interprophet_result__count)
-			if asapratio_result__count > 0:
-				AsapratioResult.SearchAll(f, stat, asapratio_result__count)
-			if xpressratio_result__count > 0:
-				XpressratioResult.SearchAll(f, stat, xpressratio_result__count)
-			i += 1
-
-	@staticmethod
-	def GetInfo(f):
-		TRACEPOS("AnalysisResult.GetInfo(): ", f.tell())
-		info = {}
-		info["analysis"] = DecodeStringFromFile(f)
-		[peptideprophet_result__count, interprophet_result__count, asapratio_result__count, xpressratio_result__count] = struct.unpack("=HHHH", f.read(2 + 2 + 2 + 2))
-		if peptideprophet_result__count > 0:
-			info["peptideprophet_result"] = PeptideprophetResult.GetInfoAll(f, peptideprophet_result__count)
-		if interprophet_result__count > 0:
-			info["interprophet_result"] = InterprophetResult.GetInfoAll(f, interprophet_result__count)
-		if asapratio_result__count > 0:
-			info["asapratio_result"] = AsapratioResult.GetInfoAll(f, asapratio_result__count)
-		if xpressratio_result__count > 0:
-			info["xpressratio_result"] = XpressratioResult.GetInfoAll(f, xpressratio_result__count)
-		return info"""
 
 class SearchScore(TagHandler):
 	"""
@@ -823,6 +574,8 @@ class SearchScore(TagHandler):
 			[dic["pp_prob"]] = struct.unpack("=f", f.read(4))
 		if OptionalFlags & 0x800:
 			[dic["ip_prob"]] = struct.unpack("=f", f.read(4))
+		else:
+			print "No ip_prob"
 		if OptionalFlags & 0x1000:
 			[dic["ap_prob"]] = struct.unpack("=f", f.read(4))
 		if OptionalFlags & 0x2000:
@@ -1025,7 +778,7 @@ class SearchHit(TagHandler):
 		
 	@staticmethod
 	def SearchAllBestHit(f, stat, count):
-		i = 0
+		"""i = 0
 		BestScore = None
 		BestScorePos = -1
 		Hits = 0
@@ -1047,24 +800,24 @@ class SearchHit(TagHandler):
 			if OptionalFlags & 0x04:
 				[peptide_next_aa] = struct.unpack("=c", f.read(1))
 				PeptideFull += peptide_next_aa
-			"""if OptionalFlags & 0x08:
-				[num_matched_ions] = struct.unpack("=B", f.read(1))
-				#FIXME: Check?
-			if OptionalFlags & 0x10:
-				[tot_num_ions] = struct.unpack("=I", f.read(4))
-				#FIXME: Check?
-			if OptionalFlags & 0x20:
-				[num_tol_term] = struct.unpack("=i", f.read(4))
-				#FIXME: Check?
-			if OptionalFlags & 0x40:
-				[num_missed_cleavages] = struct.unpack("=i", f.read(4))
-				#FIXME: Check?
-			if OptionalFlags & 0x80:
-				calc_pI = DecodeStringFromFile(f)
-				#FIXME: Check?
-			if OptionalFlags & 0x100:
-				[protein_mw] = struct.unpack("=d", f.read(8))
-				#FIXME: Check?"""
+			#if OptionalFlags & 0x08:
+			#	[num_matched_ions] = struct.unpack("=B", f.read(1))
+			#	#FIXME: Check?
+			#if OptionalFlags & 0x10:
+			#	[tot_num_ions] = struct.unpack("=I", f.read(4))
+			#	#FIXME: Check?
+			#if OptionalFlags & 0x20:
+			#	[num_tol_term] = struct.unpack("=i", f.read(4))
+			#	#FIXME: Check?
+			#if OptionalFlags & 0x40:
+			#	[num_missed_cleavages] = struct.unpack("=i", f.read(4))
+			#	#FIXME: Check?
+			#if OptionalFlags & 0x80:
+			#	calc_pI = DecodeStringFromFile(f)
+			#	#FIXME: Check?
+			#if OptionalFlags & 0x100:
+			#	[protein_mw] = struct.unpack("=d", f.read(8))
+			#	#FIXME: Check?
 			f.seek(StartPos + DataOffset)
 			score = SearchScore.SearchAll(f, s)
 			if modification_info__count > 0:
@@ -1086,6 +839,63 @@ class SearchHit(TagHandler):
 			info = SearchHit.GetInfo(f)
 			f.seek(EndPos)
 			return [BestScorePos, Hits, info]
+		return None"""
+		BestScorePos = -1
+		s = stat.copy()
+		StartPos = f.tell()
+		TRACEPOS("SearchHit.SearchAllBestHit(): ", f.tell())
+		[RecordSize, modification_info__count, alternative_protein__count, DataOffset, calc_neutral_pep_mass, massdiff, OptionalFlags, num_tot_proteins] = struct.unpack("=IHHIddHB", f.read(4 + 2 + 2 + 4 + 8 + 8 + 2 + 1))
+		peptide = DecodeStringFromFile(f)
+		PeptideFull = peptide
+		protein = DecodeStringFromFile(f)
+		s.SearchItemString("Protein", protein)
+		if OptionalFlags & 0x01:
+			protein_descr = DecodeStringFromFile(f)
+			s.SearchItemString("ProteinDescr", protein_descr)
+		if OptionalFlags & 0x02:
+			[peptide_prev_aa] = struct.unpack("=c", f.read(1))
+			PeptideFull = peptide_prev_aa + PeptideFull
+		if OptionalFlags & 0x04:
+			[peptide_next_aa] = struct.unpack("=c", f.read(1))
+			PeptideFull += peptide_next_aa
+		#if OptionalFlags & 0x08:
+		#	[num_matched_ions] = struct.unpack("=B", f.read(1))
+		#	#FIXME: Check?
+		#if OptionalFlags & 0x10:
+		#	[tot_num_ions] = struct.unpack("=I", f.read(4))
+		#	#FIXME: Check?
+		#if OptionalFlags & 0x20:
+		#	[num_tol_term] = struct.unpack("=i", f.read(4))
+		#	#FIXME: Check?
+		#if OptionalFlags & 0x40:
+		#	[num_missed_cleavages] = struct.unpack("=i", f.read(4))
+		#	#FIXME: Check?
+		#if OptionalFlags & 0x80:
+		#	calc_pI = DecodeStringFromFile(f)
+		#	#FIXME: Check?
+		#if OptionalFlags & 0x100:
+		#	[protein_mw] = struct.unpack("=d", f.read(8))
+		#	#FIXME: Check?
+		f.seek(StartPos + DataOffset)
+		score = SearchScore.SearchAll(f, s)
+		if modification_info__count > 0:
+			ModificationInfo.SearchAll(f, s, modification_info__count)
+		if alternative_protein__count > 0:
+			AlternativeProtein.SearchAll(f, s, alternative_protein__count)
+		s.SearchItemString("Peptide", PeptideFull)
+		if s.IsMatched():
+			BestScorePos = StartPos
+		i = 1
+		while i < count:
+			[RecordSize] = struct.unpack("=I", f.read(4))
+			f.seek(RecordSize - 4, 1)
+			i += 1
+		if BestScorePos >= 0:
+			EndPos = f.tell()
+			f.seek(BestScorePos)
+			info = SearchHit.GetInfo(f)
+			f.seek(EndPos)
+			return [BestScorePos, 1, info]
 		return None
 
 	@staticmethod

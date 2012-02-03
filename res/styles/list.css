@@ -24,3 +24,4 @@ tr.stuckoverodd {background-color: #BBFFBB;}
 .peptide_full {color: #707070;}
 .peptide {color: #303030;font-weight: bold;}
 .link {text-decoration: underline;cursor: pointer;}
+.dijitContentPaneLoading {background:url(../dojo/dijit/themes/claro/images/loadingAnimation.gif) no-repeat; padding-left:24px; min-height:20px;}
