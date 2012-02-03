@@ -1,0 +1,9 @@
+@import url("UploaderFileList.css");
+.dojoxUploaderDelete{
+	width:20px;
+}
+
+.dojoxUploaderDeleteRow{
+	cursor:pointer;
+	margin:0px 2px;
+}

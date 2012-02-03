@@ -574,8 +574,6 @@ class SearchScore(TagHandler):
 			[dic["pp_prob"]] = struct.unpack("=f", f.read(4))
 		if OptionalFlags & 0x800:
 			[dic["ip_prob"]] = struct.unpack("=f", f.read(4))
-		else:
-			print "No ip_prob"
 		if OptionalFlags & 0x1000:
 			[dic["ap_prob"]] = struct.unpack("=f", f.read(4))
 		if OptionalFlags & 0x2000:

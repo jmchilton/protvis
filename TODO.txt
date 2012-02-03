@@ -1,5 +1,5 @@
-Sort spectrum list for single peptide
 Dont show tooltip on click
 Show other hits in query
 Advanced search
-peptide YSLNVTYNYPVHYFDGR has tooltip error in large_interprophet.pepXML.xml
+"X more results from this spectrum" in pepxml
+Make spectrum viewer find spectrum query and show list of all peptides to switch between
