@@ -31,6 +31,7 @@
 			
 			return this.each(function() {
 				options = opts;
+				massTypeChanged = true;
 				
 				// read the static modifications
 				var parsedStaticMods = [];
