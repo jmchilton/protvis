@@ -604,7 +604,6 @@ def Spectrum(req):
 				if l.Type == Reference.FileType.MZML or l.Type == Reference.FileType.MGF:
 					possible.append(d)
 		possible = list(set(possible))
-		print possible
 		for t in [Reference.FileType.MGF, Reference.FileType.MZML]:
 			for f in possible:
 				if links.Links[f].Type == t:

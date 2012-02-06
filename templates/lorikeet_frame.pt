@@ -31,10 +31,12 @@
 					var peaks = ${spectrum.ions.ions};
 					<tal:if condition="python: try_get(peptide, 'peptide') == None">
 						var peptides = [<tal:for repeat="pep peptide.peptides">["${pep.peptide}"<tal:if condition="python: pep.mods != None">, [<tal:for repeat="mod pep.mods">{index: ${mod.index}, modMass: ${mod.mass}, aminoAcid: '${mod.aa}'},</tal:for>], ${pep.nterm}, ${pep.cterm}</tal:if>],</tal:for>];
-						for (var i = 0; i < <tal:echo content="len(peptide['peptides'])" />; ++i) {
-							var e = document.getElementById("lorikeet_${hash}_pep_" + i);
-							e.className = i == idx ? e.className.replace(/row/, "stuck") : e.className.replace(/stuck/, "row");
-						}
+						<tal:if condition="python: len(peptide['peptides']) > 1">
+							for (var i = 0; i < <tal:echo content="len(peptide['peptides'])" />; ++i) {
+								var e = document.getElementById("lorikeet_${hash}_pep_" + i);
+								e.className = i == idx ? e.className.replace(/row/, "stuck") : e.className.replace(/stuck/, "row");
+							}
+						</tal:if>
 					</tal:if>
 					<tal:else condition="python: try_get(peptide, 'peptide') != None">
 						var peptides = [["${peptide.peptide}"<tal:if condition="python: peptide.mods != None">, [<tal:for repeat="mod peptide.mods">{index: ${mod.index}, modMass: ${mod.mass}, aminoAcid: '${mod.aa}'},</tal:for>], ${peptide.nterm}, ${peptide.cterm}</tal:if>]];
@@ -62,7 +64,7 @@
 	</head>
 	<body>
 		<div id="lorikeet_${hash}"></div>
-		<tal:if condition="python: peptide != None">
+		<tal:if condition="python: peptide != None and len(peptide['peptides']) > 1">
 			<table>
 				<tr><th>Peptide</th><th>Protein</th><th>${score}</th></tr>
 				<tal:for repeat="pep peptide.peptides"><tr id="lorikeet_${hash}_pep_${repeat.pep.index}" tal:attributes="class string:row${repeat.pep.odd}" style="cursor:pointer;" onclick="SpecView(${repeat.pep.index});"><td><tal:echo content="python: render_peptide_lorikeet(pep)" /></td><td>${pep.protein}</td><td style="text-align:center;">${pep.score}</td></tr></tal:for>

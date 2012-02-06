@@ -1,0 +1,4 @@
+<table width="100%" style="text-align: center;">
+	<tr><th>Name</th><th>Value</th>
+	<tal:for repeat="s python: results['scores'].items()"><tr tal:attributes="class string: row${repeat.s.odd}"><td><tal:echo content="python: results.names[s[0]]" /></td><td><tal:echo content="python: s[1]" /></td></tr></tal:for>
+</table>
