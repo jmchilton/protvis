@@ -1,3 +1,4 @@
+<tal:var define="global hash python: unique_dataset()" />
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
 <html>
 	<head>
@@ -13,40 +14,59 @@
 		<script type="text/javascript" src="/res/lorikeet/js/aminoacid.js"></script>
 		<script type="text/javascript" src="/res/lorikeet/js/ion.js"></script>
 		<link href="/res/lorikeet/css/lorikeet.css" type="text/css" rel="stylesheet" />
-		<tal:if condition="python: peptide == None">
-			<script type="text/javascript">
-				$(document).ready(function () {
-					$("#lorikeet").specview({							
+		<link href="/res/styles/list.css" type="text/css" rel="stylesheet" />
+		<script type="text/javascript">
+			<tal:if condition="python: peptide == None">
+				$(document).ready(function() {
+					$("#lorikeet_${hash}").specview({							
 						scanNum: ${spectrum.scan},
 						charge: ${spectrum.charge},
-						fileName:"${spectrum.file}",
+						fileName: "${spectrum.file}",
 						peaks: ${spectrum.ions.ions}
 					});	
-
 				});
-			</script>
-		</tal:if>
-		<tal:else condition="python: peptide != None">
-			<script type="text/javascript">
-				$(document).ready(function () {
+			</tal:if>
+			<tal:else condition="python: peptide != None">
+				function SpecView(idx) {
 					var peaks = ${spectrum.ions.ions};
-					$("#lorikeet").specview({
-						sequence: "${peptide.peptide}",
+					<tal:if condition="python: try_get(peptide, 'peptide') == None">
+						var peptides = [<tal:for repeat="pep peptide.peptides">["${pep.peptide}"<tal:if condition="python: pep.mods != None">, [<tal:for repeat="mod pep.mods">{index: ${mod.index}, modMass: ${mod.mass}, aminoAcid: '${mod.aa}'},</tal:for>], ${pep.nterm}, ${pep.cterm}</tal:if>],</tal:for>];
+						for (var i = 0; i < <tal:echo content="len(peptide['peptides'])" />; ++i) {
+							var e = document.getElementById("lorikeet_${hash}_pep_" + i);
+							e.className = i == idx ? e.className.replace(/row/, "stuck") : e.className.replace(/stuck/, "row");
+						}
+					</tal:if>
+					<tal:else condition="python: try_get(peptide, 'peptide') != None">
+						var peptides = [["${peptide.peptide}"<tal:if condition="python: peptide.mods != None">, [<tal:for repeat="mod peptide.mods">{index: ${mod.index}, modMass: ${mod.mass}, aminoAcid: '${mod.aa}'},</tal:for>], ${peptide.nterm}, ${peptide.cterm}</tal:if>]];
+					</tal:else>
+					var div = $("#lorikeet_${hash}");
+					var pep = peptides[idx];
+					div.empty();
+					div.specview({
+						sequence: pep[0],
 						scanNum: ${spectrum.scan},
 						charge: ${spectrum.charge},
 						precursorMz: ${peptide.precursor_neutral_mass},
-						fileName:"${spectrum.file}",
-						<tal:if condition="python: peptide.mods != None">
-							variableMods: [<tal:for repeat="mod peptide.mods">{index: ${mod.index}, modMass: ${mod.mass}, aminoAcid: ${mod.aa}}, </tal:for>],
-							ntermMod: ${peptide.nterm},
-							ctermMod: ${peptide.cterm},
-						</tal:if>
+						fileName: "${spectrum.file}",
+						variableMods: pep[1] ? pep[1] : [],
+						ntermMod: pep[2] ? pep[2] : 0,
+						ctermMod: pep[3] ? pep[3] : 0,
 						peaks: peaks,
-					});	
-
+					});
+				}
+				$(document).ready(function() {
+					SpecView(${init_pep});
 				});
-			</script>
-		</tal:else>
+			</tal:else>
+		</script>
 	</head>
-	<body><div id="lorikeet"></div></body>
+	<body>
+		<div id="lorikeet_${hash}"></div>
+		<tal:if condition="python: peptide != None">
+			<table>
+				<tr><th>Peptide</th><th>Protein</th><th>${score}</th></tr>
+				<tal:for repeat="pep peptide.peptides"><tr id="lorikeet_${hash}_pep_${repeat.pep.index}" tal:attributes="class string:row${repeat.pep.odd}" style="cursor:pointer;" onclick="SpecView(${repeat.pep.index});"><td><tal:echo content="python: render_peptide_lorikeet(pep)" /></td><td>${pep.protein}</td><td style="text-align:center;">${pep.score}</td></tr></tal:for>
+			</table>
+		</tal:if>
+	</body>
 </html>

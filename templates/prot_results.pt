@@ -1,7 +1,8 @@
+<tal:var define="global hash python: unique_dataset()" />
 <tal:var define="global columns python: [{'name': 'protein', 'title': 'Protein'}, {'name':'peptide', 'title': 'Peptides'}, {'name':'percent_coverage', 'title':'Coverege', 'width':'95px'}, {'name': 'probability', 'title': 'Probability', 'width':'95px'}]"></tal:var>
-<div id="${info.hash}">
-	<form id="filter_protxml_${info.hash}_basic" onsubmit="FilterCurrent(document.getElementById('filter_protxml_${info.hash}').value); return false;">
-		Filter: <input type="text" id="filter_protxml_${info.hash}" value="${info.query}" />&nbsp;<input type="submit" value="Filter" />
+<div id="${hash}">
+	<form id="filter_protxml_${hash}_basic" onsubmit="FilterCurrent(document.getElementById('filter_protxml_${hash}').value); return false;">
+		Filter: <input type="text" id="filter_protxml_${hash}" value="${info.query}" />&nbsp;<input type="submit" value="Filter" />
 	</form>
 	<br/>
 	<tal:if condition="python: len(results) == 0">None of the ${info.total} proteins matched your filter</tal:if>
@@ -16,17 +17,17 @@
 			<tr tal:attributes="class string:info ${row.style}${repeat.row.odd}" id="${repeat.row.index}">
 				<td tal:attributes="class python:test(len(row.HitInfo['indistinguishable_protein']) > 0, 'notice', '')+repeat.row.odd" style="c">${row.HitInfo.protein}
 					<tal:if condition="python: len(row.HitInfo['indistinguishable_protein']) > 0">
-						<span class="indistinguishable" tal:attributes="title python:'Indistinguishable from ' + str(len(row.HitInfo['indistinguishable_protein'])) + ' other protein' + test(len(row.HitInfo['indistinguishable_protein']) > 1, 's', '')  + '. Click for details'" onclick="DisplayIndistinguishableProtein('${row.HitInfo.protein}', ${info.datafile}, ${row.ProteinOffset})">+<tal:echo content="python: len(row.HitInfo['indistinguishable_protein'])"></tal:echo></span>
+						<span class="indistinguishable" tal:attributes="title python:'Indistinguishable from ' + str(len(row.HitInfo['indistinguishable_protein'])) + ' other protein' + test(len(row.HitInfo['indistinguishable_protein']) > 1, 's', '')  + '. Click for details'" onclick="DisplayIndistinguishableProtein('${row.HitInfo.protein}', ${info.datafile}, ${row.ProteinOffset})">+<tal:echo content="python: len(row.HitInfo['indistinguishable_protein'])" /></span>
 					</tal:if>
 				</td>
 				<td tal:attributes="class python:test(len(row.HitInfo['indistinguishable_peptide']) > 0, 'notice', '')+repeat.row.odd" id="peptide">
 					<div id="best">
 						<span id="sequence" class="link" onclick="SearchPeptide('${row.HitInfo.peptide}', GetDependencies(${info.datafile})[0]);" tal:content="python: render_peptide(row.HitInfo)"></span>
 						<tal:if condition="python: row.PeptideMatches > 1">
-							&nbsp;&nbsp;<span class="more" onclick="ListProteinPeptides('${info.hash}', '${repeat.row.index}', '${row.HitInfo.protein}', ${info.datafile}, ${row.ProteinOffset});"><span tal:omit-tag="" tal:content="python: row.PeptideMatches-1"></span> more</span>
+							&nbsp;&nbsp;<span class="more" onclick="ListProteinPeptides('${hash}', '${repeat.row.index}', '${row.HitInfo.protein}', ${info.datafile}, ${row.ProteinOffset});"><span tal:omit-tag="" tal:content="python: row.PeptideMatches-1"></span> more</span>
 						</tal:if>
 						<tal:else condition="python: row.PeptideMatches == 1">
-							&nbsp;&nbsp;<span class="more" onclick="ListProteinPeptides('${info.hash}', '${repeat.row.index}', '${row.HitInfo.protein}', ${info.datafile}, ${row.ProteinOffset});">Show coverage</span>
+							&nbsp;&nbsp;<span class="more" onclick="ListProteinPeptides('${hash}', '${repeat.row.index}', '${row.HitInfo.protein}', ${info.datafile}, ${row.ProteinOffset});">Show coverage</span>
 						</tal:else>
 					</div>
 					<div id="all" style="display: none;"></div>
@@ -40,8 +41,8 @@
 		</tal:for>
 		</table>
 		<script>
-			TableManager.Add("results_${info.datafile}", "${sortcol}", <tal:echo content="python: test(sortdsc, 'false', 'true')"></tal:echo>, "${info.datafile}", "${url}");
-			/*var ids = [<span tal:omit-tag="" tal:repeat="row results">"peptide_${info.hash}_${repeat.row.index}", </span>];
+			TableManager.Add("results_${info.datafile}", "${sortcol}", <tal:echo content="python: test(sortdsc, 'false', 'true')" />, "${info.datafile}", "${url}");
+			/*var ids = [<span tal:omit-tag="" tal:repeat="row results">"peptide_${hash}_${repeat.row.index}", </span>];
 			var tt = new dijit.DynamicTooltip({
 				connectId: ids,
 				href: "/tooltip/peptide?file=${info.file}&n=${info.datafile}&peptide=",

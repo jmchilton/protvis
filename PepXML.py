@@ -1007,21 +1007,21 @@ class SearchResult(TagHandler):
 		i = 0
 		BestHitOffset = -1
 		BestHitInfo = None
-		BestHitMatches = 0
-		BestHitTotal = 0
+		HitMatches = 0
+		Total = 0
 		while i < count:
 			TRACEPOS("SearchResult.SearchAllBestHitAndCount(", i, "): ", f.tell())
 			[search_hit__count] = struct.unpack("=I", f.read(4))
+			Total += search_hit__count
 			r = SearchHit.SearchAllBestHit(f, stat, search_hit__count)
 			if r != None:
 				[off, hits, info] = r
 				if BestHitInfo == None or SearchScore.CompareHits(BestHitInfo, info) > 0:
 					BestHitOffset = off
 					BestHitInfo = info
-					BestHitMatches = hits
-					BestHitTotal = search_hit__count
+					HitMatches += hits
 			i += 1
-		return [BestHitOffset, BestHitMatches, BestHitTotal, BestHitInfo]
+		return [HitMatches, Total, BestHitOffset, BestHitInfo]
 
 	@staticmethod
 	def GetCount(f):
@@ -1052,7 +1052,7 @@ class SearchResult(TagHandler):
 				BestHitInfo = info
 				BestHitOffset = offset
 			i += 1
-		return [BestHitOffset, TotalHits, BestHitInfo]
+		return [TotalHits, BestHitOffset, BestHitInfo]
 		"""#the best hit is always the first one in the list
 		i = 0
 		BestResultIndex = -1
@@ -1069,6 +1069,16 @@ class SearchResult(TagHandler):
 				BestHitInfo = info
 			i += 1
 		return [BestResultIndex, BestHitIndex, TotalHits, BestHitInfo]"""
+
+	@staticmethod
+	def GetHitInfoAll(f, count):
+		i = 0
+		infos = []
+		while i < count:
+			[search_hit__count] = struct.unpack("=I", f.read(4))
+			infos += [SearchHit.GetInfo(f) for i in xrange(search_hit__count)]
+			i += 1
+		return infos
 
 class SearchDatabase(TagHandler):
 	"""
@@ -1453,17 +1463,18 @@ class SpectrumQuery(TagHandler):
 			result = None
 			if s.IsMatched():
 				result = Result(ResultType.SpectrumQuery)
-				[result.HitOffset, result.TotalHits, result.HitInfo] = SearchResult.GetBestHitInfoAll(f, search_result__count)
+				[result.TotalHits,result.HitOffset,  result.HitInfo] = SearchResult.GetBestHitInfoAll(f, search_result__count)
 				result.HitMatches = result.TotalHits
 			else:
-				[off, matches, total, info] = SearchResult.SearchAllBestHitAndCount(f, s, search_result__count)
+				[matches, total, off, info] = SearchResult.SearchAllBestHitAndCount(f, s, search_result__count)
 				if info != None:
 					result = Result(ResultType.SearchHit)
-					result.HitOffset = off
 					result.HitMatches = matches
 					result.TotalHits = total
+					result.HitOffset = off
 					result.HitInfo = info
 			if result != None:
+				result.spectrum = spectrum
 				result.precursor_neutral_mass = precursor_neutral_mass
 				result.retention_time_sec = retention_time_sec
 				result.search_specification = search_specification
@@ -1479,9 +1490,17 @@ class SpectrumQuery(TagHandler):
 		return [spectrum, results]
 
 	@staticmethod
+	def GetHitInfosSeek(f, query):
+		f.seek(query + 4)
+		[search_result__offset, search_result__count, _1, _2, _3, precursor_neutral_mass, _4, _5] = struct.unpack("=IHBIIfiI", f.read(4 + 2 + 1 + 4 + 4 + 4 + 4 + 4))
+		spectrum = DecodeStringFromFile(f)
+		f.seek(query + search_result__offset)
+		return { "spectrum": spectrum, "precursor_neutral_mass": precursor_neutral_mass, "peptides": SearchResult.GetHitInfoAll(f, search_result__count) }
+
+	@staticmethod
 	def GetHitInfoSeek(f, query, hit):
 		f.seek(query + 4 + 4 + 2 + 1 + 4 + 4)
-		precursor_neutral_mass = struct.unpack("=f", f.read(4))[0]
+		[precursor_neutral_mass] = struct.unpack("=f", f.read(4))
 		f.seek(4 + 4, 1)
 		spectrum = DecodeStringFromFile(f)
 		dic = SearchHit.GetInfoSeek(f, hit)
@@ -2067,17 +2086,19 @@ def SearchPeptide(FileName, peptide):
 	f.close()
 	return [scores, None]
 
+def GetQueryHitInfos(FileName, query):
+	f = open(FileName, "r")
+	f.seek(4)
+	scores = MsmsPipelineAnalysis.GetAvaliableScores(f)
+	info = SpectrumQuery.GetHitInfosSeek(f, query)
+	f.close()
+	return [info, scores]
+
 def GetHitInfo(FileName, query, hit):
 	f = open(FileName, "r")
 	info = SpectrumQuery.GetHitInfoSeek(f, query, hit)
 	f.close()
 	return info
-
-def GetScores(FileName, qoff, hoff):
-	f = open(FileName, "r")
-	results = SpectrumQuery.GetScores(f, qoff, hoff)
-	f.close()
-	return results
 
 def GetAvaliableScores(FileName):
 	f = open(FileName, "r")
@@ -2119,6 +2140,27 @@ def DefaultSortColumn(scores):
 	elif scores & 0x20:
 		return ["ionscore", reverses]
 	return ["expect", reverses]
+
+def select_scores(BaseFile, query):
+	f = open(BaseFile + "_" + query["n"], "r")
+	[spectrum, results] = SpectrumQuery.GetScores(f, int(query["qoff"]), int(query["hoff"]))
+	f.close()
+	names = {
+		"bvalue": "bvalue",
+		"expect": "expect",
+		"homologyscore": "homologyscore",
+		"hyperscore": "hyperscore",
+		"identityscore": "identityscore",
+		"ionscore": "ionscore",
+		"nextscore": "nextscore",
+		"pvalue": "pvalue",
+		"star": "star",
+		"yscore": "yscore",
+		"pp_prob": "peptideprophet",
+		"ip_prob": "interpropht",
+		"ap_prob": "asapratio",
+		"ep_prob": "xpressratio" }
+	return { "scores": results, "names": names }
 
 #FIXME: DEBUG
 def PrintResults(results):

@@ -1,6 +1,7 @@
+<tal:var define="global hash python: unique_dataset()" />
 <tal:var define="global columns python: [{'name':'peptide', 'title': 'Peptide'}, {'name': 'protein', 'title': 'Protein'}, {'name': 'massdiff', 'title': 'Mass Difference'}, {'name': info['score'], 'title': info['score']}]"></tal:var>
-<form id="filter_pepxml_${info.hash}_basic" onsubmit="FilterCurrent(document.getElementById('filter_pepxml_${info.hash}').value); return false;">
-	Filter: <input type="text" id="filter_pepxml_${info.hash}" value="${info.query}" />&nbsp;<input type="submit" value="Filter" />
+<form id="filter_pepxml_${hash}_basic" onsubmit="FilterCurrent(document.getElementById('filter_pepxml_${hash}').value); return false;">
+	Filter: <input type="text" id="filter_pepxml_${hash}" value="${info.query}" />&nbsp;<input type="submit" value="Filter" />
 </form>
 <br/>
 <tal:if condition="python: len(results) == 0">None of the ${info.total} queries matched your filter</tal:if>
@@ -13,25 +14,34 @@
 	<tr><tal:for repeat="col columns"><th id="results_${info.datafile}_column_${col.name}" onclick="TableManager.Sort('results_${info.datafile}','${col.name}');" tal:attributes="class python: 'sort' + test(sortcol==col.name, test(sortdsc, ' sort_dsc', ' sort_asc'), '')">${col.title}</th></tal:for></tr>
 	<tal:for repeat="row results">
 		<tr tal:attributes="class string:info ${row.style}${repeat.row.odd}">
-			<td><span class="peptide_full">${row.HitInfo.peptide_prev_aa}<span id="peptide_${info.hash}_${repeat.row.index}" class="link peptide" onclick="SearchPeptide('${row.HitInfo.peptide}', ${info.datafile});" tipurl="${row.HitInfo.peptide}" tal:content="python: render_peptide(row.HitInfo)"></span>${row.HitInfo.peptide_next_aa}</span></td>
+			<td><span class="peptide_full">${row.HitInfo.peptide_prev_aa}<span id="peptide_${hash}_${repeat.row.index}" class="link peptide" onclick="SearchPeptide('${row.HitInfo.peptide}', ${info.datafile});" tipurl="${row.HitInfo.peptide}" tal:content="python: render_peptide(row.HitInfo)"></span>${row.HitInfo.peptide_next_aa}</span></td>
 			<td>
 				<tal:if condition="python: info['datas'] & 0x8"><span class="link" onclick="var prot = FindFilesWithDependancy(${info.datafile}, [10, 11])[0]; SwitchDataset(prot); LoadContents(prot, '/results?file=${info.file}&n=' + prot + '&type=prot&q=${row.HitInfo.protein}&max=50');">${row.HitInfo.protein}</span></tal:if>
 				<tal:else condition="python: not info['datas'] & 0x8">${row.HitInfo.protein}</tal:else>
 			</td>
-			<td>${row.HitInfo.massdiff}</td>
-			<td onclick="DisplayScore('${row.HitInfo.peptide}/${row.HitInfo.protein}', ${info.datafile}, ${row.QueryOffset}, ${row.HitOffset});" tal:content="python: row.HitInfo[info.score]"></td>
+			<td style="text-align: center;">${row.HitInfo.massdiff}</td>
+			<td class="more" style="text-align: center;" onclick="DisplayScore('${row.HitInfo.protein}', '${row.HitInfo.peptide}', ${info.datafile}, ${row.QueryOffset}, ${row.HitOffset});" tal:content="python: row.HitInfo[info.score]"></td>
 		</tr>
 		<tal:if condition="python: try_get(row.HitInfo, 'protein_descr') != None">
 			<tr tal:attributes="class string:desc ${row.style}${repeat.row.odd}"><td tal:attributes="colspan python: len(columns)" tal:content="python: row.HitInfo['protein_descr']"></td></tr>
 		</tal:if>
-		<tal:if condition="python: row.HitMatches > 1">
-			<tr tal:attributes="class string:${row.style}${repeat.row.odd}"><td tal:attributes="colspan python: len(columns)"><span class="link" onclick="DisplayQuery(${row.QueryOffset});"><span tal:omit-tag="" tal:content="python: row.HitMatches-1"></span> more result<tal:if condition="python: row.HitMatches > 2">s</tal:if> in this spectrum query</span></td></tr>
-		</tal:if>
+		<tr tal:attributes="class string: ${row.style}${repeat.row.odd}">
+			<td tal:attributes="colspan python: len(columns)">
+				<span class="more" onclick="ShowSpectrumFromQuery(${info.datafile}, ${row.QueryOffset}, '${row.spectrum}', '${row.HitInfo.peptide}');" title="View spectrum">
+					<tal:if condition="python: row.HitMatches == 1">
+						Only result in this spectrum query
+					</tal:if>
+					<tal:else condition="python: row.HitMatches > 1">
+						<span tal:omit-tag="" tal:content="python: row.HitMatches-1"></span> more result<tal:if condition="python: row.HitMatches > 2">s</tal:if> in this spectrum query
+					</tal:else>
+				</span>
+			</td>
+		</tr>
 	</tal:for>
 	</table>
 	<script>
-		TableManager.Add("results_${info.datafile}", "${sortcol}", <tal:echo content="python: test(sortdsc, 'false', 'true')"></tal:echo>, "${info.datafile}", "${url}");
-		var ids = [<span tal:omit-tag="" tal:repeat="row results">"peptide_${info.hash}_${repeat.row.index}", </span>];
+		TableManager.Add("results_${info.datafile}", "${sortcol}", <tal:echo content="python: test(sortdsc, 'false', 'true')" />, "${info.datafile}", "${url}");
+		var ids = [<span tal:omit-tag="" tal:repeat="row results">"peptide_${hash}_${repeat.row.index}", </span>];
 		var tt = new dijit.DynamicTooltip({
 			connectId: ids,
 			href: "/tooltip/peptide?file=${info.file}&n=${info.datafile}&peptide=",

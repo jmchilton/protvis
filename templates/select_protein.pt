@@ -6,10 +6,10 @@
 <tr><tal:for repeat="col columns"><th tal:attributes="style python: test(try_get(col, 'width') != None, 'width:'+test(try_get(col, 'width') != None, try_get(col, 'width'), ''), '')">${col.title}</th></tal:for></tr>
 <tal:for repeat="row results.rows">
 	<tr tal:attributes="class string:row${repeat.row.odd}" id="coverage_${hash}_${repeat.row.index}" onmouseover="Coverages['${hash}'].Over(${repeat.row.index});" onmouseout="Coverages['${hash}'].Out(${repeat.row.index});" onclick="Coverages['${hash}'].Click(${repeat.row.index});">
-		<td><span class="link" onclick="SearchPeptide('${row.peptide}', GetDependencies(${query.n})[0]);" tal:content="python: render_peptide(row)"><tal:for repeat="indes row.indistinguishable_peptide"><br/><tal:echo tal:content="python: render_peptide(indes)"></tal:echo></tal:for></span></td>
+		<td><span class="link" onclick="SearchPeptide('${row.peptide}', GetDependencies(${query.n})[0]);" tal:content="python: render_peptide(row)"><tal:for repeat="indes row.indistinguishable_peptide"><br/><tal:echo tal:content="python: render_peptide(indes)" /></tal:for></span></td>
 		<td style="text-align:center;">${row.initial_probability}</td>
 		<td id="coverage_${hash}_${repeat.row.index}_pos" style="text-align:center;"></td>
-		<td style="text-align:center;"><tal:echo content="python: len(row['peptide'])"></tal:echo></td>
+		<td style="text-align:center;"><tal:echo content="python: len(row['peptide'])" /></td>
 	</tr>
 </tal:for>
 </table>
@@ -18,7 +18,7 @@
 	Coverages["${hash}"] = cov;
 	cov = cov.Offsets;
 	console.log(cov);
-	for (var i = 0; i < <tal:echo content="python: len(results.rows)"></tal:echo>; ++i) {
+	for (var i = 0; i < <tal:echo content="python: len(results.rows)" />; ++i) {
 		dojo.byId("coverage_${hash}_" + i + "_pos").innerHTML = cov[i];
 	}
 </script>

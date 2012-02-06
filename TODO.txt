@@ -1,5 +1,6 @@
 Dont show tooltip on click
-Show other hits in query
+Show other hits in query (page X of Y)
 Advanced search
-"X more results from this spectrum" in pepxml
 Make spectrum viewer find spectrum query and show list of all peptides to switch between
+Filter current when switching between cached datasets
+default node when drag-drop

@@ -1,6 +1,7 @@
+<tal:var define="global hash python: unique_dataset()" />
 <tal:var define="global columns python: [{'name':'spectrum', 'title': 'Spectrum'}]"></tal:var>
-<form id="filter_mgf_${info.hash}_basic" onsubmit="FilterCurrent(document.getElementById('filter_mgf_${info.hash}').value); return false;">
-	Filter: <input type="text" id="filter_mgf_${info.hash}" value="${info.query}" />&nbsp;<input type="submit" value="Filter" />
+<form id="filter_mgf_${hash}_basic" onsubmit="FilterCurrent(document.getElementById('filter_mgf_${hash}').value); return false;">
+	Filter: <input type="text" id="filter_mgf_${hash}" value="${info.query}" />&nbsp;<input type="submit" value="Filter" />
 </form>
 <br/>
 <tal:if condition="python: len(results) == 0">None of the ${info.total} queries matched your filter</tal:if>
@@ -18,6 +19,6 @@
 	</tal:for>
 	</table>
 	<script>
-		TableManager.Add("results_${info.datafile}", "${sortcol}", <tal:echo content="python: test(sortdsc, 'false', 'true')"></tal:echo>, "${info.datafile}", "${url}");
+		TableManager.Add("results_${info.datafile}", "${sortcol}", <tal:echo content="python: test(sortdsc, 'false', 'true')" />, "${info.datafile}", "${url}");
 	</script>
 </tal:else>

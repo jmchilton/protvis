@@ -104,7 +104,7 @@ class FileLinks:
 			self.Name = DecodeStringFromFile(f)
 
 	def __init__(self, IndexFile):
-		f = open(GetFileName(IndexFile), "r")
+		f = open(IndexFile, "r")
 		[files] = struct.unpack("=I", f.read(4))
 		self.Index = IndexFile
 		self.Links = [FileLinks.Link(f) for i in xrange(files)]
@@ -176,9 +176,11 @@ def RendererGlobals(system):
 				(pos, mass) = m
 				pep = pep[:pos] + '<span class="modification">[' + str(int(mass)) + ']</span>' + pep[pos:]
 		return Literal(pep)
-		
 
-	return { "test": test, "render_peptide": render_peptide, "try_get": TryGet, "urlencode": urllib.quote }
+	def unique_dataset():
+		return abs(hash(time.gmtime()))
+
+	return { "test": test, "render_peptide": render_peptide, "try_get": TryGet, "urlencode": urllib.quote, "unique_dataset": unique_dataset }
 
 class ConverterThread(Thread):
 	def __init__(self, mod, src, dst, links):
@@ -263,35 +265,6 @@ def SortPeptides(results, sortcol, score, reverse = False):
 	else:
 		return sorted(results, key = lambda key: key[sortcol], reverse=reverse)
 
-def SearchScores(req):
-	fname = GetQueryFileName(req.GET)
-	try:
-		qoff = int(req.GET["qoff"])
-		hoff = int(req.GET["hoff"])
-		[spectrum, results] = PepXML.GetScores(fname, qoff, hoff)
-	except:
-		return HTTPBadRequest()
-	items = sorted(results.items())
-	rows = spectrum;
-	names = {
-		"bvalue": "bvalue",
-		"expect": "expect",
-		"homologyscore": "homologyscore",
-		"hyperscore": "hyperscore",
-		"identityscore": "identityscore",
-		"ionscore": "ionscore",
-		"nextscore": "nextscore",
-		"pvalue": "pvalue",
-		"star": "star",
-		"yscore": "yscore",
-		"pp_prob": "peptideprophet",
-		"ip_prob": "interpropht",
-		"ap_prob": "asapratio",
-		"ep_prob": "xpressratio"}
-	for name, val in items:
-		rows += "\n" + str(val) + " " + names[name];
-	return Response(rows, request=req)
-
 def Index(req):
 	#for when this is used as a standalone tool
 	return render_to_response(templates + "index.pt", { }, request=req)
@@ -365,7 +338,7 @@ def QueryInitStatus(req):
 
 def AddFile(req):
 	#try:
-		links = FileLinks(req.GET["file"])
+		links = FileLinks(GetQueryFileName(req.GET))
 		n = req.GET["n"]
 		l = links[int(n)]
 		try:
@@ -409,7 +382,7 @@ def AddFile(req):
 def View(req):
 	try:
 		try:
-			links = FileLinks(req.GET["file"])
+			links = FileLinks(GetQueryFileName(req.GET))
 		except:
 			return HTTPNotFound()
 		try:
@@ -428,7 +401,7 @@ def View(req):
 def ListResults(req):
 	fname = GetQueryFileName(req.GET)
 	try:
-		links = FileLinks(req.GET["file"])
+		links = FileLinks(fname)
 	except:
 		return HTTPNotFound()
 	#try:
@@ -507,7 +480,7 @@ def ListResults(req):
 				r.style = DecodeDecoy(h["protein"])
 			except:
 				r.style = "row"
-		info = {"total": total, "matches": matches, "start": start + 1, "end": start + len(results), "type": t, "score": score, "file": req.GET["file"], "datafile": n, "query": req.GET["q"], "hash": abs(hash(time.gmtime())), "datas": links.Types()}
+		info = { "total": total, "matches": matches, "start": start + 1, "end": start + len(results), "type": t, "score": score, "file": req.GET["file"], "datafile": n, "query": req.GET["q"], "datas": links.Types() }
 		return render_to_response(templates + t + "_results.pt", { "sortcol": sortcol, "sortdsc": reverse, "info": info, "results": results, "url": Literal(req.path_qs) }, request = req)
 	#except:
 	#	return HTTPBadRequest()
@@ -595,7 +568,7 @@ def SelectInfo(req):
 		if (c < 'a' or c > 'z') and c != '_':
 			raise HTTPUnauthorized()
 	#try:
-	parser = FileLinks(req.GET["file"]).GetParser(int(req.GET["n"]))
+	parser = FileLinks(GetQueryFileName(req.GET)).GetParser(int(req.GET["n"]))
 	select = eval("parser.select_" + req.GET["type"])
 	results = select(GetQueryFileName(req.GET), req.GET)
 	return render_to_response(templates + "select_" + req.GET["type"] + ".pt", { "query": req.GET, "results": results }, request=req)
@@ -609,12 +582,12 @@ def Spectrum(req):
 	datafile = TryGet(req.GET, "n")
 	filetype = TryGet(req.GET, "type")
 	offset = TryGet(req.GET, "off")
-	pep_datafile = TryGet(req.GET, "pn")
-	pep_query_offset = TryGet(req.GET, "pqoff")
-	pep_hit_offset = TryGet(req.GET, "phoff")
+	params = ""
+	pep_datafile = None
 	if datafile == None:
-		links = FileLinks(req.GET["file"])
+		links = FileLinks(fname)
 		possible = []
+		pep_datafile = TryGet(req.GET, "pn")
 		if pep_datafile == None:
 			for i in xrange(len(links.Links)):
 				l = links.Links[i]
@@ -635,31 +608,30 @@ def Spectrum(req):
 		for t in [Reference.FileType.MGF, Reference.FileType.MZML]:
 			for f in possible:
 				if links.Links[f].Type == t:
-					offset = MGF.GetOffsetFromSpectrum(fname + "_" + str(f), spectrum)
+					offset = Parsers[Reference.FileType.NameBasic(t)].GetOffsetFromSpectrum(fname + "_" + str(f), spectrum)
 					if offset >= 0:
 						datafile = f
 						filetype = Reference.FileType.NameBasic(t)
-						break	
+						break
+		params = "&pn=" + pep_datafile + "&pqoff=" + req.GET["pqoff"]
+		pep_hit_offset = TryGet(req.GET, "phoff")
+		pep_default = TryGet(req.GET, "pep")
+		if pep_hit_offset != None:
+			params += "&phoff=" + pep_hit_offset
+		if pep_default != None:
+			params += "&pep=" + pep_default
 	elif filetype == None:
-		filetype = FileLinks(req.GET["file"]).Links[datafile].Type
+		filetype = FileLinks(fname).Links[datafile].Type
 	if offset == None:
 		parser = Parsers[filetype]
 		parser.GetOffsetFromSpectrum(spectrum)
-	return render_to_response(templates + "spectrum.pt", { "file": req.GET["file"], "type": filetype, "spectrum": spectrum, "datafile": datafile, "offset": offset, "pep_datafile": pep_datafile, "pep_query_offset": pep_query_offset, "pep_hit_offset": pep_hit_offset }, request=req)
+	return render_to_response(templates + "spectrum.pt", { "file": req.GET["file"], "type": filetype, "spectrum": spectrum, "datafile": datafile, "offset": offset, "pep_datafile": pep_datafile, "params": params }, request=req)
 	#except:
 	#	return HTTPBadRequest()
 
 def Lorikeet(req):
-	fname = GetQueryFileName(req.GET)
-	#try:
-	parser = Parsers[req.GET["type"]]
-	spec = req.GET["spectrum"].split(".")
-	pep_datafile = TryGet(req.GET, "pn")
-	pep_query_offset = TryGet(req.GET, "pqoff")
-	pep_hit_offset = TryGet(req.GET, "phoff")
-	if pep_datafile != None and pep_query_offset != None and pep_hit_offset != None:
-		pep = PepXML.GetHitInfo(fname + "_" + pep_datafile, int(pep_query_offset), int(pep_hit_offset))
-		peptide = { "peptide": pep["peptide"], "precursor_neutral_mass": pep["precursor_neutral_mass"], "modification_info": pep["modification_info"] }
+	def PeptideInfo(pep):
+		peptide = { "peptide": pep["peptide"], "modification_info": pep["modification_info"], "protein": pep["protein"], "score": TryGet(pep, sortcol) }
 		if pep["modification_info"] != None and len(pep["modification_info"]) > 0:
 			nterm_mod = 0
 			cterm_mod = 0
@@ -679,10 +651,48 @@ def Lorikeet(req):
 			peptide["cterm"] = cterm_mod
 		else:
 			peptide["mods"] = None
+		return peptide
+
+	def render_peptide_lorikeet(peptide):
+		pep = peptide["peptide"]
+		mods = peptide["mods"]
+		if mods != None and len(mods) > 0:
+			mods = sorted(mods, key = lambda mam: mam["index"], reverse = True)
+			for m in mods:
+				pep = pep[:m["index"]] + '<span class="modification">[' + str(int(m["mass"])) + ']</span>' + pep[m["index"]:]
+		return Literal(pep)
+
+	fname = GetQueryFileName(req.GET)
+	#try:
+	init_pep = 0
+	parser = Parsers[req.GET["type"]]
+	spec = req.GET["spectrum"].split(".")
+	pep_datafile = TryGet(req.GET, "pn")
+	pep_query_offset = TryGet(req.GET, "pqoff")
+	if pep_datafile != None and pep_query_offset != None:
+		pep_hit_offset = TryGet(req.GET, "phoff")
+		if pep_hit_offset == None:
+			[peptide, scores] = PepXML.GetQueryHitInfos(fname + "_" + pep_datafile, int(pep_query_offset))
+			scores = scores & 0xFF #get rid of inter/pepdite prophet scores. Only the top hit has 1 of these scores, which isnt much use
+			score = PepXML.SearchEngineName(scores)
+			[sortcol, reverses] = PepXML.DefaultSortColumn(scores)
+			peptide["peptides"] = sorted([PeptideInfo(p) for p in peptide["peptides"]], key = lambda key: key["score"], reverse = test(sortcol in reverses, True, False))
+			pep = TryGet(req.GET, "pep")
+			if pep != None:
+				i = 0
+				for p in peptide["peptides"]:
+					if p["peptide"] == pep:
+						init_pep = i
+						break
+					i += 1
+		else:
+			peptide = PepInfo(PepXML.GetHitInfo(fname + "_" + pep_datafile, int(pep_query_offset), int(pep_hit_offset)))
+			peptide["precursor_neutral_mass"] = pep["precursor_neutral_mass"]
 	else:
 		peptide = None
+		score = None
 	spectrum = { "file": Literal(".".join(spec[:-3]).replace("\\", "\\\\").replace("\"", "\\\"")), "scan": spec[-3], "charge": spec[-1], "ions": parser.GetSpectrumFromOffset(fname + "_" + req.GET["n"], int(req.GET["off"])) }
-	return render_to_response(templates + "lorikeet_frame.pt", { "query": req.GET, "spectrum": spectrum, "peptide": peptide }, request=req)
+	return render_to_response(templates + "lorikeet_frame.pt", { "query": req.GET, "spectrum": spectrum, "peptide": peptide, "init_pep": init_pep, "score": score, "render_peptide_lorikeet": render_peptide_lorikeet }, request=req)
 	#except:
 	#	return HTTPBadRequest()
 
@@ -750,8 +760,7 @@ if __name__ == "__main__":
 	JobsTotal = 0
 	ThreadsLock = Lock()
 	config = Configurator(renderer_globals_factory=RendererGlobals)
-	config.add_route("list", "/list/{type}/")
-	config.add_route("search_score", "/search/{type}/score/")
+	config.add_route("list", "/list/{type}/") #deprecated
 	
 	config.add_route("index", "/")
 	config.add_route("upload", "/init")
@@ -767,7 +776,6 @@ if __name__ == "__main__":
 	config.add_route("tooltip", "/tooltip/{type}")
 	config.add_view(DisplayList, route_name="list")
 	#config.add_view(SearchHit, route_name="search_hit")
-	config.add_view(SearchScores, route_name="search_score")
 	config.add_view(Index, route_name="index")
 	config.add_view(Upload, route_name="upload")
 	config.add_view(Convert, route_name="convert")

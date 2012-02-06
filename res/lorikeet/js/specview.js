@@ -30,7 +30,6 @@
 			var opts = $.extend(defaults, opts);
 			
 			return this.each(function() {
-				
 				options = opts;
 				
 				// read the static modifications
