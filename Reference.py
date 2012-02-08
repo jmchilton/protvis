@@ -276,6 +276,12 @@ def PepReferences(fname, IncludedFiles, Validator):
 			if f[1] != FileType.UNKNOWN:
 				t = f[1]
 				IncludedFiles.Set(info.Name, f[1])
+			if t == FileType.UNKNOWN:
+				f = open(fname)
+				t = GuessType(fh)
+				f.close()
+				if t == FileType.UNKNOWN:
+					IncludedFiles.Set(info.Name, t)
 			if info.Exists:
 				IncludedFiles.TouchDeps(info.Name)
 			else:
