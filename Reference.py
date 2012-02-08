@@ -277,9 +277,9 @@ def PepReferences(fname, IncludedFiles, Validator):
 				t = f[1]
 				IncludedFiles.Set(info.Name, f[1])
 			if t == FileType.UNKNOWN:
-				f = open(fname)
+				fh = open(fname)
 				t = GuessType(fh)
-				f.close()
+				fh.close()
 				if t == FileType.UNKNOWN:
 					IncludedFiles.Set(info.Name, t)
 			if info.Exists:
