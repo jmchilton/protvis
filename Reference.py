@@ -319,11 +319,11 @@ def ProtReferences(fname, IncludedFiles, Validator):
 		except:
 			exts = f.split(".")
 			ext = []
-			i = len(exts) - 1
-			while i >= 0:
-				if exts[i] in valid:
-					ext.append(exts[i])
-					--i
+			j = len(exts) - 1
+			while j >= 0:
+				if exts[j] in valid:
+					ext.append(exts[j])
+					j -= 1
 				else:
 					break
 			IncludedFiles.Add(f, FileType.FromExtensions(ext) | FileType.MISSING)
