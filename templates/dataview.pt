@@ -4,14 +4,16 @@
 		<meta http-equiv="content-type" content="text/html; charset=utf-8" />
 		<title>Results</title>
 		<link href="/res/styles/list.css" type="text/css" rel="stylesheet" />
+		<link href="/res/styles/specview.css" type="text/css" rel="stylesheet" />
 		<link href="/res/dojo/dijit/themes/dijit.css" rel="stylesheet" />
 		<link id="themeStyles" href="/res/dojo/dijit/themes/claro/claro.css" type="text/css" rel="stylesheet" />
 		<link id="themeStyles" href="/res/dojo/dojox/html/resources/ellipsis.css" type="text/css" rel="stylesheet" />
 		<script type="text/javascript" src="/res/dojo/dojo/dojo.js" data-dojo-config="parseOnLoad: true"></script>
 		<script type="text/javascript" src="/res/scripts/flowchart.js"></script>
-		<!--<script type="text/javascript" src="/res/scripts/specview.js"></script>-->
+		<script type="text/javascript" src="/res/scripts/specview.js"></script>
 		<script type="text/javascript">
 			dojo.require("dojo.fx");
+			dojo.require("dojo.query");
 			dojo.require("dijit.Dialog");
 			dojo.require("dojo._base.connect");
 			dojo.require("dijit.DynamicTooltip");
@@ -295,11 +297,11 @@
 						cont.style = "display: none";
 						cont.innerHTML = results;
 						dojo.byId("data_" + container).appendChild(cont);
-						executeAjaxResponse(results);
 						delete PendingAnimations;
 						PendingAnimations = new Array();
 						QueueAnimation(dojo.fx.wipeOut({ node: dojo.byId("searching") }));
 						QueueAnimation(dojo.fx.wipeIn({ node: cont }));
+						executeAjaxResponse(results);
 					},
 					error: function() {
 						var cont = document.createElement("div");
@@ -493,7 +495,7 @@
 		<div id="selectBtn"></div>
 		<tal:if condition="python: nfiles > 1">
 			<div id="navigation">
-				<div class="more" onclick="ToggleNavigation();"><span id="navigation_toggle_sh">Hide</span> Nagivation</div>
+				<div class="more" onclick="ToggleNavigation();"><span id="navigation_toggle_sh">Hide</span> Navigation</div>
 				<div id="navigation_graph" style="width:100%; height:auto; overflow:auto; text-align:center;"></div>
 				<br/>
 			</div>

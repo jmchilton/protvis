@@ -4,3 +4,9 @@ Advanced search
 Make spectrum viewer find spectrum query and show list of all peptides to switch between
 Filter current when switching between cached datasets
 default node when drag-drop
+Make errors more descriptive
+specview tooltip
+resize specview on window size change
+zooming in really close freeze spectrum viewer. Probably evaluates to 0
+mouse coordinates in firefox are about 4px off in each dimension
+loading 2nd spectrum hsa bug in conflicting names

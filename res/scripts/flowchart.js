@@ -97,7 +97,7 @@ FlowChart = function(parent, files, OnSelect) {
 			if (box[side].length < BoxSlots) {
 				return box[side].push(1);
 			}
-			var minval = 65535;
+			var minval = Number.POSITIVE_INFINITY;
 			var minpos = 0;
 			for (s in box[side]) {
 				var c = box[side][s];

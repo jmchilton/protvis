@@ -235,7 +235,7 @@ def Search(filename, terms):
 	f = open(filename, "r")
 	print terms
 	stat = SearchStatus(terms)
-	specs = Header.search_spectrums(f, stat)
+	Header.search_spectrums(f, stat)
 	f.close()
 	return [0, stat.Total, stat.Results]
 

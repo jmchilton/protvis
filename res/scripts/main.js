@@ -74,7 +74,8 @@ function executeAjaxResponse(response) {
 			eval(scripts[i]);
 		} catch (e) {
 			if (console) {
-				console.log(scripts[i]);
+				ex = e;
+				console.log(e.toString());
 				console.log(e);
 			}
 		}

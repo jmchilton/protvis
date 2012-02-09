@@ -209,7 +209,7 @@ class TagHandler(object):
 		raise NotImplementedError(name)
 
 	def EndChild(self):
-		return stream
+		return self.Stream
 
 class Eater:
 	def End(self):

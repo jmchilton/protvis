@@ -1487,7 +1487,7 @@ def select_indistinguishable_protein(BaseFile, query):
 
 def select_indistinguishable_peptide(BaseFile, query):
 	f = open(BaseFile + "_" + query["n"], "r")
-	peptides = Peptide.GetIndistinguishable(f, int(query["off"]))
+	peptides = Peptide.GetIndistinguishable(f, int(query["off"])) #FIXME: implement GetIndistinguishable
 	f.close()
 	return peptides
 
