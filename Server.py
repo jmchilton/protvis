@@ -673,8 +673,9 @@ def Spectrum(req):
 							break
 						i += 1
 			else:
-				peptide = PepInfo(PepXML.GetHitInfo(fname + "_" + pep_datafile, int(pep_query_offset), int(pep_hit_offset)))
-				peptide["precursor_neutral_mass"] = pep["precursor_neutral_mass"]
+				sortcol = None
+				pep = PepXML.GetHitInfo(fname + "_" + pep_datafile, int(pep_query_offset), int(pep_hit_offset))
+				peptide = { "peptides":[PeptideInfo(pep)], "precursor_neutral_mass":pep["precursor_neutral_mass"] }
 	elif filetype == None:
 		filetype = FileLinks(fname).Links[datafile].Type
 	parser = Parsers[filetype]

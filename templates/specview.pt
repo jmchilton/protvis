@@ -169,7 +169,12 @@
 				} else if(SpecView.Options.massTypeOpt == "avg") {
 					neutralMass = Peptide.getNeutralMassAvg();
 				}
-				dojo.byId("peptide_${hash}").innerHTML = dojo.byId("specview_${hash}_pep_" + idx).firstChild.innerHTML;
+				<tal:if condition="python: len(peptide['peptides']) > 1">
+					dojo.byId("peptide_${hash}").innerHTML = dojo.byId("specview_${hash}_pep_" + idx).firstChild.innerHTML;
+				</tal:if>
+				<tal:else condition="python: len(peptide['peptides']) == 1">
+					dojo.byId("peptide_${hash}").innerHTML = "<tal:echo content="peptide['peptides'][0]['peptide']" />";
+				</tal:else>
 				dojo.byId("neutralMass_${hash}").innerHTML = (neutralMass + Ion.MASS_PROTON).toFixed(4);
 				dojo.byId("mz_${hash}").innerHTML = Ion.getMz(neutralMass, ${spectrum.charge}).toFixed(4);
 			}
