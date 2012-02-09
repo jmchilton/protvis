@@ -650,14 +650,16 @@ def Spectrum(req):
 				if l.Type == Reference.FileType.MZML or l.Type == Reference.FileType.MGF:
 					possible.append(d)
 		possible = list(set(possible))
+		offset = -1
 		for t in [Reference.FileType.MGF, Reference.FileType.MZML]:
-			for f in possible:
-				if links.Links[f].Type == t:
-					offset = Parsers[Reference.FileType.NameBasic(t)].GetOffsetFromSpectrum(fname + "_" + str(f), spectrum)
-					if offset >= 0:
-						datafile = str(f)
-						filetype = Reference.FileType.NameBasic(t)
-						break
+			if offset < 0:
+				for f in possible:
+					if links.Links[f].Type == t:
+						offset = Parsers[Reference.FileType.NameBasic(t)].GetOffsetFromSpectrum(fname + "_" + str(f), spectrum)
+						if offset >= 0:
+							datafile = str(f)
+							filetype = Reference.FileType.NameBasic(t)
+							break
 		pep_query_offset = TryGet(req.GET, "pqoff")
 		if pep_query_offset != None:
 			pep_hit_offset = TryGet(req.GET, "phoff")
