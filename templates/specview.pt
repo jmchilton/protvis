@@ -115,7 +115,7 @@
 						&nbsp;<input id="resetZoom_${hash}" type="button" value="Zoom Out" />&nbsp;<input id="printLink_${hash}" type="button" value="Print" />
 					</nobr>
 					&nbsp;&nbsp;
-					<nobr><input id="enableTooltip_${hash}" type="checkbox">Enable tooltip</nobr><br/>
+					<nobr><input id="enableTooltip_${hash}" type="checkbox" checked="checked">Enable tooltip</nobr><br/>
 				</div>
 				<!--placeholder for ms1 plot (if data is available)-->
 				<!--if(options.ms1peaks && options.ms1peaks.length > 0) {

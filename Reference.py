@@ -280,7 +280,7 @@ def PepReferences(fname, IncludedFiles, Validator):
 				fh = open(fname)
 				t = GuessType(fh)
 				fh.close()
-				if t == FileType.UNKNOWN:
+				if t != FileType.UNKNOWN:
 					IncludedFiles.Set(info.Name, t)
 			if info.Exists:
 				IncludedFiles.TouchDeps(info.Name)
@@ -418,10 +418,10 @@ def LoadChainGroup(files):
 			try:
 				t = IncludedFiles.Get(fname)
 				_t = FileType.FromExtensions(ext)
-				if _t > t:
-					t = _t
+				if t.Type > _t:
+					_t = t.Type
 					IncludedFiles.Set(fname, _t)
-				return ValidFile(OpenFile(fname, f.Stream), t, True)
+				return ValidFile(OpenFile(fname, f.Stream), _t, True)
 			except:
 				if f != None:
 					t = FileType.FromExtensions(ext)

@@ -30,7 +30,8 @@ SpecViewer = function(container, opts) {
 		neutralLosses: [], //Any combination of: "h2o", "nh3"
 		massTypeOpt: "mono", // mono OR avg
 		ionTableContainer: null, //the element to contain the ion table
-		selectedIons: [["b", 1], ["y", 1]] //The ions to display
+		selectedIons: [["b", 1], ["y", 1]], //The ions to display
+		tooltip: true
 	};
 	if (Math.max(1, opts.charge - 1) >= 2) {
 		selectedIons.append(["b", 2]);

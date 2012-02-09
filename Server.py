@@ -76,7 +76,10 @@ class JobManager:
 			data.write(struct.pack("=I", len(job["files"])))
 			for t, f in job["files"]:
 				if t != None and t.Type > f.Type:
+					print f, t.Type, f.Type
 					f.Type = t.Type
+				else:
+					print f, None
 				data.write(struct.pack("=BH", f.Type, len(f.Depends)))
 				for d in f.Depends:
 					data.write(struct.pack("=H", test(d < 0, 0xFFFF, d)))
