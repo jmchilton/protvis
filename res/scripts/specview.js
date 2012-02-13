@@ -31,7 +31,8 @@ SpecViewer = function(container, opts) {
 		massTypeOpt: "mono", // mono OR avg
 		ionTableContainer: null, //the element to contain the ion table
 		selectedIons: [["b", 1], ["y", 1]], //The ions to display
-		tooltip: true
+		tooltip: true,
+		editable: false
 	};
 	if (Math.max(1, opts.charge - 1) >= 2) {
 		selectedIons.append(["b", 2]);
@@ -56,12 +57,14 @@ SpecViewer = function(container, opts) {
 	this.peakAssignmentTypeChanged = false;
 	this.peakLabelTypeChanged = false;
 	this.selectedNeutralLossChanged = false;
-	
+
 	this.PlotOptions = {
 		axis: {},
-		selection:{
-			axis:"x",
-			callback:function(range) {
+		tooltip: this.Options.tooltip,
+		editable: this.Options.editable,
+		selection: {
+			axis: "x",
+			callback: function(range) {
 				obj.ZoomRange = range;
 				var datasets = obj.getDatasets();
 				if (obj.PlotOptions.selection.axis.indexOf("y") < 0) {
@@ -81,13 +84,13 @@ SpecViewer = function(container, opts) {
 			}
 		}
 	};
-	
+
 	this.plot = null;			// MS/MS plot
 	this.ms1plot = null;		// MS1 plot (only created when data is available)
 	this.ZoomRange = null; 		// for zooming MS/MS plot
 	this.ms1zoomRange = null;
 	this.previousPoint = null; 	// for tooltips
-	
+
 	this.ionSeries = {a: [], b: [], c: [], x:[], y: [], z: []};
 	this.ionSeriesMatch = {a: [], b: [], c: [], x: [], y: [], z: []};
 	this.ionSeriesLabels = {a: [], b: [], c: [], x: [], y: [], z: []};
@@ -104,7 +107,7 @@ SpecViewer = function(container, opts) {
 	}
 
 	/*function createMs1Plot(zoomrange) {
-		
+
 		var data = [{data: this.Options.ms1peaks, color: "#bbbbbb", labelType: 'none', hoverable: false, clickable: false}];
 		if(this.Options.precursorPeaks) {
 			if(this.Options.precursorPeakClickFn)
@@ -112,11 +115,11 @@ SpecViewer = function(container, opts) {
 			else
 				data.push({data: this.Options.precursorPeaks, color: "#ff0000", hoverable: false, clickable: false});
 		}
-		
+
 		// the MS/MS plot should have been created by now.  This is a hack to get the plots aligned.
 		// We will set the y-axis labelWidth to this value.
 		var labelWidth = plot.getAxes().yaxis.labelWidth;
-		
+
 		var ms1plotOptions = {
 			series: { peaks: {show: true, shadowSize: 0}, shadowSize: 0},
 			grid: { show: true, 
@@ -129,21 +132,21 @@ SpecViewer = function(container, opts) {
 			xaxis: { tickLength: 2, tickColor: "#000" },
 			yaxis: { tickLength: 0, tickColor: "#fff", ticks: [], labelWidth: labelWidth }
 		};
-		
+
 		if(this.Zoomrange) {
 			ms1plotOptions.xaxis.min = this.Zoomrange.xaxis.from;
 			ms1plotOptions.xaxis.max = this.Zoomrange.xaxis.to;
 			ms1plotOptions.yaxis.min = this.Zoomrange.yaxis.from;
 			ms1plotOptions.yaxis.max = this.Zoomrange.yaxis.to;
 		}
-		
+
 		var placeholder = container.find("#msplot");
 		ms1plot = $.plot(placeholder, data, ms1plotOptions);
-		
+
 		// mark the current precursor peak
 		if(this.Options.precursorPeaks) {
 			var x,y, diff, precursorMz;
-			
+
 			// If we are given a precursor m/z use it
 			if(this.Options.precursorMz) {
 				precursorMz = this.Options.precursorMz;
@@ -153,7 +156,7 @@ SpecViewer = function(container, opts) {
 				var mass = Peptide.getNeutralMassMono();
 				precursorMz = Ion.getMz(mass, this.Options.charge);
 			}
-			
+
 			if(precursorMz) {
 				// find the closest actual peak
 				for(var i = 0; i < this.Options.precursorPeaks.length; i += 1) {
@@ -179,13 +182,13 @@ SpecViewer = function(container, opts) {
 				}
 			}
 		}
-		
+
 		// mark the scan number if we have it
 		o = this.ms1plot.getPlotOffset();
 		if(this.Options.ms1scanLabel) {
 			placeholder.append('<div style="position:absolute;left:' + (o.left + 4) + 'px;top:' + (o.top+4) + 'px;color:#666;font-size:smaller">MS1 scan: '+this.Options.ms1scanLabel+'</div>');
 		}
-		
+
 		// zoom out icon on plot right hand corner
 		if(this.Zoomrange) {
 			placeholder.append('<div id="ms1plot_zoom_out" class="zoom_out_link"  style="position:absolute; left:' + (o.left + ms1plot.width() - 40) + 'px;top:' + (o.top+4) + 'px;"></div>');
@@ -194,7 +197,7 @@ SpecViewer = function(container, opts) {
 				createMs1Plot();
 			});
 		}
-		
+
 		if(this.Options.precursorPeaks) {
 			placeholder.append('<div id="ms1plot_zoom_in" class="zoom_in_link"  style="position:absolute; left:' + (o.left + ms1plot.width() - 20) + 'px;top:' + (o.top+4) + 'px;"></div>');
 			$("#ms1plot_zoom_in").click( function() {
@@ -215,31 +218,31 @@ SpecViewer = function(container, opts) {
 			});
 		}
 	}
-	
+
 	function setupMs1PlotInteractions() {
-		
+
 		var placeholder = container.find("#msplot");
-		
-		
+
+
 		// allow clicking on plot if we have a function to handle the click
 		if(this.Options.precursorPeakClickFn != null) {
 			placeholder.bind("plotclick", function (event, pos, item) {
-				
+
 			   if (item) {
 				//highlight(item.series, item.datapoint);
 			   	this.Options.precursorPeakClickFn(item.datapoint[0]);
 			   }
 			});
 		}
-		
+
 		// allow zooming the plot
 		placeholder.bind("plotselected", function (event, ranges) {
 			createMs1Plot(ranges);
 			ms1zoomRange = ranges;
 		});
-		
+
 	}*/
-	
+
 	this.createPlot = function(datasets) {
 		var maxInt = 0;
 		for (var i in datasets) {
@@ -262,7 +265,7 @@ SpecViewer = function(container, opts) {
 			//if(po.selection.axis.indexOf("y") >= 0)
 				po.axis.y = dojo.mixin(po.axis.y, this.ZoomRange.y);
 			this.plot = new MsPlot(this.Container, datasets, po);
-			
+
 			// zoom out icon on plot right hand corner
 			/*var o = this.plot.getPlotOffset();
 			container.find("#msmsplot").append('<div id="ms2plot_zoom_out" class="zoom_out_link" style="position:absolute; left:' + (o.left + this.plot.width() - 20) + 'px;top:' + (o.top+4) + 'px"></div>');
@@ -277,12 +280,12 @@ SpecViewer = function(container, opts) {
 		this.peakLabelTypeChanged = false;
 		this.selectedNeutralLossChanged = false;
 	}
-	
+
 	// -----------------------------------------------
 	// SET UP INTERACTIVE ACTIONS
 	// -----------------------------------------------
 	/*function setupInteractions () {
-		
+
 		// ZOOMING
 		container.find("#msmsplot").bind("plotselected", function (event, ranges) {
 			this.ZoomRange = ranges;
@@ -302,7 +305,7 @@ SpecViewer = function(container, opts) {
 			}
 			this.createPlot(datasets);
 		});
-		
+
 		// TOOLTIPS
 		container.find("#msmsplot").bind("plothover", function (event, pos, item) {
 
@@ -310,11 +313,11 @@ SpecViewer = function(container, opts) {
 			  if (item) {
 				 if (previousPoint != item.datapoint) {
 					previousPoint = item.datapoint;
-					
+
 					$("#msmstooltip").remove();
 					var x = item.datapoint[0].toFixed(2),
 						y = item.datapoint[1].toFixed(2);
-					
+
 					showTooltip(item.pageX, item.pageY,
 							  "m/z: " + x + "<br>intensity: " + y);
 				 }
@@ -324,9 +327,9 @@ SpecViewer = function(container, opts) {
 			  }
 		   }
 		});
-		
+
 	}
-	
+
 	function showTooltip(x, y, contents) {
 	   $('<div id="msmstooltip">' + contents + '</div>').css( {
 		  position: 'absolute',
@@ -339,7 +342,7 @@ SpecViewer = function(container, opts) {
 		  opacity: 0.80
 	   }).appendTo("body").fadeIn(200);
 	}*/
-	
+
 	this.plotAccordingToChoices = function() {
 		var data = this.getDatasets();
 		if (data.length > 0) {
@@ -347,7 +350,7 @@ SpecViewer = function(container, opts) {
 			this.createPlot(data);
 		}
 	}
-	
+
 	// -----------------------------------------------
 	// SELECTED DATASETS
 	// -----------------------------------------------
@@ -386,11 +389,11 @@ SpecViewer = function(container, opts) {
 			var matchData = [];
 			matchData[0] = []; // peaks
 			matchData[1] = []; // labels -- ions;
-		
+
 			// sion -- theoretical ion
 			// Returns the index of the matching peak, if one is found
 			function getMatchForIon(sion, neutralLoss) {
-		
+
 				var bestPeak = null;
 				if(!neutralLoss)
 					sion.match = false; // reset;
@@ -403,18 +406,18 @@ SpecViewer = function(container, opts) {
 					ionmz = Ion.getAmmoniaLossMz(sion);
 				}
 				var bestDistance;
-		
+
 				for(var j = peakIndex; j < allPeaks.length; j += 1) {
-			
+
 					var peak = allPeaks[j];
-			
+
 					// peak is before the current ion we are looking at
 					if(peak[0] < ionmz - massTolerance)
 						continue;
-				
+
 					// peak is beyond the current ion we are looking at
 					if(peak[0] > ionmz + massTolerance) {
-			
+
 						// if we found a matching peak for the current ion, save it
 						if(bestPeak) {
 							//console.log("found match "+sion.label+", "+ionmz+";  peak: "+bestPeak[0]);
@@ -431,9 +434,9 @@ SpecViewer = function(container, opts) {
 						peakIndex = j;
 						break;
 					}
-				
+
 					// peak is within +/- massTolerance of the current ion we are looking at
-			
+
 					// if this is the first peak in the range
 					if(!bestPeak) {
 						//console.log("found a peak in range, "+peak.mz);
@@ -441,7 +444,7 @@ SpecViewer = function(container, opts) {
 						bestDistance = Math.abs(ionmz - peak[0]);
 						continue;
 					}
-			
+
 					// if peak assignment method is Most Intense
 					if(peakAssignmentType == "intense") {
 						if(peak[1] > bestPeak[1]) {
@@ -449,7 +452,7 @@ SpecViewer = function(container, opts) {
 							continue;
 						}
 					}
-			
+
 					// if peak assignment method is Closest Peak
 					if(peakAssignmentType == "close") {
 						var dist = Math.abs(ionmz - peak[0]);
@@ -471,7 +474,7 @@ SpecViewer = function(container, opts) {
 				// get match for the ion
 				peakIndex = getMatchForIon(sion);
 			}
-		
+
 			return matchData;
 		}
 
@@ -518,38 +521,45 @@ SpecViewer = function(container, opts) {
 
 		// selected ions
 		calculateTheoreticalSeries(this.Options.selectedIons);
-		
+
 		// add the un-annotated peaks
 		var data = [{data: filterPeaks(this.Options.peaks), color: "#bbbbbb"}];
-		
+
 		// add the annotated peaks
 		var seriesMatches = getSeriesMatches(this.Options.selectedIons);
 		for(var i = 0; i < seriesMatches.length; i += 1) {
 			data.push(seriesMatches[i]);
 		}
-		
+
 		// add any user specified extra peaks
 		for(var i = 0; i < this.Options.extraPeakSeries.length; i += 1) {
 			data.push(this.Options.extraPeakSeries[i]);
 		}
 		return data;
 	}
-	
+
 	this.ResetZoom = function() {
 		this.ZoomRange = null;
 		this.massErrorChanged = false;
-		this.createPlot(this.getDatasets());	
+		this.createPlot(this.getDatasets());
 	}
-	
+
 	this.SetAxisZoom = function(axis) {
 		this.PlotOptions.selection.axis = axis;
-		if(this.plot) {
+		if (this.plot) {
 			this.plot.SetSelection(axis);
 		}
 	}
-	
+
+	this.SetTooltip = function(show) {
+		this.PlotOptions.tooltip = show;
+		if (this.plot) {
+			this.plot.SetTooltip(show);
+		}
+	}
+
 	this.SetMassError = function(tol, match) {
-		this.ZoomRange = null; // zoom out fully
+		//this.ZoomRange = null; // zoom out fully
 		if (tol != this.Options.massError) {
 			this.Options.massError = tol;
 			this.massErrorChanged = true;
@@ -559,7 +569,7 @@ SpecViewer = function(container, opts) {
 		this.makeIonTable();
 		this.createPlot(ds);
 	}
-	
+
 	this.SetSelectedIons = function(ions /* [[ion, charge], ... */) {
 		var selected = []
 		for (i in ions) {
@@ -568,30 +578,30 @@ SpecViewer = function(container, opts) {
 		this.Options.selectedIons = selected;
 		this.plotAccordingToChoices();
 	}
-	
+
 	this.SetNeutralLosses = function(losses) {
 		this.Options.neutralLosses = losses;
 		this.selectedNeutralLossChanged = true;
 		this.plotAccordingToChoices();
 	}
-	
+
 	this.SetHidePrecursor = function(hide) {
 		this.Options.hidePrecursor = hide;
 		this.plotAccordingToChoices();
 	}
-	
+
 	this.SetPeakAssignmentType = function(type) {
 		this.Options.peakAssignmentType = type;
 		this.peakAssignmentTypeChanged = true;
 		this.plotAccordingToChoices();
 	}
-	
+
 	this.SetPeakLabelType = function(type) {
 		this.Options.peakLabelType = type;
 		this.peakLabelTypeChanged = true;
 		this.plotAccordingToChoices();
 	}
-	
+
 	this.SetPeptide = function(opts) {
 		var none = {
 			sequence: null,
@@ -608,7 +618,7 @@ SpecViewer = function(container, opts) {
 		this.makeIonTable();
 		this.createPlot(ds);
 	}
-	
+
 	//---------------------------------------------------------
 	// ION TABLE
 	//---------------------------------------------------------
@@ -634,12 +644,12 @@ SpecViewer = function(container, opts) {
 		function round(number) {
 			return number.toFixed(4);
 		}
-		
+
 		if (this.Options.ionTableContainer) {
 		 	// selected ions
 			var ntermIons = getSelectedIons(this.Options.selectedIons, 'n');
 			var ctermIons = getSelectedIons(this.Options.selectedIons, 'c');
-		
+
 			var myTable = '<table id="ionTable" cellpadding="2" class="font_small">';
 			myTable += "<thead>";
 			myTable += "<tr>";
@@ -656,11 +666,11 @@ SpecViewer = function(container, opts) {
 			}
 			myTable += "</tr>";
 			myTable += "</thead>";
-		
+
 			myTable += "<tbody>";
 			for(var i = 0; i < this.Options.sequence.length; i += 1) {
 				myTable +=   "<tr>";
-			
+
 				// nterm ions
 				for(var n = 0; n < ntermIons.length; n += 1) {
 					if(i < this.Options.sequence.length - 1) {
@@ -677,14 +687,14 @@ SpecViewer = function(container, opts) {
 						myTable += "<td>&nbsp;</td>"; 
 					} 
 				}
-			
+
 				myTable += "<td class='numCell'>"+(i+1)+"</td>";
 				if(Peptide.varMods[i+1])
 					myTable += "<td class='seq modified'>"+this.Options.sequence[i]+"</td>";
 				else
 					myTable += "<td class='seq'>"+this.Options.sequence[i]+"</td>";
 				myTable += "<td class='numCell'>"+(this.Options.sequence.length - i)+"</td>";
-			
+
 				// cterm ions
 				for(var c = 0; c < ctermIons.length; c += 1) {
 					if(i > 0) {
@@ -702,13 +712,13 @@ SpecViewer = function(container, opts) {
 						myTable += "<td>" +"&nbsp;"+  "</td>"; 
 					} 
 				}
-			
+
 			}
 			myTable += "</tr>";
-		
+
 			myTable += "</tbody>";
 			myTable += "</table>";
-		
+
 			this.Options.ionTableContainer.innerHTML = myTable;
 		}
 	}
@@ -723,7 +733,7 @@ SpecViewer = function(container, opts) {
 				modInfo += 'Add to C-term: <b>'+this.Options.ctermMod+'</b>';
 			}
 			modInfo += '</div>';
-		
+
 			if(this.Options.staticMods && this.Options.staticMods.length > 0) {
 				modInfo += '<div style="margin-top:5px;">';
 				modInfo += 'Static Modifications: ';
@@ -734,7 +744,7 @@ SpecViewer = function(container, opts) {
 				}
 				modInfo += '</div>';
 			}
-		
+
 			if(this.Options.variableMods && this.Options.variableMods.length > 0) {
 				var modChars = [];
 				var uniqvarmods = [];
@@ -745,7 +755,7 @@ SpecViewer = function(container, opts) {
 					modChars[mod.aa.code] = 1;
 					uniqvarmods.push(mod);
 				}  
-			
+
 				modInfo += '<div style="margin-top:5px;">';
 				modInfo += 'Variable Modifications: ';
 				for(var i = 0; i < uniqvarmods.length; i += 1) {
@@ -754,11 +764,11 @@ SpecViewer = function(container, opts) {
 				}
 				modInfo += '</div>';
 			}
-		
+
 			this.ModInfoContainer.innerHTML = modInfo;
 		}
 	}
-	
+
 	// read the static modifications
 	var parsedMods = [];
 	for(var i = 0; i < this.Options.staticMods.length; i += 1) {
@@ -766,7 +776,7 @@ SpecViewer = function(container, opts) {
 		parsedMods[i] = new Modification(AminoAcid.get(mod.aminoAcid), mod.modMass);
 	}
 	this.Options.staticMods = parsedMods;
-	
+
 	// read the variable modifications
 	var parsedMods = [];
 	for(var i = 0; i < this.Options.variableMods.length; i += 1) {
@@ -774,13 +784,13 @@ SpecViewer = function(container, opts) {
 		parsedMods[i] = new VariableModification(mod.index, mod.modMass, AminoAcid.get(mod.aminoAcid));
 	}
 	this.Options.variableMods = parsedMods;
-	
+
 	var input = new Peptide(this.Options.sequence, this.Options.staticMods, this.Options.variableMods, this.Options.ntermMod, this.Options.ctermMod);
-	
+
 	this.showModInfo();
-	
+
 	this.maxInt = getMaxInt(this.Options.peaks);
-	
+
 	var ds = this.getDatasets();
 	this.makeIonTable();
 	this.createPlot(ds); // Initial MS/MS Plot
@@ -860,7 +870,7 @@ function Peptide(seq, staticModifications, varModifications, ntermModification, 
 			Peptide.staticMods[mod.aa.code] = mod;
 		}
 	}
-	
+
 	Peptide.varMods = [];
 	if(varModifications) {
 		for(var i = 0; i < varModifications.length; i += 1) {
@@ -891,7 +901,7 @@ Peptide.getSeqMassMono = function _seqMassMono(seq, index, term) {
 			}
 		}
 	}
-	
+
 	mass = _addTerminalModMass(mass, term);
 	mass = _addResidueModMasses(mass, seq, index, term);
 	return mass;
@@ -917,7 +927,7 @@ Peptide.getSeqMassAvg = function _seqMassAvg(seq, index, term) {
 			}
 		}
 	}
-	
+
 	mass = _addTerminalModMass(mass, term);
 	mass = _addResidueModMasses(mass, seq, index, term);
 	return mass;
@@ -932,7 +942,7 @@ Peptide.getNeutralMassMono = function _massNeutralMono() {
 			mass += aa.mono;
 		}
 	}
-	
+
 	mass = _addTerminalModMass(mass, "n");
 	mass = _addTerminalModMass(mass, "c");
 	mass = _addResidueModMasses(mass, Peptide.sequence, Peptide.sequence.length, "n");
@@ -940,7 +950,7 @@ Peptide.getNeutralMassMono = function _massNeutralMono() {
 	mass = mass + Ion.MASS_H_1;
 	// add C-terminal OH
 	mass = mass + Ion.MASS_O_16 + Ion.MASS_H_1;
-	
+
 	return mass;
 }
 
@@ -953,7 +963,7 @@ Peptide.getNeutralMassAvg = function _massNeutralAvg() {
 			mass += aa.avg;
 		}
 	}
-	
+
 	mass = _addTerminalModMass(mass, "n");
 	mass = _addTerminalModMass(mass, "c");
 	mass = _addResidueModMasses(mass, Peptide.sequence, Peptide.sequence.length, "n");
@@ -961,13 +971,13 @@ Peptide.getNeutralMassAvg = function _massNeutralAvg() {
 	mass = mass + Ion.MASS_H;
 	// add C-terminal OH
 	mass = mass + Ion.MASS_O + Ion.MASS_H;
-	
+
 	return mass;
 }
 
 function _addResidueModMasses(seqMass, seq, index, term) {
 	var mass = seqMass;
-	
+
 	// add any static modifications
 	if(term == "n") {
 		for(var i = 0; i < index; i += 1) {
@@ -985,7 +995,7 @@ function _addResidueModMasses(seqMass, seq, index, term) {
 			}
 		}
 	}
-	
+
 	// add any variable modifications
 	if(term == "n") {
 		for(var i = 0; i < index; i += 1) {
@@ -1093,12 +1103,12 @@ _ions["z"][2] = Ion.Z_2;
 _ions["z"][3] = Ion.Z_3;
 
 Ion.get = function _getIon(type, charge) {
-	
+
 	return _ions[type][charge];
 }
 
 Ion.getSeriesColor = function _getSeriesColor(ion) {
-	
+
 	return _ions[ion.type][ion.charge].color;
 }
 
@@ -1130,7 +1140,7 @@ Ion.MASS_O_16 = MASS_O_16;
 
 // massType can be "mono" or "avg"
 Ion.getSeriesIon = function _getSeriesIon(ion, sequence, idxInSeq, massType) {
-	if(ion.type == "a")	
+	if(ion.type == "a")
 		return new Ion_A (sequence, idxInSeq, ion.charge, massType);
 	if(ion.type == "b")
 		return new Ion_B (sequence, idxInSeq, ion.charge, massType);
@@ -1286,7 +1296,7 @@ MsPlot = function(container, data, opts) {
 			obj.DataRange.y.max = Math.max(obj.DataRange.y.max, d[1]);
 		}
 	}
-	
+
 	function RenderFrame() {
 		function Ticks(len, spacing, view) {
 			var ticks = [];
@@ -1339,22 +1349,22 @@ MsPlot = function(container, data, opts) {
 			}
 			return ticks;
 		}
-		
-		obj.FrameGroup.createRect({x:padding[0], y:padding[1], width:obj.Width, height:obj.Height}).setFill("white").setStroke({color:"black", width:1});
+
+		obj.FrameGroup.createRect({x:padding[0] - 1, y:padding[1] - 1, width:obj.Width + 2, height:obj.Height + 2}).setFill("white").setStroke({color:"black", width:1});
 		//x-axis
 		var ticks = Ticks(obj.Width, 100, obj.ViewRange.x);
 		for (var i = 0; i < ticks.length; ++i) {
 			var x = (ticks[i] - obj.ViewRange.x.min) * obj.ScaleX + padding[0];
-			obj.FrameGroup.createLine({x1:x, y1:obj.GraphBottom, x2:x, y2:obj.GraphBottom + 3}).setStroke({color:"black", width:1});
-			obj.FrameGroup.createText({x:x, y:obj.GraphBottom + 15, text:ticks[i].toPrecision(), align:"middle"}).setFont({family:"Arial", size:"10px"}).setFill("black");
+			obj.FrameGroup.createLine({x1:x, y1:obj.GraphBottom + 1, x2:x, y2:obj.GraphBottom + 4}).setStroke({color:"black", width:1});
+			obj.FrameGroup.createText({x:x, y:obj.GraphBottom + 16, text:ticks[i].toPrecision(), align:"middle"}).setFont({family:"Arial", size:"10px"}).setFill("black");
 		}
 		//y axis
 		var scale = 100 / obj.DataRange.y.max;
 		ticks = Ticks(obj.Height, 50, {min: obj.ViewRange.y.min * scale, max: obj.ViewRange.y.max * scale});
 		for (var i = 0; i < ticks.length; ++i) {
 			var y = obj.GraphBottom - (ticks[i] - obj.ViewRange.y.min * scale) * obj.ScaleY / scale;
-			obj.FrameGroup.createLine({x1:padding[0], y1:y, x2:padding[0] - 3, y2:y}).setStroke({color:"black", width:1});
-			obj.FrameGroup.createText({x:padding[0] - 5, y:y + 4, text:ticks[i].toPrecision() + "%", align:"end"}).setFont({family:"Arial", size:"10px"}).setFill("black");
+			obj.FrameGroup.createLine({x1:padding[0] - 1, y1:y, x2:padding[0] - 4, y2:y}).setStroke({color:"black", width:1});
+			obj.FrameGroup.createText({x:padding[0] - 6, y:y + 4, text:ticks[i].toPrecision() + "%", align:"end"}).setFont({family:"Arial", size:"10px"}).setFill("black");
 		}
 	}
 
@@ -1387,17 +1397,52 @@ MsPlot = function(container, data, opts) {
 		}
 	}
 	
+	function PointOnGraph(e) {
+		/*if (e.offsetX != undefined && e.offsetY != undefined) {
+			return {x:e.offsetX, y:e.offsetY};
+		} else {
+			var x,y;
+			if (e.pageX != undefined && e.pageY != undefined) {
+				x = e.pageX - container.offsetLeft;
+				y = e.pageY - container.offsetTop;
+			} else {
+				x = e.clientX + document.body.scrollLeft + document.documentElement.scrollLeft - container.offsetLeft;
+				y = e.clientY + document.body.scrollTop + document.documentElement.scrollTop - container.offsetTop;
+			}
+			var elem = container;
+			do {
+				x -= elem.offsetLeft;
+				y -= elem.offsetTop;
+			} while(elem = elem.offsetParent);
+			return {x:x, y:y};
+		}*/
+		var elem = dojo.position(container, true);
+		return { x:e.pageX - elem.x, y:e.pageY - elem.y };
+	}
+
+	function PointInGraph(pt) {
+		return pt.x >= padding[0] && pt.x <= obj.Width + padding[0] && pt.y >= padding[1] && pt.y <= obj.Height + padding[1];
+	}
+
 	this.SetSelection = function(axis) {
 		this.Options.selection.axis = axis;
 	}
 	
+	this.SetTooltip = function(show) {
+		this.Options.tooltip = show;
+	}
+
 	this.Destroy = function() {
+		if (this.Tooltip) {
+			dijit.Tooltip.hide(this.Tooltip.pos);
+			this.Tooltip = null;
+		}
 		this.Surface.destroy();
 	}
 
 	var obj = this;
 	var padding = [50, 30, 20, 20]; //l, t, r, b
-	
+
 	this.DataRange = {
 		x: { min:Number.POSITIVE_INFINITY, max:Number.NEGATIVE_INFINITY },
 		y: { min:Number.POSITIVE_INFINITY, max:Number.NEGATIVE_INFINITY }
@@ -1414,7 +1459,7 @@ MsPlot = function(container, data, opts) {
 		x: { min:Val(opts, "axis", "x", "min", this.DataRange.x.min), max:Val(opts, "axis", "x", "max", this.DataRange.x.max) },
 		y: { min:Val(opts, "axis", "y", "min", 0), max:Val(opts, "axis", "y", "max", this.DataRange.y.max * 1.1) }
 	};
-	
+
 	this.Surface = dojox.gfx.createSurface(container, container.clientWidth, container.clientHeight);
 	this.Options = dojo.clone(opts);
 	this.FrameGroup = this.Surface.createGroup();
@@ -1434,33 +1479,9 @@ MsPlot = function(container, data, opts) {
 	this.Overlays = this.Surface.createGroup();
 	this.Interact = this.Surface.createGroup();
 	this.Interact.createRect({x:0, y:0, width:container.clientWidth, height:container.clientHeight}).setFill("rgba(0,0,0,0)").setStroke(null);
+	this.Tooltip = null;
 	this.Interact.connect("onmousedown", this, function(evt) {
 		dojo._base.event.stop(evt);
-		function PointOnGraph(e) {
-			if (e.offsetX != undefined && e.offsetY != undefined) {
-				return {x:e.offsetX, y:e.offsetY};
-			} else {
-				var x,y;
-				if (e.pageX != undefined && e.pageY != undefined) {
-					x = e.pageX - container.offsetLeft;
-					y = e.pageY - container.offsetTop;
-				} else {
-					x = e.clientX + document.body.scrollLeft + document.documentElement.scrollLeft - container.offsetLeft;
-					y = e.clientY + document.body.scrollTop + document.documentElement.scrollTop - container.offsetTop;
-				}
-				var elem = container;
-				do {
-					x -= elem.offsetLeft;
-					y -= elem.offsetTop;
-				} while(elem = elem.offsetParent);
-				return {x:x, y:y};
-			}
-		}
-		
-		function MouseInGraph(evt) {
-			var pt = PointOnGraph(evt);
-			return pt.x >= padding[0] && pt.x <= obj.Width + padding[0] && pt.y >= padding[1] && pt.y <= obj.Height + padding[1];
-		}
 
 		var pt = PointOnGraph(evt);
 		if (this.Options.selection) {
@@ -1471,7 +1492,7 @@ MsPlot = function(container, data, opts) {
 				x: pt.x < padding[0] ? padding[0] : pt.x > this.Width + padding[0] ? this.Width + padding[0] : pt.x,
 				y: pt.y < padding[1] ? padding[1] : pt.y > this.Height + padding[1] ? this.Height + padding[1] : pt.y,
 				active: false,
-				on: MouseInGraph(evt)
+				on: PointInGraph(pt)
 			};
 			this.Handlers.onmouseup = this.Interact.connect("onmouseup", this, function(evt) {
 				var pt = PointOnGraph(evt);
@@ -1503,44 +1524,6 @@ MsPlot = function(container, data, opts) {
 				}
 				this.Handlers = {}
 			});
-			this.Handlers.onmousemove = this.Interact.connect("onmousemove", this, function(evt) {
-				var pt = PointOnGraph(evt);
-				dojo._base.event.stop(evt);
-				if (this.DragPoint.active) {
-					if (this.Options.selection.axis.indexOf("x") >= 0) {
-						var x1 = this.DragPoint.x;
-						var x2 = pt.x < padding[0] ? padding[0] : pt.x > this.Width + padding[0] ? this.Width + padding[0] : pt.x;
-						this.Selection.rawNode.setAttribute("x", Math.min(x1, x2));
-						this.Selection.rawNode.setAttribute("width", Math.max(x1, x2) - Math.min(x1, x2));
-					}
-					if (this.Options.selection.axis.indexOf("y") >= 0) {
-						var y1 = this.DragPoint.y;
-						var y2 = pt.y < padding[1] ? padding[1] : pt.y > this.Height + padding[1] ? this.Height + padding[1] : pt.y;
-						this.Selection.rawNode.setAttribute("y", Math.min(y1, y2));
-						this.Selection.rawNode.setAttribute("height", Math.max(y1, y2) - Math.min(y1, y2));
-					}
-				} else {
-					if (Math.abs(pt.x - this.DragPoint.x) > 5 || Math.abs(pt.y - this.DragPoint.y) > 5) {
-						if (!this.DragPoint.on && MouseInGraph(evt)) {
-							this.DragPoint.on = true;
-						}
-						if (this.DragPoint.on) {
-							var x1 = this.DragPoint.x, y1 = this.DragPoint.y, x2 = pt.x, y2 = pt.y;
-							if (this.Options.selection.axis.indexOf("x") < 0) {
-								x1 = padding[0];
-								x2 = this.Width + padding[0];
-							}
-							if (this.Options.selection.axis.indexOf("y") < 0) {
-								y1 = padding[1];
-								y2 = this.Height + padding[1];
-							}
-							var x1 = Math.min(x1, x2), y1 = Math.min(y1, y2), x2 = Math.max(x1, x2), y2 = Math.max(y1, y2);
-							this.Selection = this.Overlays.createRect({x:x1, y:y1, width:x2 - x1, height:y2 - y1}).setFill("rgba(0,0,190,0.2)").setStroke({color:"rgba(0,0,190,0.7)", width:0.5});
-							this.DragPoint.active = true;
-						}
-					}
-				}
-			});
 			/*this.Handlers.onmouseleave = this.Surface.connect("onmouseleave", this, function(evt) {
 				console.log(evt);
 				this.Surface.connect("onmouseenter", this, function(evt) {
@@ -1548,6 +1531,91 @@ MsPlot = function(container, data, opts) {
 				});
 			});*/
 		} else if (this.Options.Dragable) {
+		}
+	});
+	this.Interact.connect("onmousemove", this, function(evt) {
+		var pt = PointOnGraph(evt);
+		if (this.DragPoint != null) {
+			dojo._base.event.stop(evt);
+			if (this.DragPoint.active) {
+				if (this.Options.selection.axis.indexOf("x") >= 0) {
+					var x1 = this.DragPoint.x;
+					var x2 = pt.x < padding[0] ? padding[0] : pt.x > this.Width + padding[0] ? this.Width + padding[0] : pt.x;
+					this.Selection.rawNode.setAttribute("x", Math.min(x1, x2));
+					this.Selection.rawNode.setAttribute("width", Math.max(x1, x2) - Math.min(x1, x2));
+				}
+				if (this.Options.selection.axis.indexOf("y") >= 0) {
+					var y1 = this.DragPoint.y;
+					var y2 = pt.y < padding[1] ? padding[1] : pt.y > this.Height + padding[1] ? this.Height + padding[1] : pt.y;
+					this.Selection.rawNode.setAttribute("y", Math.min(y1, y2));
+					this.Selection.rawNode.setAttribute("height", Math.max(y1, y2) - Math.min(y1, y2));
+				}
+			} else {
+				if (Math.abs(pt.x - this.DragPoint.x) > 5 || Math.abs(pt.y - this.DragPoint.y) > 5) {
+					if (!this.DragPoint.on && PointInGraph(pt)) {
+						this.DragPoint.on = true;
+					}
+					if (this.DragPoint.on) {
+						var x1 = this.DragPoint.x, y1 = this.DragPoint.y, x2 = pt.x, y2 = pt.y;
+						if (this.Options.selection.axis.indexOf("x") < 0) {
+							x1 = padding[0];
+							x2 = this.Width + padding[0];
+						}
+						if (this.Options.selection.axis.indexOf("y") < 0) {
+							y1 = padding[1];
+							y2 = this.Height + padding[1];
+						}
+						var x1 = Math.min(x1, x2), y1 = Math.min(y1, y2), x2 = Math.max(x1, x2), y2 = Math.max(y1, y2);
+						this.Selection = this.Overlays.createRect({x:x1, y:y1, width:x2 - x1, height:y2 - y1}).setFill("rgba(0,0,190,0.2)").setStroke({color:"rgba(0,0,190,0.7)", width:0.5});
+						this.DragPoint.active = true;
+					}
+				}
+			}
+		} else if (this.Options.tooltip) {
+			if (PointInGraph(pt)) {
+				var closest = {i:-1, j:-1, dist:Number.POSITIVE_INFINITY};
+				var m = { x: pt.x - padding[0], y: pt.y };
+				for (var i in data) {
+					for (var j in data[i].data) {
+						var d = data[i].data[j];
+						if (d[0] >= obj.ViewRange.x.min && d[0] <= obj.ViewRange.x.max && d[1] > obj.ViewRange.y.min) {
+							var a = { x: (d[0] - this.ViewRange.x.min) * this.ScaleX, y: this.GraphBottom - (d[1] - this.ViewRange.y.min) * obj.ScaleY };
+							if (a.y < m.y + 8) {
+								var b = { x: a.x, y: this.GraphBottom };
+								var dist = Math.sqrt(Math.pow((b.y - a.y) * (m.x - a.x) + (b.x - a.x) * (m.y - a.y), 2) / (Math.pow(b.x - a.x, 2) + Math.pow(b.y - a.y, 2)));
+								if (dist <= closest.dist) {
+									closest = {i:i, j:j, dist:dist};
+								}
+							}
+						}
+					}
+				}
+				if (closest.i >= 0 && closest.dist < 10) {
+					var d = data[closest.i].data[closest.j];
+					var elem = dojo.position(container, false);
+					if (this.Tooltip && this.Tooltip.i == closest.i && this.Tooltip.j == closest.j) {
+						this.Tooltip.node.style.left = Math.round((d[0] - this.ViewRange.x.min) * this.ScaleX + padding[0] + elem.x - 5) + "px";
+						this.Tooltip.node.style.top = (evt.pageY - this.Tooltip.node.offsetHeight / 2) + "px";
+					} else {
+						this.Tooltip = {i:closest.i, j:closest.j, pos:{x: Math.round((d[0] - this.ViewRange.x.min) * this.ScaleX + padding[0] + elem.x - 5), y: evt.pageY, w: 1, h: 1}};
+						dijit.Tooltip.show("m/z: " + d[0].toFixed(3) + "<br/>Intensity: " + d[1].toFixed(3), this.Tooltip.pos, ["after", "before"], false, "ltr");
+						this.Tooltip.node = dijit.Tooltip._masterTT.domNode;
+						this.Tooltip.node.setAttribute("style", "pointer-events:none;" + this.Tooltip.node.getAttribute("style"));
+					}
+				} else if (this.Tooltip) {
+					dijit.Tooltip.hide(this.Tooltip.pos);
+					this.Tooltip = null;
+				}
+			} else if (this.Tooltip) {
+				dijit.Tooltip.hide(this.Tooltip.pos);
+				this.Tooltip = null;
+			}
+		}
+	});
+	this.Interact.connect("onmouseout", this, function(evt) {
+		if (this.Tooltip) {
+			dijit.Tooltip.hide(this.Tooltip.pos);
+			this.Tooltip = null;
 		}
 	});
 }

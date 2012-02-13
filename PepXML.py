@@ -1490,6 +1490,22 @@ class SpectrumQuery(TagHandler):
 		return [spectrum, results]
 
 	@staticmethod
+	def GetHitInfos(f, query, count):
+		i = 0
+		while i < count:
+			StartPos = f.tell()
+			[RecordSize] = struct.unpack("=I", f.read(4))
+			f.seek(4 + 2 + 1 + 4 + 4 + 4 + 4 + 4, 1)
+			if DecodeStringFromFile(f) == query:
+				f.seek(StartPos + 4)
+				[search_result__offset, search_result__count, _1, _2, _3, precursor_neutral_mass, _4, _5] = struct.unpack("=IHBIIfiI", f.read(4 + 2 + 1 + 4 + 4 + 4 + 4 + 4))
+				f.seek(StartPos + search_result__offset)
+				return SearchResult.GetHitInfoAll(f, search_result__count)
+			f.seek(StartPos + RecordSize)
+			i += 1
+		return None
+
+	@staticmethod
 	def GetHitInfosSeek(f, query):
 		f.seek(query + 4)
 		[search_result__offset, search_result__count, _1, _2, _3, precursor_neutral_mass, _4, _5] = struct.unpack("=IHBIIfiI", f.read(4 + 2 + 1 + 4 + 4 + 4 + 4 + 4))
@@ -1597,6 +1613,21 @@ class MsmsRunSummary(TagHandler):
 			stat.Total += spectrum_query__count
 			f.seek(StartPos + RecordSize)
 			i += 1
+
+	@staticmethod
+	def GetHitInfos(f, query, count):
+		i = 0
+		infos = []
+		while i < count:
+			StartPos = f.tell()
+			[RecordSize, spectrum_query__count, spectrum_query__offset] = struct.unpack("=III", f.read(4 + 4 + 4))
+			f.seek(StartPos + spectrum_query__offset)
+			info = SpectrumQuery.GetHitInfos(f, query, spectrum_query__count)
+			if info != None:
+				infos += info
+			f.seek(StartPos + RecordSize)
+			i += 1
+		return infos
 
 class DatasetDerivation(TagHandler):
 	def __init__(self, stream, stat, attr):
@@ -2008,6 +2039,13 @@ class MsmsPipelineAnalysis(TagHandler):
 	@staticmethod
 	def GetAvaliableScores(f):
 		return struct.unpack("=H", f.read(2))[0]
+
+	@staticmethod
+	def GetHitInfos(f, query):
+		[scores, msms_run_summary__count, dataset_derivation__count, analysis_summary__count] = struct.unpack("=HHHH", f.read(2 + 2 + 2 + 2))
+		EatStringFromFile(f)
+		EatStringFromFile(f)
+		return MsmsRunSummary.GetHitInfos(f, query, msms_run_summary__count)
 		
 
 #externally usable functions
@@ -2086,13 +2124,18 @@ def SearchPeptide(FileName, peptide):
 	f.close()
 	return [scores, None]
 
-def GetQueryHitInfos(FileName, query):
+def GetQueryHitInfosFromOffset(FileName, query):
 	f = open(FileName, "r")
-	f.seek(4)
-	scores = MsmsPipelineAnalysis.GetAvaliableScores(f)
 	info = SpectrumQuery.GetHitInfosSeek(f, query)
 	f.close()
-	return [info, scores]
+	return info
+
+def GetQueryHitInfosFromName(FileName, query):
+	f = open(FileName, "r")
+	f.seek(4) #skip the peptide index offset
+	info = MsmsPipelineAnalysis.GetHitInfos(f, query)
+	f.close()
+	return info
 
 def GetHitInfo(FileName, query, hit):
 	f = open(FileName, "r")
@@ -2107,7 +2150,7 @@ def GetAvaliableScores(FileName):
 	f.close()
 	return scores
 
-def SearchEngineName(scores):
+def SearchEngineScoreName(scores):
 	if scores & 0x800:
 		return "Interprophet Probability"
 	elif scores & 0x400:
@@ -2118,7 +2161,20 @@ def SearchEngineName(scores):
 		return "Mascot Ionscore"
 	elif scores & 0x02:
 		return "Omssa Expect"
-	return "unknown"
+	return "Unknown"
+
+def SearchEngineName(scores):
+	if scores & 0x800:
+		return "Interprophet"
+	elif scores & 0x400:
+		return "Peptideprophet"
+	elif scores & 0x08:
+		return "X-Tandem"
+	elif scores & 0x20:
+		return "Mascot"
+	elif scores & 0x02:
+		return "Omssa"
+	return "Unknown"
 
 def SearchEngineOnlyName(scores):
 	if scores & 0x08:
@@ -2127,7 +2183,7 @@ def SearchEngineOnlyName(scores):
 		return "Mascot Ionscore"
 	elif scores & 0x02:
 		return "Omssa Expect"
-	return "unknown"
+	return "Unknown"
 
 def DefaultSortColumn(scores):
 	reverses = ["hyperscore", "ionscore", "pp_prob", "ip_prob"]
@@ -2167,17 +2223,3 @@ def PrintResults(results):
 	print("Results:")
 	for r in results:
 		print(r)
-
-#HTTP server functions
-from HttpUtil import *;
-
-def DisplayList(request, query, fname):
-	scores = GetAvaliableScores(fname)
-	score = SearchEngineName(scores)
-	sortcol = DefaultSortColumn(scores)
-	head_results = "<tr class=\\\"link\\\"><th><span onclick=\\\"SortRestults('peptide');\\\">Peptide</span></th><th><span onclick=\\\"SortRestults('protein');\\\">Protein</span></th><th><span onclick=\\\"SortRestults('massdiff');\\\">Mass Difference</span></th><th><span onclick=\\\"SortRestults('" + DefaultSortColumn(scores) + "');\\\">" + score + "</span></th></tr>"
-	head_peptides = "<tr class=\\\"link\\\"><th><span onclick=\\\"SortPeptides('spectrum');\\\">Spectrum</span></th><th><span onclick=\\\"SortPeptides('massdiff');\\\">Mass Diff</span></th><th><span onclick=\\\"SortPeptides('" + sortcol + "');\\\">" + SearchEngineName(scores) + "</span></th>";
-	if scores & 0x6C: #this is a prophet result
-		head_peptides += "<th><span onclick=\\\"SortPeptides('engine');\\\">Search Engine</span></th><th><span onclick=\\\"SortPeptides('raw');\\\">Raw Score</span></th></tr>";
-	head_peptides += "</tr>";
-	return { "type": request.matchdict["type"], "file": query["file"], "sortcol": sortcol, "head_results": Literal(head_results), "head_peptides": Literal(head_peptides) }

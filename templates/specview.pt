@@ -1,26 +1,3 @@
-<!--<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
-<html>
-	<head>
-		<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
-		<title>Lorikeet Spectrum Viewer</title>
-		<script type="text/javascript" src="res/dojo/dojo/dojo.js"></script>
-		<script type="text/javascript" src="res/scripts/main.js"></script>
-		<script type="text/javascript" src="/res/scripts/specview.js"></script>
-		<link href="/res/styles/specview.css" type="text/css" rel="stylesheet" />
-		<link href="/res/styles/list.css" type="text/css" rel="stylesheet" />
-		<script>
-			dojo.require("dojo.fx");
-			dojo.require("dojo.query");
-			dojo.require("dojo._base.connect");
-			dojo.require("dijit.Dialog");
-			dojo.require("dojo._base.connect");
-			dojo.require("dijit.DynamicTooltip");
-			dojo.require("dojox.html.ellipsis");
-			dojo.require("dojox.gfx");
-		</script>
-	</head>
-	<body>
-		<!-- END DEBUG SECTION -->
 <tal:var define="global hash python: unique_dataset()" />
 <tal:var define="global opt_charge python: max(1, int(spectrum['charge']) - 1)" />
 <div id="specview_${hash}" class="lorikeet">
@@ -135,8 +112,8 @@
 </div>
 <tal:if condition="python: peptide != None and len(peptide['peptides']) > 1">
 	<table>
-		<tr><th>Peptide</th><th>Protein</th><th>${score}</th></tr>
-		<tal:for repeat="pep peptide.peptides"><tr id="specview_${hash}_pep_${repeat.pep.index}" tal:attributes="class string:row${repeat.pep.odd}" style="cursor:pointer;" onclick="UpdateView(${repeat.pep.index});"><td><tal:echo content="python: render_peptide_lorikeet(pep)" /></td><td>${pep.protein}</td><td style="text-align:center;">${pep.score}</td></tr></tal:for>
+		<tr><th>Peptide</th><th>Protein</th><th>Engine</th><th>Engine Score</th></tr>
+		<tal:for repeat="pep peptide.peptides"><tr id="specview_${hash}_pep_${repeat.pep.index}" tal:attributes="class string:row${repeat.pep.odd}" style="cursor:pointer;" onclick="UpdateView(${repeat.pep.index});"><td><tal:echo content="python: render_peptide_lorikeet(pep)" /></td><td>${pep.protein}</td><td style="text-align:center;">${pep.engine}</td><td style="text-align:center;">${pep.score}</td></tr></tal:for>
 	</table>
 </tal:if>
 <script>
@@ -279,10 +256,11 @@
 			SpecView.SetAxisZoom(zoom);
 		});
 	});
-	dojo.query("#resetZoom_${hash}", container).forEach(function(node, index, arr) {
-		dojo.connect(node, "onclick", null, function(evt) {
-			SpecView.ResetZoom();
-		});
+	dojo.connect(dojo.byId("resetZoom_${hash}"), "onclick", null, function(evt) {
+		SpecView.ResetZoom();
+	});
+	dojo.connect(dojo.byId("enableTooltip_${hash}"), "onclick", null, function(evt) {
+		SpecView.SetTooltip(dojo.byId("enableTooltip_${hash}").checked);
 	});
 
 	/*function printPlot() {
@@ -341,6 +319,3 @@
 		});
 	}*/
 </script>
-<!-- BEGIN DEBUG SECTION
-	</body>
-</html> -->
