@@ -11,7 +11,6 @@ from pyramid.httpexceptions import *
 import tempfile
 import urllib
 import re
-from HttpUtil import *
 import Reference
 import struct
 from Common import EncodeStringToFile, DecodeStringFromFile, TryGet, EncodeTermsBasic, EncodeTermsAdvanced
