@@ -99,7 +99,7 @@ RenderCoverage = function(chartdiv, sequence, peptides) {
 				cls = "row";
 			} else {
 				this.Boxes[i].setFill([255, 0, 0, 0.3]);
-				cls = "decoy";
+				cls = "rowdecoy";
 			}
 		}
 		dojo.byId(this.Container + "_" + i).setAttribute("class", cls + (((i % 2) == 0) ? "" : "odd"));

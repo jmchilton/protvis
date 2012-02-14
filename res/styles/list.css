@@ -7,8 +7,10 @@ th.sort_asc {padding-right: 15px;background:url(/res/images/sort_asc.png) right 
 th.sort_dsc {padding-right: 15px;background:url(/res/images/sort_dsc.png) right no-repeat #B8B8E0;}
 tr.row {background-color: #E9E9FF;}
 tr.rowodd {background-color: #DDDDFF;}
-tr.decoy {background-color: #FFE9E9;}
-tr.decoyodd {background-color: #FFDDDD;}
+tr.rowdecoy {background-color: #FFE9E9;}
+tr.rowdecoyodd {background-color: #FFDDDD;}
+tr.stuckdecoy {background-color: #E9FFE9;}
+tr.stuckdecoyodd {background-color: #DDFFDD;}
 tr.stuck {background-color: #E9FFE9;}
 tr.stuckodd {background-color: #DDFFDD;}
 tr.stuckover {background-color: #C9FFC9;}

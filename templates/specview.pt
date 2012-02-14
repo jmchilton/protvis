@@ -113,7 +113,7 @@
 <tal:if condition="python: peptide != None and len(peptide['peptides']) > 1">
 	<table>
 		<tr><th>Peptide</th><th>Protein</th><th>Engine</th><th>Engine Score</th></tr>
-		<tal:for repeat="pep peptide.peptides"><tr id="specview_${hash}_pep_${repeat.pep.index}" tal:attributes="class string:row${repeat.pep.odd}" style="cursor:pointer;" onclick="UpdateView(${repeat.pep.index});"><td><tal:echo content="python: render_peptide_lorikeet(pep)" /></td><td>${pep.protein}</td><td style="text-align:center;">${pep.engine}</td><td style="text-align:center;">${pep.score}</td></tr></tal:for>
+		<tal:for repeat="pep peptide.peptides"><tr id="specview_${hash}_pep_${repeat.pep.index}" tal:attributes="class string:${pep.style}${repeat.pep.odd}" style="cursor:pointer;" onclick="UpdateView(${repeat.pep.index});"><td><tal:echo content="python: render_peptide_lorikeet(pep)" /></td><td>${pep.protein}</td><td style="text-align:center;">${pep.engine}</td><td style="text-align:center;">${pep.score}</td></tr></tal:for>
 	</table>
 </tal:if>
 <script>
@@ -228,7 +228,6 @@
 		});
 		dojo.query("input[name$=peakAssignOpt]", container).forEach(function(node, index, arr) {
 			dojo.connect(node, "onclick", null, function(evt) {
-				
 				SpecView.SetPeakAssignmentType(dojo.query("input[name$=peakAssignOpt]:checked", container)[0].value);
 			});
 		});
@@ -237,14 +236,12 @@
 				SpecView.SetPeakLabelType(dojo.query("input[name$=peakLabelOpt]:checked", container)[0].value);
 			});
 		});
-		/*dojo.query("#deselectIonsLink_${hash}", container).forEach(function(node, index, arr) {
-			dojo.connect(node, "onclick", null, function(evt) {
-				ionChoiceContainer.find("input:checkbox:checked").each(function() {
-					node.checked = "";
-				});
-				plotAccordingToChoices();
+		dojo.connect(dojo.byId("deselectIonsLink_${hash}"), "onclick", null, function(evt) {
+			dojo.query("#ion_choice_${hash} input:checked").forEach(function(node, index, arr) {
+				node.checked = false;
 			});
-		});*/
+			SpecView.SetSelectedIons([]);
+		});
 	</tal:else>
 
 	dojo.query("#zoom_${hash} input", container).forEach(function(node, index, arr) {

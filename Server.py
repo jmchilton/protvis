@@ -226,7 +226,7 @@ def GetQueryFileName(query):
 
 def DecodeDecoy(protein):
 	if decoy_regex.match(protein.lower()) != None:
-		return "decoy"
+		return "rowdecoy"
 	return "row"
 
 def SortPeptides(results, sortcol, score, reverse = False):
@@ -477,9 +477,8 @@ def ListResults(req):
 		elif limit > 0:
 			results = results[:limit]
 		for r in results:
-			h = r.HitInfo
 			try:
-				r.style = DecodeDecoy(h["protein"])
+				r.style = DecodeDecoy(r.HitInfo["protein"])
 			except:
 				r.style = "row"
 		info = { "total": total, "matches": matches, "start": start + 1, "end": start + len(results), "type": t, "score": score, "file": req.GET["file"], "datafile": n, "query": req.GET["q"], "datas": links.Types() }
@@ -700,6 +699,11 @@ def Spectrum(req):
 			peptide["peptides"] += PepXML.GetQueryHitInfosFromName(fname + "_" + str(i), spectrum)
 		i += 1
 	peptide["peptides"] = sorted([PeptideInfo(p) for p in peptide["peptides"]], key = lambda key: key["sort"])
+	for r in peptide["peptides"]:
+		try:
+			r["style"] = DecodeDecoy(r["protein"])
+		except:
+			r["style"] = "row"
 	parser = Parsers[filetype]
 	if offset == None and datafile != None:
 		offset = parser.GetOffsetFromSpectrum(fname + "_" + str(datafile), spectrum)

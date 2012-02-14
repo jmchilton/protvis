@@ -57,7 +57,8 @@
 			var Tooltips = new Array();
 			var CurrentResultsID = 0;
 			var CurrentPeptide = null;
-			var CurrentContents = null;
+			var CurrentContents = {};
+			var CurrentPage = null;
 			var CurrentDataset = new Location(${index});
 			var LastDataset = new Location(${index});
 			var ResultsVisible;
@@ -209,6 +210,7 @@
 			}
 			
 			function SwitchDataset(dataset, table) {
+				CurrentPage = dataset;
 				var set = (dataset instanceof Location) ? dataset : new Location(dataset, table);
 				if (set.Table != CurrentDataset.Table) {
 					dojo.fx.combine([
@@ -238,7 +240,7 @@
 			}
 
 			function LoadContents(container, url) {
-				CurrentContents = { url: BaseUrl(url), container: container };
+				CurrentContents[container] = { url: BaseUrl(url), container: container };
 				var oldhits = dojo.byId("data_" + container).firstChild;
 				if (oldhits == null) {
 					var anim = dojo.fx.wipeIn({
@@ -319,8 +321,8 @@
 			}
 			
 			function FilterCurrent(filter) {
-				if (CurrentContents != null) {
-					LoadContents(CurrentContents["container"], CurrentContents["url"] + "q=" + encodeURIComponent(filter));
+				if (CurrentContents[CurrentPage] != null) {
+					LoadContents(CurrentContents[CurrentPage]["container"], CurrentContents[CurrentPage]["url"] + "q=" + encodeURIComponent(filter));
 				}
 			}
 			
@@ -464,6 +466,7 @@
 
 			dojo.ready(function() {
 				// Populate content initially
+				CurrentPage = "${index}";
 				LoadContents("${index}", "/results?file=${file}&n=${index}&type=${type}&q=&max=50");
 				DetailsDialog = new dijit.Dialog({ style: "width: 400px" });
 				<tal:if condition="python: nfiles > 1">
