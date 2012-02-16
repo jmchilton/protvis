@@ -118,6 +118,10 @@ RenderCoverage = function(chartdiv, sequence, peptides) {
 		this.ApplyState(index, 1);
 	}
 	
+	function PointOnGraph(e, elem) {
+		return { x:e.pageX - elem.x, y:e.pageY - elem.y };
+	}
+	
 	var Height = 20;
 	this.AAs = sequence.length;
 	this.Container = chartdiv;
@@ -135,32 +139,42 @@ RenderCoverage = function(chartdiv, sequence, peptides) {
 		this.Boxes[i] = this.Group.createRect({x:this.Offsets[i], y:0, width:p.length, height:Height}).setFill([0, 0, 255, 0.3]);
 		this.Stuck[i] = 0;
 	}
-	this.Surface.connect("onmousemove", this, function(evt) {
+	this.InteractGroup = this.Surface.createGroup();
+	this.Background = this.InteractGroup.createRect({x:0, y:0, width:sequence.length, height:Height}).setFill("rgba(0,0,0,0)").setStroke(null);
+	this.InteractGroup.connect("onmousemove", this, function(evt) {
+		var elem = dojo.position(this.Surface.rawNode, true);
+		var pt = PointOnGraph(evt, elem);
 		var s = this.Surface.rawNode;
 		var boxes = this.Group.rawNode.childNodes;
-		var mx = evt.offsetX * (s.viewBox.baseVal.width / s.clientWidth);
+		var mx = pt.x * (s.viewBox.baseVal.width / elem.w);
 		for (var i = 0; i < boxes.length; ++i) {
 			var b = boxes[i];
-			if (mx >= b.x.baseVal.value && mx <= b.x.baseVal.value + b.width.baseVal.value) {
+			var x = b.x ? b.x.baseVal.value : b.getAttribute("x");
+			var w = b.width ? b.width.baseVal.value : b.getAttribute("width");
+			if (mx >= x && mx <= x + w) {
 				this.ApplyState(i, 1);
 			} else {
 				this.ApplyState(i, 0);
 			}
 		}
 	});
-	this.Surface.connect("click", this, function(evt) {
+	this.InteractGroup.connect("click", this, function(evt) {
+		var elem = dojo.position(this.Surface.rawNode, true);
+		var pt = PointOnGraph(evt, elem);
 		var s = this.Surface.rawNode;
 		var boxes = this.Group.rawNode.childNodes;
-		var mx = evt.offsetX * (s.viewBox.baseVal.width / s.clientWidth);
+		var mx = pt.x * (s.viewBox.baseVal.width / elem.w);
 		for (var i = 0; i < boxes.length; ++i) {
 			var b = boxes[i];
-			if (mx >= b.x.baseVal.value && mx <= b.x.baseVal.value + b.width.baseVal.value) {
+			var x = b.x ? b.x.baseVal.value : b.getAttribute("x");
+			var w = b.width ? b.width.baseVal.value : b.getAttribute("width");
+			if (mx >= x && mx <= x + w) {
 				this.Stuck[i] = !this.Stuck[i];
 				this.ApplyState(i, 1);
 			}
 		}
 	});
-	this.Surface.connect("onmouseleave", this, function(evt) {
+	this.InteractGroup.connect("onmouseleave", this, function(evt) {
 		for (var i in this.Boxes) {
 			this.ApplyState(i, 0);
 		}
