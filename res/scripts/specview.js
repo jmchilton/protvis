@@ -1398,24 +1398,6 @@ MsPlot = function(container, data, opts) {
 	}
 	
 	function PointOnGraph(e) {
-		/*if (e.offsetX != undefined && e.offsetY != undefined) {
-			return {x:e.offsetX, y:e.offsetY};
-		} else {
-			var x,y;
-			if (e.pageX != undefined && e.pageY != undefined) {
-				x = e.pageX - container.offsetLeft;
-				y = e.pageY - container.offsetTop;
-			} else {
-				x = e.clientX + document.body.scrollLeft + document.documentElement.scrollLeft - container.offsetLeft;
-				y = e.clientY + document.body.scrollTop + document.documentElement.scrollTop - container.offsetTop;
-			}
-			var elem = container;
-			do {
-				x -= elem.offsetLeft;
-				y -= elem.offsetTop;
-			} while(elem = elem.offsetParent);
-			return {x:x, y:y};
-		}*/
 		var elem = dojo.position(container, true);
 		return { x:e.pageX - elem.x, y:e.pageY - elem.y };
 	}
@@ -1598,7 +1580,7 @@ MsPlot = function(container, data, opts) {
 						this.Tooltip.node.style.top = (evt.pageY - this.Tooltip.node.offsetHeight / 2) + "px";
 					} else {
 						this.Tooltip = {i:closest.i, j:closest.j, pos:{x: Math.round((d[0] - this.ViewRange.x.min) * this.ScaleX + padding[0] + elem.x - 5), y: evt.pageY, w: 1, h: 1}};
-						dijit.Tooltip.show("m/z: " + d[0].toFixed(3) + "<br/>Intensity: " + d[1].toFixed(3), this.Tooltip.pos, ["after", "before"], false, "ltr");
+						dijit.Tooltip.show('<div style="white-space:nowrap;">m/z: ' + d[0].toFixed(3) + "<br/>Intensity: " + d[1].toFixed(3) + "</div>", this.Tooltip.pos, ["after", "before"], false, "ltr");
 						this.Tooltip.node = dijit.Tooltip._masterTT.domNode;
 						this.Tooltip.node.setAttribute("style", "pointer-events:none;" + this.Tooltip.node.getAttribute("style"));
 					}
