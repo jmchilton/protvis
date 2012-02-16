@@ -22,7 +22,7 @@ SpecViewer = function(container, opts) {
 		precursorPeaks: null,
 		precursorPeakClickFn: null,
 		zoomMs1: false,
-		massError: 0.5, // mass tolerance for labeling peaks
+		massError: 0.65, // mass tolerance for labeling peaks
 		extraPeakSeries:[],
 		hidePrecursor: true,
 		peakAssignmentType: "intense", // intense OR close

@@ -49,7 +49,7 @@
 									<nobr><input type="radio" name="massType" value="mono" checked="checked"/><b>Mono</b> <input type="radio" name="massType" value="avg"/><b>Avg</b></nobr>
 								</div>
 								<div style="margin-top:10px;">
-									<nobr>Mass Tol: <input id="massError_${hash}" type="text" value="0.5" size="4"/></nobr>
+									<nobr>Mass Tol: <input id="massError_${hash}" type="text" value="0.65" size="4"/></nobr>
 								</div>
 								<div style="margin-top:10px;" align="center">
 									<input id="update_${hash}" name="massType" type="button" value="Update"/>
@@ -189,7 +189,7 @@
 			precursorMz: ${peptide.precursor_neutral_mass},
 			fileName: "${spectrum.file}",
 			sequence: pep[0],
-			variableMods: pep[1] ? pep[1] : [],
+			staticMods: pep[1] ? pep[1] : [],
 			ntermMod: pep[2] ? pep[2] : 0,
 			ctermMod: pep[3] ? pep[3] : 0,
 			peaks: peaks,
