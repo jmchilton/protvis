@@ -1209,46 +1209,16 @@ class TerminalModification(TagHandler):
 		print("NYI: TerminalModification") #FIXME: implement
 
 class Parameter(TagHandler):
-	"""
-	struct Parameter {
-		BYTE OptionalFlags
-		String name;
-		String value
-		String type; //ONLY IF (OptionalFlags & 0x01)
-	}
-	"""
+	class Value:
+		def __init__(self, value, t = None):
+			self.Value = value
+			self.Type = t
+
+		def __str__(self):
+			return self.Value
 
 	def __init__(self, stream, stat, attr):
-		"""t = TryGet(attr, "value")
-		stream.write(struct.pack("=B", EncodeOptional(t)))
-		EncodeStringToFile(stream, attr["name"])
-		EncodeStringToFile(stream, attr["value"])
-		if t != None:
-			EncodeStringToFile(stream, t)"""
-		return
-		
-	@staticmethod
-	def SearchAll(f, stat, count, prepend):
-		"""i = 0
-		while i < count:
-			[OptionalFlags] = struct.unpack("=B", f.read(1))
-			stat.SearchItemString(prepend + "_name", DecodeStringFromFile(f))
-			stat.SearchItemString(prepend + "_value", DecodeStringFromFile(f))
-			if OptionalFlags & 0x01:
-				stat.SearchItemString(prepend + "_type", DecodeStringFromFile(f))"""
-		return
-
-	@staticmethod
-	def GetInfoAll(f, count):
-		"""i = 0
-		results = {}
-		while i < count:
-			[OptionalFlags] = struct.unpack("=B", f.read(1))
-			results[DecodeStringFromFile(f)] = DecodeStringFromFile(f)
-			if OptionalFlags & 0x01:
-				DecodeStringFromFile(f) #we don't care about this
-			i += 1
-		return results"""
+		stream[attr["name"]] = Parameter.Value(attr["value"], TryGet(attr, "type"))
 
 class SearchSummary(TagHandler):
 	"""
@@ -1265,16 +1235,15 @@ class SearchSummary(TagHandler):
 		//unsigned int search_id;
 		String out_data_type; //ONLY IF (OptionalFlags & 0x01)
 		String out_data; //ONLY IF (OptionalFlags & 0x02)
-		SearchDatabase search_database; //ONLY IF (OptionalFlags & 0x04)
-		EnzymaticSearchConstraint enzymatic_search_constraint; //ONLY IF (OptionalFlags & 0x08)
+		float mass_tolerance; //ONLY IF (OptionalFlags & 0x04)
+		SearchDatabase search_database; //ONLY IF (OptionalFlags & 0x08)
+		EnzymaticSearchConstraint enzymatic_search_constraint; //ONLY IF (OptionalFlags & 0x10)
 		WORD sequence_search_constraint__count;
 		WORD aminoacid_modification__count;
 		WORD terminal_modification__count;
-		WORD parameter__count;
 		SequenceSearchConstraint sequence_search_constraint[sequence_search_constraint__count];
 		AminoacidModification aminoacid_modification[aminoacid_modification__count];
 		TerminalModification terminal_modification[terminal_modification__count];
-		Parameter parameter[parameter__count];
 	}
 	"""
 
@@ -1299,26 +1268,35 @@ class SearchSummary(TagHandler):
 		self.SequenceSearchConstraint = None
 		self.AminoacidModification = None
 		self.TerminalModification = None
-		self.Parameter = None
+		self.Parameters = {}
 
 	def End(self):
 		EndPos = self.Stream.tell()
 		self.Stream.seek(self.StartPos)
-		self.Stream.write(struct.pack("=B", EncodeOptional(self.out_data_type, self.out_data, self.SearchDatabase, self.EnzymaticSearchConstraint)))
+		mass_tolerance = TryGet(self.Parameters, "ITOL")
+		if mass_tolerance != None:
+			if self.Parameters["ITOLU"].Value.lower() != "da":
+				mass_tolerance = None
+		if mass_tolerance == None:
+			mass_tolerance = TryGet(self.Parameters, "spectrum, fragment monoisotopic mass error")
+			if mass_tolerance != None:
+				if self.Parameters["spectrum, fragment monoisotopic mass error units"].Value.lower() != "daltons":
+					mass_tolerance = None
+		self.Stream.write(struct.pack("=B", EncodeOptional(self.out_data_type, self.out_data, mass_tolerance, self.SearchDatabase, self.EnzymaticSearchConstraint)))
 		self.Stream.seek(EndPos)
+		if mass_tolerance != None:
+			self.Stream.write(struct.pack("=f", float(mass_tolerance.Value)))
 		if self.SearchDatabase != None:
 			self.Stream.write(self.SearchDatabase.getvalue())
 		if self.EnzymaticSearchConstraint != None:
 			self.Stream.write(self.EnzymaticSearchConstraint.getvalue())
-		self.Stream.write(struct.pack("=HHHH", self.SequenceSearchConstraintCount, self.AminoacidModificationCount, self.TerminalModificationCount, self.ParameterCount))
+		self.Stream.write(struct.pack("=HHH", self.SequenceSearchConstraintCount, self.AminoacidModificationCount, self.TerminalModificationCount))
 		if self.SequenceSearchConstraint != None:
 			self.Stream.write(self.SequenceSearchConstraint.getvalue())
 		if self.AminoacidModification != None:
 			self.Stream.write(self.AminoacidModification.getvalue())
 		if self.TerminalModification != None:
 			self.Stream.write(self.TerminalModification.getvalue())
-		if self.Parameter != None:
-			self.Stream.write(self.Parameter.getvalue())
 
 	def BeginChild(self, name):
 		if name == "search_database":
@@ -1344,9 +1322,20 @@ class SearchSummary(TagHandler):
 				self.TerminalModification = StringIO()
 			return self.TerminalModification
 		if name == "parameter":
-			if self.Parameter == None:
-				self.Parameter = StringIO()
-			return self.Parameter
+			return self.Parameters
+
+	@staticmethod
+	def GetMassTolerance(f):
+		[OptionalFlags] = struct.unpack("=B", f.read(1))
+		if OptionalFlags & 0x04:
+			EatStringFromFile(f)
+			EatStringFromFile(f)
+			if OptionalFlags & 0x01:
+				EatStringFromFile(f)
+			if OptionalFlags & 0x02:
+				EatStringFromFile(f)
+			return struct.unpack("=f", f.read(4))[0]
+		return None
 
 class DatabaseRefreshTimestamp(TagHandler):
 	"""
@@ -1533,6 +1522,7 @@ class MsmsRunSummary(TagHandler):
 		DWORD RecordSize; //Size in bytes of this record, not including this 4 byte value
 		DWORD spectrum_query__count;
 		DWORD spectrum_query__offset;
+		DWORD search_summary__offset;
 		DWORD OtherDataOffset;
 		BYTE OptionalFlags;
 		String base_name;
@@ -1544,8 +1534,8 @@ class MsmsRunSummary(TagHandler):
 		String msMassAnalyzer; //ONLY IF (OptionalFlags & 0x08)
 		String msDetector; //ONLY IF (OptionalFlags & 0x10)
 		SpectrumQuery spectrum_query[spectrum_query__count];
-		SampleEnzyme sample_enzyme;
 		SearchSummary search_summary;
+		SampleEnzyme sample_enzyme;
 		//AnalysisTimestamp analysis_timestamp[];
 	}
 	"""
@@ -1579,8 +1569,8 @@ class MsmsRunSummary(TagHandler):
 
 	def End(self):
 		OtherDataOffset = self.Stream.tell()
-		self.Stream.write(self.SampleEnzyme.getvalue())
 		self.Stream.write(self.SearchSummary.getvalue())
+		self.Stream.write(self.SampleEnzyme.getvalue())
 		#AnalysisTimestamp
 		EndPos = self.Stream.tell()
 		self.Stream.seek(self.StartPos)
@@ -1617,17 +1607,38 @@ class MsmsRunSummary(TagHandler):
 	@staticmethod
 	def GetHitInfos(f, query, count):
 		i = 0
-		infos = []
 		while i < count:
 			StartPos = f.tell()
-			[RecordSize, spectrum_query__count, spectrum_query__offset] = struct.unpack("=III", f.read(4 + 4 + 4))
+			[RecordSize, spectrum_query__count, spectrum_query__offset, OtherDataOffset] = struct.unpack("=IIII", f.read(4 + 4 + 4 + 4))
 			f.seek(StartPos + spectrum_query__offset)
 			info = SpectrumQuery.GetHitInfos(f, query, spectrum_query__count)
 			if info != None:
-				infos += info
+				f.seek(StartPos + OtherDataOffset)
+				mass_tolerance = SearchSummary.GetMassTolerance(f)
+				for inf in info:
+					inf["masstol"] = mass_tolerance
+				return info
 			f.seek(StartPos + RecordSize)
 			i += 1
-		return infos
+		return None
+
+	@staticmethod
+	def GetHitInfosSeek(f, query, count):
+		i = 0
+		while i < count:
+			StartPos = f.tell()
+			[RecordSize, spectrum_query__count, spectrum_query__offset, OtherDataOffset] = struct.unpack("=IIII", f.read(4 + 4 + 4 + 4))
+			if StartPos + RecordSize > query:
+				info = SpectrumQuery.GetHitInfosSeek(f, query)
+				if info != None:
+					f.seek(StartPos + OtherDataOffset)
+					mass_tolerance = SearchSummary.GetMassTolerance(f)
+					for inf in info["peptides"]:
+						inf["masstol"] = mass_tolerance
+				return info
+			f.seek(StartPos + RecordSize)
+			i += 1
+		return None
 
 class DatasetDerivation(TagHandler):
 	def __init__(self, stream, stat, attr):
@@ -1656,9 +1667,9 @@ class PosmodelDistribution(TagHandler):
 		evd
 	}
 	struct PosmodelDistribution {
-		WORD parameter__count;
+		//WORD parameter__count;
 		Type type;
-		Parameter parameter[parameter__count];
+		//Parameter parameter[parameter__count];
 	}
 	"""
 
@@ -1677,8 +1688,9 @@ class PosmodelDistribution(TagHandler):
 
 	def BeginChild(self, name):
 		if name == "parameter":
-			self.Params = 1
-			return self.Stream
+			#self.Params += 1
+			#return self.Stream
+			return NullStream()
 		raise ValueError(name)
 		
 class NegmodelDistribution(TagHandler):
@@ -1692,9 +1704,9 @@ class NegmodelDistribution(TagHandler):
 		evd
 	}
 	struct NegmodelDistribution {
-		WORD parameter__count;
+		//WORD parameter__count;
 		Type type;
-		Parameter parameter[parameter__count];
+		//Parameter parameter[parameter__count];
 	}
 	"""
 
@@ -1713,8 +1725,9 @@ class NegmodelDistribution(TagHandler):
 
 	def BeginChild(self, name):
 		if name == "parameter":
-			self.Params = 1
-			return self.Stream
+			#self.Params += 1
+			#return self.Stream
+			return NullStream()
 		raise ValueError(name)
 		
 class MixturemodelDistribution(TagHandler):
@@ -2046,6 +2059,13 @@ class MsmsPipelineAnalysis(TagHandler):
 		EatStringFromFile(f)
 		EatStringFromFile(f)
 		return MsmsRunSummary.GetHitInfos(f, query, msms_run_summary__count)
+
+	@staticmethod
+	def GetHitInfosSeek(f, query):
+		[scores, msms_run_summary__count, dataset_derivation__count, analysis_summary__count] = struct.unpack("=HHHH", f.read(2 + 2 + 2 + 2))
+		EatStringFromFile(f)
+		EatStringFromFile(f)
+		return MsmsRunSummary.GetHitInfosSeek(f, query, msms_run_summary__count)
 		
 
 #externally usable functions
@@ -2126,7 +2146,8 @@ def SearchPeptide(FileName, peptide):
 
 def GetQueryHitInfosFromOffset(FileName, query):
 	f = open(FileName, "r")
-	info = SpectrumQuery.GetHitInfosSeek(f, query)
+	f.seek(4) #skip the peptide index offset
+	info = MsmsPipelineAnalysis.GetHitInfosSeek(f, query)
 	f.close()
 	return info
 

@@ -196,6 +196,9 @@ class NullStream:
 	def seek(self, offset, origin = 0):
 		return
 
+	def __setitem__(self, name, val):
+		return
+
 class TagHandler(object):
 	def __new__(cls, stream, *args, **kwargs):
 		obj = object.__new__(cls, *args, **kwargs)

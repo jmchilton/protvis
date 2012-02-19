@@ -75,10 +75,7 @@ class JobManager:
 			data.write(struct.pack("=I", len(job["files"])))
 			for t, f in job["files"]:
 				if t != None and t.Type > f.Type:
-					print f, t.Type, f.Type
 					f.Type = t.Type
-				else:
-					print f, None
 				data.write(struct.pack("=BH", f.Type, len(f.Depends)))
 				for d in f.Depends:
 					data.write(struct.pack("=H", test(d < 0, 0xFFFF, d)))
@@ -584,7 +581,7 @@ def SelectInfo(req):
 
 def Spectrum(req):
 	def PeptideInfo(pep):
-		peptide = { "peptide": pep["peptide"], "modification_info": pep["modification_info"], "protein": pep["protein"], "sort":pep["expect"] }
+		peptide = { "peptide": pep["peptide"], "modification_info": pep["modification_info"], "protein": pep["protein"], "sort":pep["expect"], "masstol": pep["masstol"] }
 		if "hyperscore" in pep:
 			peptide["engine"] = "X-Tandem"
 			peptide["score"] = str(pep["hyperscore"])
@@ -696,7 +693,9 @@ def Spectrum(req):
 		peptide = {"peptides":[], "precursor_neutral_mass":0}
 	for f in links.Links:
 		if datafile in f.Depends and f.Type < Reference.FileType.PEPXML_COMPARE and i != pep_datafile:
-			peptide["peptides"] += PepXML.GetQueryHitInfosFromName(fname + "_" + str(i), spectrum)
+			#peptide["peptides"] += PepXML.GetQueryHitInfosFromName(fname + "_" + str(i), spectrum)
+			p = PepXML.GetQueryHitInfosFromName(fname + "_" + str(i), spectrum)
+			peptide["peptides"] += p
 		i += 1
 	peptide["peptides"] = sorted([PeptideInfo(p) for p in peptide["peptides"]], key = lambda key: key["sort"])
 	for r in peptide["peptides"]:
