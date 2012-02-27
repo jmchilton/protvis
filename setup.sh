@@ -18,7 +18,7 @@ get() {
 	else
 		if [ "$2" = "" ]; then 
 			echo "Failed to install $1."
-			echo "The following packages are required before running: python java python-setuptools python-virtualenv"
+			echo "The following packages are required before running: make python python-setuptools python-virtualenv"
 			echo "Exiting."
 			exit
 		else
@@ -51,6 +51,7 @@ import $1
 }
 
 bin_need python
+bin_need make
 py_need "setuptools" "wget http://peak.telecommunity.com/dist/ez_setup.py -O- | super python"
 py_need "virtualenv" "easy_install virtualenv"
 
@@ -91,6 +92,11 @@ echo "The environment has been set up"
 cd ../res
 rm dojo 2>/dev/null
 ln -s dojo_mini dojo
+cd ..
+
+echo "Compiling C++ bindings"
+cd ../C
+make -s
 cd ..
 
 echo "You can now run the program by typing ./run"
