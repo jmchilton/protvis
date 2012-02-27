@@ -213,8 +213,16 @@
 				CurrentPage = dataset;
 				var set = (dataset instanceof Location) ? dataset : new Location(dataset, table);
 				if (set.Table != CurrentDataset.Table) {
+					var cur = CurrentDataset.Table;
 					dojo.fx.combine([
-						dojo.fx.wipeOut({ node: dojo.byId(CurrentDataset.Table) }),
+						dojo.fx.wipeOut({
+							node: dojo.byId(CurrentDataset.Table),
+							onEnd: function(node) {
+								if (cur == "data_spectrum") {
+									node.innerHTML = "";
+								}
+							}
+						}),
 						dojo.fx.wipeIn({ node: dojo.byId(set.Table) })
 					]).play();
 					CurrentDataset = set;

@@ -33,7 +33,7 @@ class Spectrum:
 	"""
 	struct Ion {
 		float mass;
-		float intensity; //ONLY IF (Spectrum.OptionalFlags & 0x02)
+		float intensity;
 	}
 	struct Spectrum {
 		//String title; //stored in index
@@ -54,7 +54,7 @@ class Spectrum:
 		intensity = TryGet(TryGet(self.ions, 0), 1)
 		for p in self.params:
 			if p.name == "PEPMASS":
-				pepmass = float(p.value)
+				pepmass = float(p.value.split(" ")[0])
 			elif p.name == "TITLE":
 				self.title = p.value
 		self.stream.write(struct.pack("=BI", EncodeOptional(pepmass, intensity), len(self.ions)))
@@ -178,7 +178,7 @@ class Header:
 				f.seek(4, 1)
 			i += 1
 
-def ToBinary(f, dest = None, links = None):
+def ToBinary(f, dest = None):
 	import Reference
 	header = Header(dest)
 	spectrum = None
@@ -233,7 +233,6 @@ def GetOffsetFromSpectrum(filename, spectrum):
 
 def Search(filename, terms):
 	f = open(filename, "r")
-	print terms
 	stat = SearchStatus(terms)
 	Header.search_spectrums(f, stat)
 	f.close()

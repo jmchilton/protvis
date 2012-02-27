@@ -203,7 +203,7 @@ class ConverterThread(Thread):
 			s = open(self.Source, "r")
 			opened = True
 		d = open(self.Dest, "w")
-		self.Type = self.Module.ToBinary(s, d, self.Links)
+		self.Type = self.Module.ToBinary(s, d)
 		if opened:
 			s.close()
 		d.close()
@@ -695,7 +695,8 @@ def Spectrum(req):
 		if datafile in f.Depends and f.Type < Reference.FileType.PEPXML_COMPARE and i != pep_datafile:
 			#peptide["peptides"] += PepXML.GetQueryHitInfosFromName(fname + "_" + str(i), spectrum)
 			p = PepXML.GetQueryHitInfosFromName(fname + "_" + str(i), spectrum)
-			peptide["peptides"] += p
+			if p != None:
+				peptide["peptides"] += p
 		i += 1
 	peptide["peptides"] = sorted([PeptideInfo(p) for p in peptide["peptides"]], key = lambda key: key["sort"])
 	for r in peptide["peptides"]:

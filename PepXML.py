@@ -2070,7 +2070,7 @@ class MsmsPipelineAnalysis(TagHandler):
 
 #externally usable functions
 
-def ToBinary(f, Dest = None, Links = None):
+def ToBinary(f, Dest = None):
 	"""
 	struct _PeptideInstance {
 		String Peptide;

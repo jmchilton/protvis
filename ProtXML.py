@@ -1443,7 +1443,7 @@ def ConvertFilename(FileName):
 def IsConverted(FileName):
 	return os.path.isfile(ConvertFilename(FileName))
 
-def ToBinary(f, Dest, Links = None):
+def ToBinary(f, Dest):
 	import Reference
 	stat = EncodingStatus(Links)
 	parser = xml.sax.make_parser()

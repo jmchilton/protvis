@@ -1476,7 +1476,8 @@ MsPlot = function(container, data, opts) {
 				active: false,
 				on: PointInGraph(pt)
 			};
-			this.Handlers.onmouseup = this.Interact.connect("onmouseup", this, function(evt) {
+			//this.Handlers.onmouseup = this.Interact.connect("onmouseup", this, function(evt) {
+			this.Handlers.onmouseup = dojo.connect(window, "onmouseup", this, function(evt) {
 				var pt = PointOnGraph(evt);
 				if (this.DragPoint.active && this.Options.selection.callback) {
 					var r = this.ViewRange;
@@ -1515,7 +1516,7 @@ MsPlot = function(container, data, opts) {
 		} else if (this.Options.Dragable) {
 		}
 	});
-	this.Interact.connect("onmousemove", this, function(evt) {
+	dojo.connect(window, "onmousemove", this, function(evt) {
 		var pt = PointOnGraph(evt);
 		if (this.DragPoint != null) {
 			dojo._base.event.stop(evt);
