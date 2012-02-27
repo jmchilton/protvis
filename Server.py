@@ -571,11 +571,24 @@ def SelectInfo(req):
 	for c in req.GET["type"]:
 		if (c < 'a' or c > 'z') and c != '_':
 			raise HTTPUnauthorized()
+	fname = GetQueryFileName(req.GET)
 	#try:
-	parser = FileLinks(GetQueryFileName(req.GET)).GetParser(int(req.GET["n"]))
+	parser = FileLinks(fname).GetParser(int(req.GET["n"]))
 	select = eval("parser.select_" + req.GET["type"])
-	results = select(GetQueryFileName(req.GET), req.GET)
+	results = select(fname, req.GET)
 	return render_to_response(templates + "select_" + req.GET["type"] + ".pt", { "query": req.GET, "results": results }, request=req)
+	#except:
+	#	return HTTPBadRequest()
+
+def SpectumLC(req):
+	for c in req.GET["type"]:
+		if (c < 'a' or c > 'z') and c != '_':
+			raise HTTPUnauthorized()
+	fname = GetQueryFileName(req.GET)
+	#try:
+	parser = FileLinks(fname).GetParser(int(req.GET["n"]))
+	select = eval("parser.spectrum_" + req.GET["type"])
+	return Response(select(fname, request=req, content_type="image/png")
 	#except:
 	#	return HTTPBadRequest()
 

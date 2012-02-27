@@ -21,3 +21,7 @@ conf.py
 res/dojo_compile
 res/dojo
 compile/dojo-release*
+C/bin/*
+C/*/*.o
+C/config.mk
+C/Libraries/*

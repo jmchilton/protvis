@@ -1,0 +1,68 @@
+#!/bin/sh
+
+config="config.mk"
+includes=""
+
+cpptestinc() {
+	echo -n "Searching for $1 headers: "
+	shift
+	for i in $@; do
+		cat > __test.c <<%%%
+#include <$i>
+int main() { return 0; }
+%%%
+		$cpp __test.c -o __test.o 2>/dev/null 1>/dev/null
+		if [ $? -eq 0 ]; then
+			echo "$i"
+			includes="$includes $i"
+			rm __test.c __test.o
+			return
+		fi
+	done
+	echo "(Not found)"
+	echo "Tried: $*"
+	rm __test.c
+	exit
+}
+
+findtool() {
+	var=$1
+	echo -n "Searching for $2: "
+	shift 2
+	for i in $@; do
+		if [ "`which $i`" != "" ]; then
+			echo $i
+			echo "$var=$i" >> $config
+			return
+		fi
+	done
+	echo "(Not found)"
+	echo "Tried: $*"
+	exit
+}
+
+findtool2() {
+	for i in $@; do
+		if [ "`which $i`" != "" ]; then
+			echo $i
+			return
+		fi
+	done
+}
+
+rm $config
+echo -n "Searching for C++ compiler: "
+cpp=`findtool2 g++ gpp`
+if [ "x$cpp" != "x" ]; then
+	echo $cpp
+	echo "CC=$cpp" >> $config
+else
+	echo "(Not found)"
+	exit
+fi
+cpptestinc "python" "Python.h" "python`python --version 2>&1 | awk '{print $2}' | cut -b -3`/Python.h"
+for i in $includes; do
+	echo "#include <$i>" >> common/inc.h
+done
+
+echo "PYTHON_LIB=-lpython`python --version 2>&1 | awk '{print $2}' | cut -b -3`" >> $config

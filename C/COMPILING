@@ -1,0 +1,33 @@
+Libraries Required:
+  Boost:  libboost-dev   http://www.boost.org/           (only needs the headers, you dont need to compile this or get the libraries)
+  Expat:  libexpat1-dev  http://expat.sourceforge.net/
+  Zlib:   zlibc          http://zlib.net/
+
+  On Ubuntu type:
+    sudo apt-get install libboost-dev libexpat1-dev zlibc
+
+### LINUX ###
+
+Tools Required:
+  g++
+  make
+
+  On Ubuntu type:
+    sudo apt-get install make g++
+
+To compile type:
+  make
+
+
+### WINDOWS ###
+
+Tools Required:
+  Microsoft Visual Studio 2010
+
+To compile:
+  Download and extract the Boost headers to a folder named "boost" in the Libraries directory. Be sure to remove the version number from the folder name
+  Download and extract Expat to a folder named "expat" in the Libraries folder. Be sure to remove the version number from the folder name
+    Open the expat solution and compile the static library. Be sure to build the same configuration (Debug/Release) for what you will be compiling here
+  Download and extract Zlib to a folder named "zlib" in the Libraries folder. Be sure to remove the version number from the folder name
+    Open the zlib solution from zlib\contrib\vstudio\vc10\zlibvc.sln and compile the static library. Be sure to build the same configuration (Debug/Release) for what you will be compiling here
+  Open Proteomics.sln with Visual Studio and compile
