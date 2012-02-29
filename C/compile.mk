@@ -4,7 +4,7 @@ RM=rm
 MKDIR=mkdir -p
 
 #flags
-#CFLAGS=-c -Wall -O3
+#CFLAGS=-c -Wall -O3 -fPIC
 CFLAGS=-c -Wall -g -fPIC
 LDFLAGS=-O3
 

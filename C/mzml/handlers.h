@@ -30,18 +30,26 @@
 				} \
 				return TagHandler::BeginChild(nIndex - 1); \
 			} \
-			/*static void Search(FILE *f, SearchParams params) { \
-				READ_STRUCTURE(f, Info, 1, (DWORD), (nCount)); \
-				for (DWORD i = 0; i < Info._1; ++i) { \
-					type::Search(f, params); \
-				} \
-			}*/ \
-			static void Eat(FILE *f) { \
+			static void Search(FILE *f, SearchStatus &stat) { \
 				READ_STRUCTURE(f, Info, 1, (DWORD)); \
-				for (DWORD i = 0; i < Info._0; ++i) { \
-					type::Eat(f); \
+				type::SearchAll(f, stat, Info._0); \
+			} \
+			static void SearchAll(FILE *f, SearchStatus &stat, DWORD nCount) { \
+				for (DWORD i = 0; i < nCount; ++i) { \
+					READ_STRUCTURE(f, Info, 1, (DWORD)); \
+					type::SearchAll(f, stat, Info._0); \
 				} \
 			} \
+			/*static void Eat(FILE *f) { \
+				READ_STRUCTURE(f, Info, 1, (DWORD)); \
+				type::EatAll(f, Info._0); \
+			}
+			static void EatAll(FILE *f, DWORD nCount) { \
+				for (DWORD i = 0; i < nCount; ++i) { \
+					READ_STRUCTURE(f, Info, 1, (DWORD)); \
+					type::EatAll(f, Info._0); \
+				} \
+			}*/ \
 			private: \
 				off_t m_offStartPos; \
 				DWORD m_nCount; \
@@ -82,9 +90,12 @@
 	class ParamGroup : public TagHandler {
 		TAG_HANDLER(ParamGroup, m_pCvParam(NULL));
 		virtual OutputStream *BeginChild(DWORD nIndex);
-		static void Eat(FILE *f); //Not used, but needed for LIST_TYPE macro
 		CVParamData *GetParams();
 		DWORD GetParamsCount();
+		static void Eat(FILE *f); //Not used, but needed for LIST_TYPE macro
+		static void EatAll(FILE *f, DWORD nCount); //Not used, but needed for LIST_TYPE macro
+		static void Search(FILE *f, SearchStatus &stat); //Not used, but needed for LIST_TYPE macro
+		static void SearchAll(FILE *f, SearchStatus &stat, DWORD nCount); //Not used, but needed for LIST_TYPE macro
 		
 		private:
 			MemoryStream *m_pCvParam;
@@ -183,7 +194,8 @@
 		virtual void End();
 		virtual OutputStream *BeginChild(DWORD nIndex);
 		void SetStartTime(float nTime);
-		static void Eat(FILE *f);
+		static void EatAll(FILE *f);
+		static void SearchAll(FILE *f, SearchStatus &stat, DWORD nCount);
 		static PyObject *GetInfo(FILE *pFile); //Assumes the file is pointing to the correct place
 		
 		private:
@@ -219,6 +231,7 @@
 		virtual void End();
 		virtual OutputStream *BeginChild(DWORD nIndex);
 		void AddSpectrumN(DWORD nIndex);
+		static void Search(FILE *pFile, SearchStatus &stat);
 
 		private:
 			typedef struct _Index {
@@ -268,8 +281,8 @@
 		static PyObject *GetSpectrum(FILE *pFile, const char *szSpectrumName);
 		static unsigned long GetSpectrumOffset(FILE *pFile, const char *szSpectrumName);
 		static void SearchSpectrums(FILE *pFile, SearchStatus &stat);
-		
-		
+		static void Info(FILE *pFile, float &nMinTime, float &nMaxTime, float &nMinMz, float &nMaxMz, float &nMaxIntensity);
+
 		private:
 			typedef struct _MS1Data {
 				float nScanTime;

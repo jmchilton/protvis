@@ -17,23 +17,16 @@ def GetEngineCode(name):
 
 #Encoding Info
 class EncodingStatus:
-	def __init__(self, links):
+	def __init__(self):
 		self.IncludedScores = 0
 		self.Peptides = {}
 		self.QueryOffset = 0
-		self.Links = links
 
 	def AddPeptide(self, peptide, hit_offset):
 		try:
 			self.Peptides[peptide].append([hit_offset, self.QueryOffset])
 		except:
 			self.Peptides[peptide] = [[hit_offset, self.QueryOffset]]
-
-	def GetLink(self, name):
-		try:
-			return self.Links[name]
-		except:
-			return 0xFFFF
 
 
 #Search results
@@ -1443,13 +1436,15 @@ def ConvertFilename(FileName):
 def IsConverted(FileName):
 	return os.path.isfile(ConvertFilename(FileName))
 
-def ToBinary(f, Dest):
+def ToBinary(f, dst):
 	import Reference
-	stat = EncodingStatus(Links)
+	Dest = open(dst, "w")
+	stat = EncodingStatus()
 	parser = xml.sax.make_parser()
 	parser.setFeature("http://xml.org/sax/features/external-general-entities", False)
 	parser.setContentHandler(SaxHandler(Dest, stat))
 	parser.parse(f)
+	Dest.close()
 	return Reference.FileType.PROTXML_PROTEINPROPHET
 
 def Search(FileName, terms):

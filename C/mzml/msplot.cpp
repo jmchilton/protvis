@@ -24,7 +24,10 @@ static void PngWriterFlush(png_structp png_ptr) {
 
 #define CACHE_MAX 10
 typedef struct {
-	char ID[16];
+	char ID[15];
+	char Code;
+	DWORD Width, Height;
+	float MinTime, MaxTime, MinMz, MaxMz;
 	DWORD TimeStamp;
 	MS1Plot::Cache Image;
 } ImageCache;
@@ -45,6 +48,36 @@ void ClearMS1Cache() {
 			free(pCache->Image.pImage);
 		}
 	}
+}
+
+MemoryStream *BlankImage() {
+	MemoryStream *pStream = new MemoryStream();
+	png_structp png_ptr = png_create_write_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
+	if (png_ptr != NULL) {
+		png_infop info_ptr = NULL;
+		png_bytep *pRows = NULL;
+		if (setjmp(png_jmpbuf(png_ptr))) {
+			puts("ERROR");
+			if (pRows != NULL) {
+				free(pRows);
+			}
+			png_destroy_write_struct(&png_ptr, &info_ptr);
+			delete pStream;
+			return NULL;
+		}
+		info_ptr = png_create_info_struct(png_ptr);
+		if (info_ptr != NULL) {
+			png_set_write_fn(png_ptr, pStream, &PngWriterWrite, &PngWriterFlush);
+			png_set_IHDR(png_ptr, info_ptr, 1, 1, 8, PNG_COLOR_TYPE_GRAY_ALPHA, PNG_INTERLACE_NONE, PNG_COMPRESSION_TYPE_BASE, PNG_FILTER_TYPE_BASE);
+			png_write_info(png_ptr, info_ptr);
+			png_bytep pRows[1 + 1];
+			*pRows = (png_bytep)pRows + 1; //Assign the row
+			*((png_byte *)(pRows + 1)) = 255; //Draw the pixel
+			png_write_image(png_ptr, pRows);
+			png_write_end(png_ptr, NULL);
+		}
+	}
+	return pStream;
 }
 
 static MemoryStream *RenderFromCache(MS1Plot::Cache &cache, float nDistortion) {
@@ -96,7 +129,7 @@ static MemoryStream *RenderFromCache(MS1Plot::Cache &cache, float nDistortion) {
 	return pStream;
 }
 
-inline void AddCache(const char *szId, MS1Plot::Cache &cache) {
+inline void AddCache(const char *szId, DWORD nCode, DWORD nWidth, DWORD nHeight, float nMinTime, float nMaxTime, float nMinMz, float nMaxMz, MS1Plot::Cache &cache) {
 	DWORD nMin = (DWORD)-1;
 	DWORD nMinIdx = 0;
 	for (DWORD i = 0; i < CACHE_MAX; ++i) {
@@ -110,31 +143,33 @@ inline void AddCache(const char *szId, MS1Plot::Cache &cache) {
 	}
 	ImageCache *pCache = &gs_cache[nMinIdx];
 	pCache->TimeStamp = gs_nTimeStamp++;
-	strncpy(pCache->ID, szId, 15);
-	pCache->ID[15] = 0;
+	strncpy(pCache->ID, szId, 14);
+	pCache->ID[14] = 0;
+	pCache->Code = nCode;
+	pCache->Width = nWidth;
+	pCache->Height = nHeight;
+	pCache->MinTime = nMinTime;
+	pCache->MaxTime = nMaxTime;
+	pCache->MinMz = nMinMz;
+	pCache->MaxMz = nMaxMz;
 	if (pCache->Image.pImage != NULL) {
 		free(pCache->Image.pImage);
 	}
 	memcpy(&pCache->Image, &cache, sizeof(MS1Plot::Cache));
 }
 
-inline MemoryStream *RenderCachedImage(const char *szId, float nDistortion) {
+MemoryStream *MS1Plot::RenderFromFileSmooth(const char *szFileName, DWORD nWidth, DWORD nHeight, float nDistortion, float nMinTime, float nMaxTime, float nMinMz, float nMaxMz) {
+	//Try the cache first
 	for (DWORD i = 0; i < CACHE_MAX; ++i) {
-		if (gs_cache[i].ID == NULL) {
+		ImageCache &c = gs_cache[i];
+		if (c.ID == NULL) {
 			break;
-		} else if (strcmp(szId, gs_cache[i].ID) == 0) {
-			gs_cache[i].TimeStamp = gs_nTimeStamp++;
-			return RenderFromCache(gs_cache[i].Image, nDistortion);
+		} else if (strncmp(szFileName, c.ID, 14) == 0 && c.Code == 0 && c.Width == nWidth && c.Height == nHeight && c.MinTime == nMinTime && c.MaxTime == nMaxTime && c.MinMz == nMinMz && c.MaxMz == nMaxMz) {
+			c.TimeStamp = gs_nTimeStamp++;
+			return RenderFromCache(c.Image, nDistortion);
 		}
 	}
-	return NULL;
-}
-
-MemoryStream *MS1Plot::RenderFromFile(const char *szFileName, unsigned nWidth, unsigned nHeight, float nDistortion, float nMinTime, float nMaxTime, float nMinMz, float nMaxMz) {
-	MemoryStream *pCache = RenderCachedImage(szFileName, nDistortion);
-	if (pCache != NULL) {
-		return pCache;
-	}
+	//Not in cache, load it up
 	FILE *pFile = fopen(szFileName, "rb");
 	if (pFile != NULL) {
 		struct Info {
@@ -157,17 +192,119 @@ MemoryStream *MS1Plot::RenderFromFile(const char *szFileName, unsigned nWidth, u
 			return NULL;
 		}
 		fclose(pFile);
-		return RenderFromFileInternal(szFileName, pSrcData, info.count, nWidth, nHeight, nDistortion, info.maxInt, nMinTime >= 0 ? nMinTime : info.minTime, nMaxTime >= 0 ? nMaxTime : info.maxTime, nMinMz >= 0 ? nMinMz : info.minMz, nMaxMz >= 0 ? nMaxMz : info.maxMz);
+		if ((nMinTime < 0 || abs(nMinTime - info.minTime) < 0.001) && (nMaxTime < 0 || abs(nMaxTime - info.maxTime) < 0.001)) {
+			if (nWidth > info.count) {
+				nWidth = info.count;
+			}
+		} else {
+			char *pSrcDataPtr = pSrcData;
+			unsigned nScans = 0;
+			for (uint32_t i = 0; i < info.count; ++i) {
+				Scan *pScan = (Scan *)pSrcDataPtr;
+				if (pScan->nStartTime >= nMinTime && pScan->nStartTime <= nMaxTime) {
+					++nScans;
+				}
+				pSrcDataPtr += sizeof(Scan) + pScan->nPoints * sizeof(ScanPoint<float>);
+			}
+			if (nWidth > nScans) {
+				nWidth = nScans;
+			}
+		}
+		if (nHeight == (DWORD)-1) {
+			nHeight = (DWORD)(info.maxMz - info.minMz + 0.5f);
+			while (nHeight > 512) {
+				nHeight >>= 1;
+			}
+		}
+		return RenderFromFileInternalSmooth(szFileName, pSrcData, info.count, nWidth, nHeight, nDistortion, info.maxInt, nMinTime >= 0 ? nMinTime : info.minTime, nMaxTime >= 0 ? nMaxTime : info.maxTime, nMinMz >= 0 ? nMinMz : info.minMz, nMaxMz >= 0 ? nMaxMz : info.maxMz);
 	}
 	return NULL;
 }
 
-inline MemoryStream *MS1Plot::RenderFromFileInternal(const char *szFileName, char *pSrcData, uint32_t nScans, unsigned nWidth, unsigned nHeight, float nDistortion, float nMaxIntensity, float nMinTime, float nMaxTime, float nMinMz, float nMaxMz) {
+MemoryStream *MS1Plot::RenderFromFilePoints(const char *szFileName, DWORD nWidth, DWORD nHeight, float nDistortion, float nMinTime, float nMaxTime, float nMinMz, float nMaxMz) {
+	//Try the cache first
+	for (DWORD i = 0; i < CACHE_MAX; ++i) {
+		ImageCache &c = gs_cache[i];
+		if (c.ID == NULL) {
+			break;
+		} else if (strncmp(szFileName, c.ID, 14) == 0 && c.Code == 1 && c.Width == nWidth && c.Height == nHeight && c.MinTime == nMinTime && c.MaxTime == nMaxTime && c.MinMz == nMinMz && c.MaxMz == nMaxMz) {
+			c.TimeStamp = gs_nTimeStamp++;
+			return RenderFromCache(c.Image, nDistortion);
+		}
+	}
+	//Not in cache, load it up
+	FILE *pFile = fopen(szFileName, "rb");
+	if (pFile != NULL) {
+		struct Info {
+			DWORD offset;
+			DWORD size;
+			DWORD count;
+			float maxInt;
+			float minTime, maxTime;
+			float minMz, maxMz;
+		};
+		Info info;
+		if (fread(&info, 1, sizeof(Info), pFile) != sizeof(Info)) {
+			fclose(pFile);
+			return NULL;
+		}
+		fseek(pFile, info.offset, SEEK_SET);
+		char *pSrcData = (char *)malloc(info.size);
+		if (fread(pSrcData, 1, info.size, pFile) != info.size) {
+			fclose(pFile);
+			return NULL;
+		}
+		fclose(pFile);
+		DWORD nScans = 0, nMaxPeaks = 0;
+		if ((nMinTime < 0 || abs(nMinTime - info.minTime) < 0.001) && (nMaxTime < 0 || abs(nMaxTime - info.maxTime) < 0.001)) {
+			nScans = info.count;
+			char *pSrcDataPtr = pSrcData;
+			for (uint32_t i = 0; i < info.count; ++i) {
+				Scan *pScan = (Scan *)pSrcDataPtr;
+				if (pScan->nPoints > nMaxPeaks) {
+					nMaxPeaks = pScan->nPoints;
+				}
+				if (pScan->nStartTime >= nMinTime && pScan->nStartTime <= nMaxTime) {
+					++nScans;
+				}
+				pSrcDataPtr += sizeof(Scan) + pScan->nPoints * sizeof(ScanPoint<float>);
+			}
+		} else {
+			char *pSrcDataPtr = pSrcData;
+			for (uint32_t i = 0; i < info.count; ++i) {
+				Scan *pScan = (Scan *)pSrcDataPtr;
+				if (pScan->nStartTime >= nMinTime && pScan->nStartTime <= nMaxTime) {
+					++nScans;
+					if (pScan->nPoints > nMaxPeaks) {
+						nMaxPeaks = pScan->nPoints;
+					}
+				}
+				pSrcDataPtr += sizeof(Scan) + pScan->nPoints * sizeof(ScanPoint<float>);
+			}
+		}
+		if (nScans == 0) {
+			return BlankImage();
+		} else {
+			unsigned nRadiusX = nWidth / (nScans * 2);
+			unsigned nRadiusY = nHeight / (nMaxPeaks * 2);
+			printf("%d %d\n", nRadiusX, nRadiusY);
+			if (nRadiusX > 1 && nRadiusY > 1) {
+				return RenderFromFileInternalPointsLarge(szFileName, pSrcData, info.count, nWidth, nHeight, nDistortion, info.maxInt, nMinTime >= 0 ? nMinTime : info.minTime, nMaxTime >= 0 ? nMaxTime : info.maxTime, nMinMz >= 0 ? nMinMz : info.minMz, nMaxMz >= 0 ? nMaxMz : info.maxMz, nRadiusX < nRadiusY ? nRadiusX : nRadiusY);
+			} else {
+				return RenderFromFileInternalPointsSmall(szFileName, pSrcData, info.count, nWidth, nHeight, nDistortion, info.maxInt, nMinTime >= 0 ? nMinTime : info.minTime, nMaxTime >= 0 ? nMaxTime : info.maxTime, nMinMz >= 0 ? nMinMz : info.minMz, nMaxMz >= 0 ? nMaxMz : info.maxMz);
+			}
+		}
+	}
+	return NULL;
+}
+
+inline MemoryStream *MS1Plot::RenderFromFileInternalSmooth(const char *szFileName, char *pSrcData, uint32_t nScans, DWORD nWidth, DWORD nHeight, float nDistortion, float nMaxIntensity, float nMinTime, float nMaxTime, float nMinMz, float nMaxMz) {
 	unsigned nPixels = nWidth * nHeight;
 	float *pImg = (float *)malloc(nPixels * sizeof(float));
 	if (pImg == NULL) {
 		return NULL;
 	}
+	memset(pImg, 0, nPixels * sizeof(float));
 	float nScaleX = (nWidth - 1) / (nMaxTime - nMinTime);
 	float nScaleY = (nHeight - 1) / (nMaxMz - nMinMz);
 	unsigned nPosX, nPosY;
@@ -183,25 +320,27 @@ inline MemoryStream *MS1Plot::RenderFromFileInternal(const char *szFileName, cha
 			nPosX = (unsigned)nVal;
 			for (unsigned j = 0; j < pScan->nPoints; ++j) {
 				const ScanPoint<float> &point = pScan->pPoints[j];
-				nVal = (nMaxMz - point.mz) * nScaleY;
-				nIntensity = point.intensity;
-				nFactorY = nVal - floor(nVal);
-				nPosY = (unsigned)nVal;
-				nIdx = nPosY * nWidth + nPosX;
-				UPDATE_VAL(nIntensity * (1.0f - nFactorX) * (1.0f - nFactorY));
-				if (nPosX + 1 < nWidth) {
-					++nIdx;
-					UPDATE_VAL(nIntensity * nFactorX * (1.0f - nFactorY));
-					if (nPosY + 1 < nHeight) {
+				if (point.mz >= nMinMz && point.mz <= nMaxMz) {
+					nVal = (nMaxMz - point.mz) * nScaleY;
+					nIntensity = point.intensity;
+					nFactorY = nVal - floor(nVal);
+					nPosY = (unsigned)nVal;
+					nIdx = nPosY * nWidth + nPosX;
+					UPDATE_VAL(nIntensity * (1.0f - nFactorX) * (1.0f - nFactorY));
+					if (nPosX + 1 < nWidth) {
+						++nIdx;
+						UPDATE_VAL(nIntensity * nFactorX * (1.0f - nFactorY));
+						if (nPosY + 1 < nHeight) {
+							nIdx += nWidth;
+							UPDATE_VAL(nIntensity * nFactorX * nFactorY);
+							--nIdx;
+							goto MS1DoX1Y2Smooth;
+						}
+					} else if (nPosY + 1 < nHeight) {
 						nIdx += nWidth;
-						UPDATE_VAL(nIntensity * nFactorX * nFactorY);
-						--nIdx;
-						goto MS1DoX1Y2;
+MS1DoX1Y2Smooth:
+						UPDATE_VAL(nIntensity * (1.0f - nFactorX) * nFactorY);
 					}
-				} else if (nPosY + 1 < nHeight) {
-					nIdx += nWidth;
-MS1DoX1Y2:
-					UPDATE_VAL(nIntensity * (1.0f - nFactorX) * nFactorY);
 				}
 			}
 		}
@@ -209,12 +348,123 @@ MS1DoX1Y2:
 	}
 	free(pSrcData);
 	MS1Plot::Cache cache = { nWidth, nHeight, nMax, pImg };
-	AddCache(szFileName, cache);
+	AddCache(szFileName, 0, nWidth, nHeight, nMinTime, nMaxTime, nMinMz, nMaxMz, cache);
+	return RenderFromCache(cache, nDistortion);
+}
+
+inline MemoryStream *MS1Plot::RenderFromFileInternalPointsSmall(const char *szFileName, char *pSrcData, uint32_t nScans, DWORD nWidth, DWORD nHeight, float nDistortion, float nMaxIntensity, float nMinTime, float nMaxTime, float nMinMz, float nMaxMz) {
+	unsigned nPixels = nWidth * nHeight;
+	float *pImg = (float *)malloc(nPixels * sizeof(float));
+	if (pImg == NULL) {
+		return NULL;
+	}
+	memset(pImg, 0, nPixels * sizeof(float));
+	float nScaleX = (nWidth - 1) / (nMaxTime - nMinTime);
+	float nScaleY = (nHeight - 1) / (nMaxMz - nMinMz);
+	unsigned nPosX, nPosY;
+	float nVal, nIntensity, nFactorX, nFactorY;
+	float nMax = nMaxIntensity;
+	unsigned nIdx;
+	char *pSrcDataPtr = pSrcData;
+	for (uint32_t i = 0; i < nScans; ++i) {
+		Scan *pScan = (Scan *)pSrcDataPtr;
+		if (pScan->nStartTime >= nMinTime && pScan->nStartTime <= nMaxTime) {
+			nVal = (pScan->nStartTime - nMinTime) * nScaleX;
+			nFactorX = nVal - floor(nVal);
+			nPosX = (unsigned)nVal;
+			for (unsigned j = 0; j < pScan->nPoints; ++j) {
+				const ScanPoint<float> &point = pScan->pPoints[j];
+				if (point.mz >= nMinMz && point.mz <= nMaxMz) {
+					nVal = (nMaxMz - point.mz) * nScaleY;
+					nIntensity = point.intensity;
+					nFactorY = nVal - floor(nVal);
+					nPosY = (unsigned)nVal;
+					nIdx = nPosY * nWidth + nPosX;
+					UPDATE_VAL(nIntensity * (1.0f - nFactorX) * (1.0f - nFactorY));
+					if (nPosX + 1 < nWidth) {
+						++nIdx;
+						UPDATE_VAL(nIntensity * nFactorX * (1.0f - nFactorY));
+						if (nPosY + 1 < nHeight) {
+							nIdx += nWidth;
+							UPDATE_VAL(nIntensity * nFactorX * nFactorY);
+							--nIdx;
+							goto MS1DoX1Y2Points;
+						}
+					} else if (nPosY + 1 < nHeight) {
+						nIdx += nWidth;
+MS1DoX1Y2Points:
+						UPDATE_VAL(nIntensity * (1.0f - nFactorX) * nFactorY);
+					}
+				}
+			}
+		}
+		pSrcDataPtr += sizeof(Scan) + pScan->nPoints * sizeof(ScanPoint<float>);
+	}
+	free(pSrcData);
+	MS1Plot::Cache cache = { nWidth, nHeight, nMax, pImg };
+	AddCache(szFileName, 1, nWidth, nHeight, nMinTime, nMaxTime, nMinMz, nMaxMz, cache);
+	return RenderFromCache(cache, nDistortion);
+}
+
+inline MemoryStream *MS1Plot::RenderFromFileInternalPointsLarge(const char *szFileName, char *pSrcData, int32_t nScans, int32_t nWidth, int32_t nHeight, float nDistortion, float nMaxIntensity, float nMinTime, float nMaxTime, float nMinMz, float nMaxMz, int nRadius) {
+	unsigned nPixels = nWidth * nHeight;
+	float *pImg = (float *)malloc(nPixels * sizeof(float));
+	if (pImg == NULL) {
+		return NULL;
+	}
+	memset(pImg, 0, nPixels * sizeof(float));
+	float nScaleX = (nWidth - 1) / (nMaxTime - nMinTime);
+	float nScaleY = (nHeight - 1) / (nMaxMz - nMinMz);
+	int32_t nPosX, nPosY;
+	float nVal, nIntensity;
+	float nMax = nMaxIntensity;
+	unsigned nIdx;
+	char *pSrcDataPtr = pSrcData;
+	DWORD r2 = nRadius * nRadius;
+	DWORD y2;
+	for (int32_t i = 0; i < nScans; ++i) {
+		Scan *pScan = (Scan *)pSrcDataPtr;
+		if (pScan->nStartTime >= nMinTime && pScan->nStartTime <= nMaxTime) {
+			nVal = (pScan->nStartTime - nMinTime) * nScaleX;
+			nPosX = (int32_t)nVal - nRadius;
+			for (unsigned j = 0; j < pScan->nPoints; ++j) {
+				const ScanPoint<float> &point = pScan->pPoints[j];
+				if (point.mz >= nMinMz && point.mz <= nMaxMz) {
+					nVal = (nMaxMz - point.mz) * nScaleY;
+					nIntensity = point.intensity;
+					nPosY = ((int32_t)nVal - nRadius) * nWidth;
+					printf("%d %d\n", nPosX, (int32_t)nVal - nRadius);
+					int x, y;
+					for (y = -nRadius; y <= nRadius; ++y) {
+						if (nPosY >= 0 && nPosY < nPixels) {
+							y2 = y * y;
+							nIdx = nPosY + nPosX;
+							for (x = -nRadius; x <= nRadius; ++x) {
+								if (nPosX + i >= 0 && nPosX + i < nWidth) {
+									if ((x * x) + y2 <= r2) {
+										UPDATE_VAL(nIntensity);
+									} else if (x > 0) {
+										break;
+									}
+								}
+								++nIdx;
+							}
+						}
+						nPosY += nWidth;
+					}
+				}
+			}
+		}
+		pSrcDataPtr += sizeof(Scan) + pScan->nPoints * sizeof(ScanPoint<float>);
+	}
+	free(pSrcData);
+	MS1Plot::Cache cache = { nWidth, nHeight, nMax, pImg };
+	AddCache(szFileName, 1, nWidth, nHeight, nMinTime, nMaxTime, nMinMz, nMaxMz, cache);
 	return RenderFromCache(cache, nDistortion);
 }
 
 //MS2
-MemoryStream *MS2Plot::RenderFromFile(const char *szFileName, unsigned nWidth, unsigned nHeight, float nMinTime, float nMaxTime, float nMinMz, float nMaxMz) {
+MemoryStream *MS2Plot::RenderFromFile(const char *szFileName, DWORD nWidth, DWORD nHeight, float nMinTime, float nMaxTime, float nMinMz, float nMaxMz) {
 	FILE *pFile = fopen(szFileName, "rb");
 	if (pFile != NULL) {
 		fseek(pFile, 3 * sizeof(DWORD) + sizeof(float), SEEK_SET);
@@ -239,7 +489,7 @@ MemoryStream *MS2Plot::RenderFromFile(const char *szFileName, unsigned nWidth, u
 	return NULL;
 }
 
-inline MemoryStream *MS2Plot::RenderFromFileInternal(char *pSrcData, uint32_t nScans, unsigned nWidth, unsigned nHeight, float nMinTime, float nMaxTime, float nMinMz, float nMaxMz) {
+inline MemoryStream *MS2Plot::RenderFromFileInternal(char *pSrcData, uint32_t nScans, DWORD nWidth, DWORD nHeight, float nMinTime, float nMaxTime, float nMinMz, float nMaxMz) {
 	return NULL;
 	/*unsigned nPixels = nWidth * nHeight;
 	float *pImg = (float *)malloc(nPixels * sizeof(float));

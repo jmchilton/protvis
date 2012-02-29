@@ -5,6 +5,20 @@ inline void Spectrum::SetStartTime(float nTime) {
 	m_nStartTime = nTime;
 }
 
+inline void Spectrum::SearchAll(FILE *pFile, SearchStatus &stat, DWORD nCount) {
+	for (DWORD i = 0; i < nCount; ++i) {
+		READ_STRUCTURE(pFile, header, 4, (DWORD, DWORD, float, float));
+		stat.Match("time", header._2);
+		stat.Match("pepmass", header._3);
+		if (stat.IsMatched()) {
+			fseek(pFile, -(2 * sizeof(DWORD) + 2 * sizeof(float)), SEEK_CUR);
+			stat.AddResult(GetInfo(pFile));
+		} else {
+			fseek(pFile, header._0 * (sizeof(float) * 2) + header._1 * sizeof(float), SEEK_CUR);
+		}
+	}
+}
+
 inline PyObject *Spectrum::GetInfo(FILE *pFile) {
 	READ_STRUCTURE(pFile, header, 4, (DWORD, DWORD, float, float));
 	PyObject *pList = PyList_New(header._0);
@@ -30,6 +44,11 @@ inline void Run::AddSpectrumN(DWORD nIndex) {
 	m_arrSpectrums.Push(Index(nIndex, m_pStream->Tell()));
 }
 
+inline void Run::Search(FILE *pFile, SearchStatus &stat) {
+	READ_STRUCTURE(pFile, header, 2, (DWORD, DWORD));
+	SpectrumList::SearchAll(pFile, stat, header._0);
+}
+
 inline PyObject *MzML::GetSpectrum(FILE *pFile, const char *szSpectrumName) {
 	return NULL; //FIXME: implement
 }
@@ -39,9 +58,21 @@ inline unsigned long MzML::GetSpectrumOffset(FILE *pFile, const char *szSpectrum
 }
 
 inline void MzML::SearchSpectrums(FILE *pFile, SearchStatus &stat) {
-	//FIXME: implement
+	fseek(pFile, 3 * sizeof(DWORD) + 5 * sizeof(float), SEEK_SET);
+	Run::Search(pFile, stat);
 }
 
 inline void MzML::AddSpectrum1(float nStartTime, DWORD nCount, float *pMz, float *pIntensity) {
 	m_arrMS1Data.Push(MS1Data(nStartTime, nCount, pMz, pIntensity));
+}
+
+inline void MzML::Info(FILE *pFile, float &nMinTime, float &nMaxTime, float &nMinMz, float &nMaxMz, float &nMaxIntensity) {
+	fseek(pFile, 3 * sizeof(DWORD), SEEK_SET);
+	READ_STRUCTURE(pFile, info, 5, (float, float, float, float, float));
+	printf("%f %f %f %f %f\n", info._1, info._2, info._3, info._4, info._0);
+	nMinTime = info._1;
+	nMaxTime = info._2;
+	nMinMz = info._3;
+	nMaxMz = info._4;
+	nMaxIntensity = info._0;
 }

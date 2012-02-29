@@ -5,12 +5,13 @@
 #include "msplot.h"
 
 static PyObject *ToBinary(PyObject *self, PyObject *args) {
-	const char *szSource, *szDest;
-	if (!PyArg_ParseTuple(args, "ss", &szSource, &szDest)) {
+	const char *szDest;
+	PyObject *pFile;
+	if (!PyArg_ParseTuple(args, "Os", &pFile, &szDest)) {
 		return NULL;
 	}
 	State state(szDest);
-	Transcode(szSource, &state);
+	Transcode(fileno(PyFile_AsFile(pFile)), &state);
 	/*DWORD nWidth = state.MS1.GetSpectrumCount();//(DWORD)(state.MS1.GetTimeRange() + 0.5f);
 	while (nWidth > 2048) {
 		nWidth >>= 1;
@@ -89,27 +90,59 @@ static PyObject *DefaultSortColumn(PyObject *self, PyObject *args) {
 	return Py_BuildValue("[s,[]]", "spectrum");
 }
 
-static PyObject *SpectrumMS1(PyObject *self, PyObject *args) {
+static PyObject *Display(PyObject *self, PyObject *args) {
 	const char *szFileName;
-	float nContrast;
-	float nMinTime = -1.0f, nMaxTime = -1.0f, nMinMz = -1.0f, nMaxMz = -1.0f;
-	if (!PyArg_ParseTuple(args, "sf|ffff", &szFileName, &nContrast, &nMinTime, &nMaxTime, &nMinMz, &nMaxMz)) {
+	PyObject *pQuery;
+	if (!PyArg_ParseTuple(args, "sO", &szFileName, &pQuery)) {
 		return NULL;
 	}
-	MemoryStream *pStream = MS1Plot::RenderFromFile(szFileName, 1500, 1000, pow(nContrast, 1.2f), nMinTime, nMaxTime, nMinMz, nMaxMz);
-	PyObject *pRet = Py_BuildValue("s#", pStream->GetBuffer(), pStream->GetLength());
+	FILE *pFile = fopen(szFileName, "r");
+	if (pFile != NULL) {
+		float nMinTime, nMaxTime, nMinMz, nMaxMz, nMaxIntensity;
+		MzML::Info(pFile, nMinTime, nMaxTime, nMinMz, nMaxMz, nMaxIntensity);
+		fclose(pFile);
+		return Py_BuildValue("[f,f,f,f,f]", nMinTime, nMaxTime, nMinMz, nMaxMz, nMaxIntensity);
+	} 
+	return Py_BuildValue("");
+}
+
+static PyObject *SpectrumMS1Smooth(PyObject *self, PyObject *args) {
+	const char *szFileName;
+	float nContrast;
+	unsigned long nWidth, nHeight;
+	float nMinTime = -1.0f, nMaxTime = -1.0f, nMinMz = -1.0f, nMaxMz = -1.0f;
+	if (!PyArg_ParseTuple(args, "sfkk|ffff", &szFileName, &nContrast, &nWidth, &nHeight, &nMinTime, &nMaxTime, &nMinMz, &nMaxMz)) {
+		return NULL;
+	}
+	MemoryStream *pStream = MS1Plot::RenderFromFileSmooth(szFileName, nWidth, nHeight, pow(nContrast, 1.2f), nMinTime, nMaxTime, nMinMz, nMaxMz);
+	PyObject *pRet = pStream == NULL ? Py_BuildValue("") : Py_BuildValue("s#", pStream->GetBuffer(), pStream->GetLength());
+	delete pStream;
+	return pRet;
+}
+
+static PyObject *SpectrumMS1Points(PyObject *self, PyObject *args) {
+	const char *szFileName;
+	float nContrast;
+	unsigned long nWidth, nHeight;
+	float nMinTime = -1.0f, nMaxTime = -1.0f, nMinMz = -1.0f, nMaxMz = -1.0f;
+	if (!PyArg_ParseTuple(args, "sfkk|ffff", &szFileName, &nContrast, &nWidth, &nHeight, &nMinTime, &nMaxTime, &nMinMz, &nMaxMz)) {
+		return NULL;
+	}
+	MemoryStream *pStream = MS1Plot::RenderFromFilePoints(szFileName, nWidth, nHeight, pow(nContrast, 1.2f), nMinTime, nMaxTime, nMinMz, nMaxMz);
+	PyObject *pRet = pStream == NULL ? Py_BuildValue("") : Py_BuildValue("s#", pStream->GetBuffer(), pStream->GetLength());
 	delete pStream;
 	return pRet;
 }
 
 static PyObject *SpectrumMS2(PyObject *self, PyObject *args) {
 	const char *szFileName;
+	unsigned long nWidth, nHeight;
 	float nMinTime = -1.0f, nMaxTime = -1.0f, nMinMz = -1.0f, nMaxMz = -1.0f;
-	if (!PyArg_ParseTuple(args, "sf|ffff", &szFileName, &nMinTime, &nMaxTime, &nMinMz, &nMaxMz)) {
+	if (!PyArg_ParseTuple(args, "skk|ffff", &szFileName, &nWidth, &nHeight, &nMinTime, &nMaxTime, &nMinMz, &nMaxMz)) {
 		return NULL;
 	}
-	MemoryStream *pStream = MS2Plot::RenderFromFile(szFileName, 1500, 1000, nMinTime, nMaxTime, nMinMz, nMaxMz);
-	PyObject *pRet = Py_BuildValue("s#", pStream->GetBuffer(), pStream->GetLength());
+	MemoryStream *pStream = MS2Plot::RenderFromFile(szFileName, nWidth, nHeight, nMinTime, nMaxTime, nMinMz, nMaxMz);
+	PyObject *pRet = pStream == NULL ? Py_BuildValue("") : Py_BuildValue("s#", pStream->GetBuffer(), pStream->GetLength());
 	delete pStream;
 	return pRet;
 }
@@ -121,7 +154,9 @@ static PyMethodDef Methods[] = {
     {"GetOffsetFromSpectrum", GetOffsetFromSpectrum, METH_VARARGS, ""},
     {"Search", Search, METH_VARARGS, ""},
     {"DefaultSortColumn", DefaultSortColumn, METH_VARARGS, ""},
-    {"spectrum_ms1", SpectrumMS1, METH_VARARGS, ""},
+    {"Display", Display, METH_VARARGS, ""},
+    {"spectrum_ms1_smooth", SpectrumMS1Smooth, METH_VARARGS, ""},
+    {"spectrum_ms1_points", SpectrumMS1Points, METH_VARARGS, ""},
     {"spectrum_ms2", SpectrumMS2, METH_VARARGS, ""},
     {NULL, NULL, 0, NULL}
 };

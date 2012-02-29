@@ -139,5 +139,6 @@
 
 	const XML_Char *Attr(const XML_Char **pszAttrs, const XML_Char *szAttr);
 	bool Transcode(const char *szXmlFile, BaseState *pState);
+	bool Transcode(int fd, BaseState *pState);
 
 #endif

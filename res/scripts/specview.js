@@ -42,9 +42,8 @@ SpecViewer = function(container, opts) {
 			selectedIons.append(["y", 3]);
 		}
 	}
-	this.Options.selectedIons
 	dojo.mixin(this.Options, opts);
-	var selected = []
+	var selected = [];
 	for (i in this.Options.selectedIons) {
 		selected.push(Ion.get(this.Options.selectedIons[i][0], this.Options.selectedIons[i][1]));
 	}
@@ -1507,6 +1506,46 @@ MsPlot = function(container, data, opts) {
 				}
 				this.Handlers = {}
 			});
+			this.Handlers.onmousemove = dojo.connect(window, "onmousemove", this, function(evt) {
+				if (this.DragPoint != null) {
+					var pt = PointOnGraph(evt);
+					dojo._base.event.stop(evt);
+					if (this.DragPoint.active) {
+						if (this.Options.selection.axis.indexOf("x") >= 0) {
+							var x1 = this.DragPoint.x;
+							var x2 = pt.x < padding[0] ? padding[0] : pt.x > this.Width + padding[0] ? this.Width + padding[0] : pt.x;
+							this.Selection.rawNode.setAttribute("x", Math.min(x1, x2));
+							this.Selection.rawNode.setAttribute("width", Math.max(x1, x2) - Math.min(x1, x2));
+						}
+						if (this.Options.selection.axis.indexOf("y") >= 0) {
+							var y1 = this.DragPoint.y;
+							var y2 = pt.y < padding[1] ? padding[1] : pt.y > this.Height + padding[1] ? this.Height + padding[1] : pt.y;
+							this.Selection.rawNode.setAttribute("y", Math.min(y1, y2));
+							this.Selection.rawNode.setAttribute("height", Math.max(y1, y2) - Math.min(y1, y2));
+						}
+					} else {
+						if (Math.abs(pt.x - this.DragPoint.x) > 5 || Math.abs(pt.y - this.DragPoint.y) > 5) {
+							if (!this.DragPoint.on && PointInGraph(pt)) {
+								this.DragPoint.on = true;
+							}
+							if (this.DragPoint.on) {
+								var x1 = this.DragPoint.x, y1 = this.DragPoint.y, x2 = pt.x, y2 = pt.y;
+								if (this.Options.selection.axis.indexOf("x") < 0) {
+									x1 = padding[0];
+									x2 = this.Width + padding[0];
+								}
+								if (this.Options.selection.axis.indexOf("y") < 0) {
+									y1 = padding[1];
+									y2 = this.Height + padding[1];
+								}
+								var x1 = Math.min(x1, x2), y1 = Math.min(y1, y2), x2 = Math.max(x1, x2), y2 = Math.max(y1, y2);
+								this.Selection = this.Overlays.createRect({x:x1, y:y1, width:x2 - x1, height:y2 - y1}).setFill("rgba(0,0,190,0.2)").setStroke({color:"rgba(0,0,190,0.7)", width:0.5});
+								this.DragPoint.active = true;
+							}
+						}
+					}
+				}
+			});
 			/*this.Handlers.onmouseleave = this.Surface.connect("onmouseleave", this, function(evt) {
 				console.log(evt);
 				this.Surface.connect("onmouseenter", this, function(evt) {
@@ -1516,45 +1555,10 @@ MsPlot = function(container, data, opts) {
 		} else if (this.Options.Dragable) {
 		}
 	});
-	dojo.connect(window, "onmousemove", this, function(evt) {
-		var pt = PointOnGraph(evt);
-		if (this.DragPoint != null) {
-			dojo._base.event.stop(evt);
-			if (this.DragPoint.active) {
-				if (this.Options.selection.axis.indexOf("x") >= 0) {
-					var x1 = this.DragPoint.x;
-					var x2 = pt.x < padding[0] ? padding[0] : pt.x > this.Width + padding[0] ? this.Width + padding[0] : pt.x;
-					this.Selection.rawNode.setAttribute("x", Math.min(x1, x2));
-					this.Selection.rawNode.setAttribute("width", Math.max(x1, x2) - Math.min(x1, x2));
-				}
-				if (this.Options.selection.axis.indexOf("y") >= 0) {
-					var y1 = this.DragPoint.y;
-					var y2 = pt.y < padding[1] ? padding[1] : pt.y > this.Height + padding[1] ? this.Height + padding[1] : pt.y;
-					this.Selection.rawNode.setAttribute("y", Math.min(y1, y2));
-					this.Selection.rawNode.setAttribute("height", Math.max(y1, y2) - Math.min(y1, y2));
-				}
-			} else {
-				if (Math.abs(pt.x - this.DragPoint.x) > 5 || Math.abs(pt.y - this.DragPoint.y) > 5) {
-					if (!this.DragPoint.on && PointInGraph(pt)) {
-						this.DragPoint.on = true;
-					}
-					if (this.DragPoint.on) {
-						var x1 = this.DragPoint.x, y1 = this.DragPoint.y, x2 = pt.x, y2 = pt.y;
-						if (this.Options.selection.axis.indexOf("x") < 0) {
-							x1 = padding[0];
-							x2 = this.Width + padding[0];
-						}
-						if (this.Options.selection.axis.indexOf("y") < 0) {
-							y1 = padding[1];
-							y2 = this.Height + padding[1];
-						}
-						var x1 = Math.min(x1, x2), y1 = Math.min(y1, y2), x2 = Math.max(x1, x2), y2 = Math.max(y1, y2);
-						this.Selection = this.Overlays.createRect({x:x1, y:y1, width:x2 - x1, height:y2 - y1}).setFill("rgba(0,0,190,0.2)").setStroke({color:"rgba(0,0,190,0.7)", width:0.5});
-						this.DragPoint.active = true;
-					}
-				}
-			}
-		} else if (this.Options.tooltip) {
+	this.Interact.connect("onmousemove", this, function(evt) {
+	//dojo.connect(window, "onmousemove", this, function(evt) {
+		if (this.DragPoint == null && this.Options.tooltip) {
+			var pt = PointOnGraph(evt);
 			if (PointInGraph(pt)) {
 				var closest = {i:-1, j:-1, dist:Number.POSITIVE_INFINITY};
 				var m = { x: pt.x - padding[0], y: pt.y };

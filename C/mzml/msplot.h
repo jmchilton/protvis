@@ -97,10 +97,13 @@
 				m_pScans.Push(pScan);
 			}
 			//These read the format as written by the XML parser
-			static MemoryStream *RenderFromFile(const char *szFileName, unsigned nWidth, unsigned nHeight, float nDistortion = 0.5f, float nMinTime = -1.0f, float nMaxTime = -1.0f, float nMinMz = -1.0f, float nMaxMz = -1.0f);
+			static MemoryStream *RenderFromFileSmooth(const char *szFileName, DWORD nWidth, DWORD nHeight, float nDistortion = 0.5f, float nMinTime = -1.0f, float nMaxTime = -1.0f, float nMinMz = -1.0f, float nMaxMz = -1.0f);
+			static MemoryStream *RenderFromFilePoints(const char *szFileName, DWORD nWidth, DWORD nHeight, float nDistortion = 0.5f, float nMinTime = -1.0f, float nMaxTime = -1.0f, float nMinMz = -1.0f, float nMaxMz = -1.0f);
 			
 		private:
-			static MemoryStream *RenderFromFileInternal(const char *szFileName, char *pSrcData, uint32_t nScans, unsigned nWidth, unsigned nHeight, float nDistortion, float nMaxIntensity, float nMinTime, float nMaxTime, float nMinMz, float nMaxMz);
+			static MemoryStream *RenderFromFileInternalSmooth(const char *szFileName, char *pSrcData, uint32_t nScans, DWORD nWidth, DWORD nHeight, float nDistortion, float nMaxIntensity, float nMinTime, float nMaxTime, float nMinMz, float nMaxMz);
+			static MemoryStream *RenderFromFileInternalPointsSmall(const char *szFileName, char *pSrcData, uint32_t nScans, DWORD nWidth, DWORD nHeight, float nDistortion, float nMaxIntensity, float nMinTime, float nMaxTime, float nMinMz, float nMaxMz);
+			static MemoryStream *RenderFromFileInternalPointsLarge(const char *szFileName, char *pSrcData, int32_t nScans, int32_t nWidth, int32_t nHeight, float nDistortion, float nMaxIntensity, float nMinTime, float nMaxTime, float nMinMz, float nMaxMz, int nRadius);
 
 		private:
 			typedef struct {
@@ -118,10 +121,10 @@
 	class MS2Plot {
 		public:
 			//These read the format as written by the XML parser
-			static MemoryStream *RenderFromFile(const char *szFileName, unsigned nWidth, unsigned nHeight, float nMinTime = -1.0f, float nMaxTime = -1.0f, float nMinMz = -1.0f, float nMaxMz = -1.0f);
+			static MemoryStream *RenderFromFile(const char *szFileName, DWORD nWidth, DWORD nHeight, float nMinTime = -1.0f, float nMaxTime = -1.0f, float nMinMz = -1.0f, float nMaxMz = -1.0f);
 			
 		private:
-			static MemoryStream *RenderFromFileInternal(char *pSrcData, uint32_t nScans, unsigned nWidth, unsigned nHeight, float nMinTime, float nMaxTime, float nMinMz, float nMaxMz);
+			static MemoryStream *RenderFromFileInternal(char *pSrcData, uint32_t nScans, DWORD nWidth, DWORD nHeight, float nMinTime, float nMaxTime, float nMinMz, float nMaxMz);
 	};
 	
 	void InitaliseMS1Cache(); //Must be called before doing any rendering

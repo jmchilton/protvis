@@ -178,8 +178,9 @@ class Header:
 				f.seek(4, 1)
 			i += 1
 
-def ToBinary(f, dest = None):
+def ToBinary(f, dst):
 	import Reference
+	dest = open(dst, "w")
 	header = Header(dest)
 	spectrum = None
 	while True:

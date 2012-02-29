@@ -18,7 +18,7 @@ int main(int argc, char *argv[]) {
 			nHeight >>= 1;
 		}*/
 		for (float n = 0.05f; n <= 1.0f; n += 0.05f) {
-			MemoryStream *pStream = MS1Plot::RenderFromFile(argv[1], 1500, 1000, pow(n, 1.2f));
+			MemoryStream *pStream = MS1Plot::RenderFromFileSmooth(argv[1], 1500, 1000, pow(n, 1.2f));
 			char szLcFile[128];
 			sprintf(szLcFile, "%s_ms1_%d", argv[1], (int)(n * 20.0f + 0.5f));
 			FILE *pFile = fopen(szLcFile, "wb");

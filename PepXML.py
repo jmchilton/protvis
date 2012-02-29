@@ -17,23 +17,16 @@ def GetEngineCode(name):
 
 #Encoding Info
 class EncodingStatus:
-	def __init__(self, links):
+	def __init__(self):
 		self.IncludedScores = 0
 		self.Peptides = {}
 		self.QueryOffset = 0
-		self.Links = links
 
 	def AddPeptide(self, peptide, hit_offset):
 		try:
 			self.Peptides[peptide].append([hit_offset, self.QueryOffset])
 		except:
 			self.Peptides[peptide] = [[hit_offset, self.QueryOffset]]
-
-	def GetLink(self, name):
-		try:
-			return self.Links[name]
-		except:
-			return 0xFFFF
 
 
 #Search results
@@ -2070,7 +2063,7 @@ class MsmsPipelineAnalysis(TagHandler):
 
 #externally usable functions
 
-def ToBinary(f, Dest = None):
+def ToBinary(f, dst):
 	"""
 	struct _PeptideInstance {
 		String Peptide;
@@ -2086,8 +2079,9 @@ def ToBinary(f, Dest = None):
 	}
 	"""
 	import Reference
+	Dest = open(dst, "w")
 	Dest.write(struct.pack("=I", 0))
-	stat = EncodingStatus(Links)
+	stat = EncodingStatus()
 	parser = xml.sax.make_parser()
 	parser.setFeature("http://xml.org/sax/features/external-general-entities", False)
 	parser.setContentHandler(SaxHandler(Dest, stat))
@@ -2102,6 +2096,7 @@ def ToBinary(f, Dest = None):
 		Dest.write(struct.pack("=H", len(offsets)))
 		for hit, query in offsets:
 			Dest.write(struct.pack("=II", hit, query))
+	Dest.close()
 	if stat.IncludedScores & 0x800:
 		return Reference.FileType.PEPXML_INTERPROPHET
 	elif stat.IncludedScores & 0x400:

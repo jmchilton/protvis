@@ -71,6 +71,12 @@ void DataHandler(BaseState *pState, const XML_Char *szData, int nLen) {
 bool Transcode(const char *szXmlFile, BaseState *pState) {
 	int fd = open(szXmlFile, O_RDONLY | O_SEQUENTIAL);
 	ASSERT_ALWAYS(fd >= 0, "Failed to open the file \'%s\' for reading\n", szXmlFile);
+	bool bSuccess = Transcode(fd, pState);
+	close(fd);
+	return bSuccess;
+}
+
+bool Transcode(int fd, BaseState *pState) {
 	int nLength;
 	int bDone = 0;
 	char pBuffer[BUFFER_SIZE];
@@ -87,7 +93,6 @@ bool Transcode(const char *szXmlFile, BaseState *pState) {
 		}
 	} while (!bDone);
 	XML_ParserFree(pParser);
-	close(fd);
 	return true;
 }
 
