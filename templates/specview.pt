@@ -49,7 +49,7 @@
 									<nobr><input type="radio" name="massType" value="mono" checked="checked"/><b>Mono</b> <input type="radio" name="massType" value="avg"/><b>Avg</b></nobr>
 								</div>
 								<div style="margin-top:10px;">
-									<nobr>Mass Tol: <input id="massError_${hash}" type="text" value="0.65" size="4"/></nobr>
+									<nobr>Mass Tol: <input id="massError_${hash}" type="text" value="0.5" size="4"/></nobr>
 								</div>
 								<div style="margin-top:10px;" align="center">
 									<input id="update_${hash}" name="massType" type="button" value="Update"/>
@@ -198,7 +198,7 @@
 			ctermMod: pep.cterm,
 			peaks: peaks,
 			ionTableContainer: dojo.byId("ionTableDiv_${hash}"),
-			massError: pep.masstol
+			massError: pep.masstol || 0.5
 		});
 		if (pep.masstol) {
 			dojo.byId("massError_${hash}").value = pep.masstol;

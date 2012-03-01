@@ -604,7 +604,6 @@ SpecViewer = function(container, opts) {
 	this.SetPeptide = function(opts) {
 		var none = {
 			sequence: null,
-			precursorMz: null,
 			staticMods: [],
 			variableMods: [],
 			ntermMod: 0,
