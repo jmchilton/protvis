@@ -1506,6 +1506,19 @@ MsPlot = function(container, data, opts) {
 				}
 				this.Handlers = {}
 			});
+			this.Handlers.onkeypress = dojo.connect(window, "onkeypress", this, function(evt) {
+				if (evt.which == 27) {
+					if (this.Selection) {
+						obj.Overlays.remove(this.Selection);
+						this.Selection = null;
+					}
+					this.DragPoint = null;
+					for (var h in this.Handlers) {
+						dojo.disconnect(this.Handlers[h]);
+					}
+					this.Handlers = {}
+				}
+			});
 			this.Handlers.onmousemove = dojo.connect(window, "onmousemove", this, function(evt) {
 				if (this.DragPoint != null) {
 					var pt = PointOnGraph(evt);

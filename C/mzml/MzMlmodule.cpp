@@ -12,17 +12,6 @@ static PyObject *ToBinary(PyObject *self, PyObject *args) {
 	}
 	State state(szDest);
 	Transcode(fileno(PyFile_AsFile(pFile)), &state);
-	/*DWORD nWidth = state.MS1.GetSpectrumCount();//(DWORD)(state.MS1.GetTimeRange() + 0.5f);
-	while (nWidth > 2048) {
-		nWidth >>= 1;
-	}
-	DWORD nHeight = (DWORD)(state.MS1.GetMzRange() + 0.5f);
-	while (nHeight > 1024) {
-		nHeight >>= 1;
-	}
-	char szLcFile[260]; //This only needs to hold "../ConvertedFiles/[unique]_[index]_lc"
-	sprintf(szLcFile, "%s_lc", szDest);
-	state.MS1.Render(szLcFile, nWidth, nHeight);*/
 	return Py_BuildValue("i", FILETYPE_MZML);
 }
 
