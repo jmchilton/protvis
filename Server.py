@@ -192,8 +192,15 @@ class ConverterThread(Thread):
 		self.Type = Reference.FileType.UNKNOWN
 
 	def run(self):
-		self.Source.seek(0)
+		close = False
+		if type(self.Source) != file:
+			self.Source = open(self.Source, "r")
+			close = True
+		else:
+			self.Source.seek(0)
 		self.Type = self.Module.ToBinary(self.Source, self.Dest)
+		if close:
+			self.Source.close()
 
 
 def GetFileName(fname):
@@ -304,7 +311,7 @@ def Convert(req):
 				if p == None:
 					threads[i] = None
 				else:
-					t = ConverterThread(p, f, data.name + "_" + str(i))
+					t = ConverterThread(p, f.Name, data.name + "_" + str(i))
 					t.start()
 					threads[i] = t
 		f = data.name[len(converted):]
