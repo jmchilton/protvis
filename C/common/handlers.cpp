@@ -98,6 +98,7 @@ bool Transcode(int fd, BaseState *pState) {
 
 class EatStream : public OutputStream {
 	public:
+		virtual ~EatStream() { }
 		virtual off_t Tell() { return 0; }
 		virtual off_t Seek(off_t nOffset, int nStart = SEEK_SET) { return 0; }
 		virtual ssize_t Write(const void *pBuffer, size_t nBytes) { return 0; }

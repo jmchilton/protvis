@@ -304,7 +304,7 @@ def Convert(req):
 				if p == None:
 					threads[i] = None
 				else:
-					t = ConverterThread(p, f.Name, data.name + "_" + str(i))
+					t = ConverterThread(p, f, data.name + "_" + str(i))
 					t.start()
 					threads[i] = t
 		f = data.name[len(converted):]

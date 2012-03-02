@@ -24,5 +24,6 @@ compile/dojo-release*
 C/bin/*
 C/*/*.o
 C/config.mk
+C/common/inc.h
 C/Libraries/*
 *.so

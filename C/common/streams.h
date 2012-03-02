@@ -28,6 +28,7 @@
 
 	class OutputStream {
 		public:
+			virtual ~OutputStream() { }
 			virtual off_t Tell() = 0;
 			virtual off_t Seek(off_t nOffset, int nStart = SEEK_SET) = 0;
 			virtual ssize_t Write(const void *pBuffer, size_t nBytes) = 0;
@@ -52,7 +53,7 @@
 			FileStream(int fd) : m_nDesc(fd), m_nBuffered(0), m_bOpened(false) {
 			}
 
-			~FileStream() {
+			virtual ~FileStream() {
 				if (m_nBuffered > 0) {
 					write(m_nDesc, m_pBuffer, m_nBuffered);
 				}
@@ -117,7 +118,7 @@
 				ASSERT_MEMORY(m_szString, nInitSize);
 			}
 			
-			~MemoryStream() {
+			virtual ~MemoryStream() {
 				if (m_szString != NULL) {
 					free(m_szString);
 				}
