@@ -3,6 +3,13 @@
 config="config.mk"
 includes=""
 
+usage() {
+	cat <<%%%
+--include=<dir>   add include directory to search path
+--lib=<dir>       add library directory ro search path
+%%%
+}
+
 cpptestinc() {
 	echo -n "Searching for $1 headers: "
 	shift
@@ -11,7 +18,7 @@ cpptestinc() {
 #include <$i>
 int main() { return 0; }
 %%%
-		$cpp __test.c -o __test.o 2>/dev/null 1>/dev/null
+		$cpp __test.c -o __test.o $incdirs $libdirs 2>/dev/null 1>/dev/null
 		if [ $? -eq 0 ]; then
 			echo "$i"
 			includes="$includes $i"
@@ -50,6 +57,20 @@ findtool2() {
 	done
 }
 
+incdirs=""
+libdirs=""
+
+for arg in $@; do
+	case "$arg" in
+		--include=*) incdirs="$incdirs -I`echo "$arg" | cut -b 11-`";;
+		--lib=*) libdirs="$libdirs -L`echo "$arg" | cut -b 7-`";;
+		*)
+			echo "Unrecognised option '$arg'"
+			usage
+			exit 1;;
+	esac
+done
+
 rm $config
 echo -n "Searching for C++ compiler: "
 cpp=`findtool2 g++ gpp`
@@ -60,6 +81,7 @@ else
 	echo "(Not found)"
 	exit
 fi
+
 cpptestinc "python" "Python.h" "python`python --version 2>&1 | awk '{print $2}' | cut -b -3`/Python.h"
 for i in $includes; do
 	echo "#include <$i>" >> common/inc.h
