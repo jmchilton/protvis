@@ -45,7 +45,7 @@ SpecViewer = function(container, opts) {
 	dojo.mixin(this.Options, opts);
 	this.maxInt = getMaxInt(this.Options.peaks);
 	var selected = [];
-	for (i in this.Options.selectedIons) {
+	for (var i in this.Options.selectedIons) {
 		selected.push(Ion.get(this.Options.selectedIons[i][0], this.Options.selectedIons[i][1]));
 	}
 	this.Options.selectedIons = selected;
@@ -57,6 +57,8 @@ SpecViewer = function(container, opts) {
 	this.peakAssignmentTypeChanged = false;
 	this.peakLabelTypeChanged = false;
 	this.selectedNeutralLossChanged = false;
+	
+	var ZoomHistory = new Array();
 
 	this.PlotOptions = {
 		axis: {
@@ -71,7 +73,7 @@ SpecViewer = function(container, opts) {
 			axis: "x",
 			callback: function(isRange, range) {
 				if (isRange) {
-					obj.ZoomRange = range;
+					var vr = dojo.clone(range);
 					var datasets = obj.getDatasets();
 					if (obj.PlotOptions.selection.axis.indexOf("y") < 0) {
 						var maxInt = 0;
@@ -84,9 +86,13 @@ SpecViewer = function(container, opts) {
 								}
 							}
 						}
-						obj.ZoomRange.y.max = maxInt * 1.1;
+						range.y.max = maxInt * 1.1;
 					}
-					obj.createPlot(datasets);
+					if (obj.ZoomRange == null || range.x.min != obj.ZoomRange.x.min || range.x.max != obj.ZoomRange.x.max || range.y.max != obj.ZoomRange.y.min || range.y.min != obj.ZoomRange.y.max) {
+						ZoomHistory.push(obj.ZoomRange);
+						obj.ZoomRange = range;
+						obj.createPlot(datasets);
+					}
 				} else if (obj.Options.editable) {
 					//select ion
 					console.log(range.x, range.y);
@@ -549,9 +555,20 @@ SpecViewer = function(container, opts) {
 	}
 
 	this.ResetZoom = function() {
-		this.ZoomRange = null;
-		this.massErrorChanged = false;
-		this.createPlot(this.getDatasets());
+		if (this.ZoomRange != null) {
+			ZoomHistory.push(this.ZoomRange);
+			this.ZoomRange = null;
+			this.massErrorChanged = false;
+			this.createPlot(this.getDatasets());
+		}
+	}
+
+	this.UndoZoom = function() {
+		if (ZoomHistory.length) {
+			this.ZoomRange = ZoomHistory.pop();
+			this.massErrorChanged = false;
+			this.createPlot(this.getDatasets());
+		}
 	}
 
 	this.SetAxisZoom = function(axis) {

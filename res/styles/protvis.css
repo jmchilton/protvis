@@ -32,10 +32,10 @@ table.graph td.plot {background-color:white; padding:5px;}
 table.graph td.options {background-color:#eeeeee; padding:0px 5px; border:1px solid #444444; vertical-align:top;}
 table.graph td.options div.group {background-color:white; border:1px dotted #666666; padding:5px; margin:5px 0px;}
 table.graph td.options div.group .head {font-weight:bold; margin-bottom:3px;}
+table.graph td.options div.group .head2 {font-weight:bold; margin:10px 0px 3px 0px;}
 table.graph td.options div.group div.tip {margin-top:7px; color:#707070;}
 @media print {.noprint {display:none;}}
 div.lorikeet {width:100%; color:#000000; font-family:"Trebuchet MS",Arial,sans-serif; font-size:10pt; font-style:normal; margin:0; padding:0;}
-div.lorikeet div.bar {background-color:#F5F5DC; color:black;}
 div.lorikeet .link {text-decoration:underline; cursor:pointer; color:#444444;}
 div.lorikeet .font_small {font-size:8pt;}
 div.lorikeet #ionTable {border-collapse:collapse; border:1px solid #666666; margin:5px 0px;}

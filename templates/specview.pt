@@ -12,10 +12,18 @@
 	<table cellpadding="0" cellspacing="5" width="100%" class="graph">
 		<tr>
 			<tal:if condition="python: peptide != None"><!--options table-->
-				<td valign="top" id="optionsTable" width="1px" class="options">
-					<div class="group"> <!-- Ions -->
+				<td valign="top" id="optionsTable" width="1" class="options">
+					<div class="group">
+						<div class="head">Zoom/Pan:</div>
+						<div id="zoom_${hash}">&nbsp;X:<input name="x" type="checkbox" checked="checked"/>&nbsp;Y:<input name="y" type="checkbox"/></div>
+						<nobr><button id="zoomundo_${hash}">Undo</button><button id="zoomout_${hash}">Show All</button></nobr>
+						<div class="head2">Misc:</div>
+						<nobr><input id="enableTooltip_${hash}" type="checkbox" checked="checked" style="margin-left:0">Enable tooltip</nobr><br/>
+						<!--<input id="print_${hash}" type="button" value="Print" />-->
+					</div>
+					<div class="group">
 						<div class="head">Ions:</div>
-						<div id="ion_choice_${hash}" style="margin-bottom: 10px">
+						<div id="ion_choice_${hash}" style="width:145px">
 							<nobr><b>a</b> <input type="checkbox" value="1" id="a_1"/>1<sup>+</sup> <input type="checkbox" value="2" id="a_2"/>2<sup>+</sup> <input type="checkbox" value="3" id="a_3"/>3<sup>+</sup></nobr><br/>
 							<nobr><b>b</b> <input type="checkbox" value="1" id="b_1" checked="checked"/>1<sup>+</sup>
 								<tal:if condition="python: opt_charge >= 2"><input type="checkbox" value="2" id="b_2" checked="checked"/>2<sup>+</sup></tal:if>
@@ -34,59 +42,42 @@
 							<nobr><b>z</b> <input type="checkbox" value="1" id="z_1"/>1<sup>+</sup> <input type="checkbox" value="2" id="z_2"/>2<sup>+</sup> <input type="checkbox" value="3" id="z_3"/>3<sup>+</sup></nobr><br/>
 							<span id="deselectIonsLink_${hash}" class="link font_small">[Deselect All]</span>
 						</div>
-						<div class="head">Neutral Loss:</div>
+						<div class="head2">Neutral Loss:</div>
 						<div id="nl_choice_${hash}">
-							<nobr> <input type="checkbox" value="h2o" id="h2o"/> H<sub>2</sub>O (<b>o</b>)</nobr><br>
-							<nobr> <input type="checkbox" value="nh3" id="nh3"/> NH<sub>3</sub> (<b>*</b>)</nobr>
+							<nobr> <input type="checkbox" value="h2o" id="h2o" style="margin-left:0"/> H<sub>2</sub>O (<b>o</b>)</nobr><br>
+							<nobr> <input type="checkbox" value="nh3" id="nh3" style="margin-left:0"/> NH<sub>3</sub> (<b>*</b>)</nobr>
 						</div>
+						<div class="head2">Peak Labels:</div>
+						<nobr><input type="radio" name="peakLabelOpt" value="ion" checked="checked" style="margin-left:0"/>Ion</nobr>
+						<nobr><input type="radio" name="peakLabelOpt" value="mz"/>m/z</nobr>
+						<nobr><input type="radio" name="peakLabelOpt" value="none"/>None</nobr>
 					</div>
-					<div id="massType_${hash}" class="group"> <!-- mass type, mass tolerance etc. -->
+					<div id="massType_${hash}" class="group">
 						<div class="head">Mass Type:</div>
-						<div id="massTypeOpt_${hash}"><nobr><input type="radio" name="massType" value="mono" checked="checked"/><b>Mono</b> <input type="radio" name="massType" value="avg"/><b>Avg</b></nobr></div>
-						<div style="margin-top:10px;">
-							<nobr>Mass Tol: <input id="massError_${hash}" type="text" value="0.5" size="4"/></nobr>
-						</div>
-						<div style="margin-top:10px;" align="center">
-							<input id="update_${hash}" name="massType" type="button" value="Update"/>
-						</div>
+						<div id="massTypeOpt_${hash}"><nobr><input type="radio" name="massType" value="mono" checked="checked" style="margin-left:0"/>Mono <input type="radio" name="massType" value="avg"/>Avg</nobr></div>
+						<div class="head2">Mass Tolerance:</div>
+						<nobr><input id="massError_${hash}" type="text" value="0.5" size="4"/><button id="update_${hash}" name="massType">Update</button></nobr>
 					</div>
-					<div class="group"> <!-- peak assignment method -->
+					<div class="group">
 						<div class="head">Peak Assignment:</div>
-						<input type="radio" name="peakAssignOpt" value="intense" checked="checked"/>Most Intense<br/>
-						<input type="radio" name="peakAssignOpt" value="close"/>Nearest Match
-						
+						<input type="radio" name="peakAssignOpt" value="intense" checked="checked" style="margin-left:0"/>Most Intense<br/>
+						<input type="radio" name="peakAssignOpt" value="close" style="margin-left:0"/>Nearest Match
 					</div>
-					<div class="group"> <!-- peak labels -->
-						<div class="head">Peak Labels:</div>
-						<input type="radio" name="peakLabelOpt" value="ion" checked="checked"/>Ion
-						<input type="radio" name="peakLabelOpt" value="mz"/>m/z<br/>
-						<input type="radio" name="peakLabelOpt" value="none"/>None
-						
-					</div>
-					<div class="group"> <!-- precursor -->
+					<div class="group">
 						<div class="head">Filter:</div>
-						<input type="checkbox" value="precursor" id="hide_precursor_${hash}" checked="checked"/>Precursor Ion
+						<input type="checkbox" value="precursor" id="hide_precursor_${hash}" checked="checked" style="margin-left:0"/>Precursor Ion
 					</div>
 				</td>
 			</tal:if>
 			<td valign="middle" align="center" class="plot">
-				<div id="msmsplot_${hash}" align="bottom" style="width:100%; height:100%; min-width:100px; min-height:525px;"></div>
-				<div id="viewOptionsDiv" align="top" style="margin-top:10px;">
-					<nobr>
-						<span style="width:100%; font-size:8pt; margin-top:5px; color:sienna;">Click and drag in the plot to zoom or pan. Zoom: </span>
-						<span id="zoom_${hash}">X:<input name="x" type="checkbox" checked="checked"/>&nbsp;Y:<input name="y" type="checkbox" /></span>
-						&nbsp;<input id="resetZoom_${hash}" type="button" value="Zoom Out" />&nbsp;<input id="printLink_${hash}" type="button" value="Print" />
-					</nobr>
-					&nbsp;&nbsp;
-					<nobr><input id="enableTooltip_${hash}" type="checkbox" checked="checked">Enable tooltip</nobr><br/>
-				</div>
+				<div id="msmsplot_${hash}" align="bottom" style="width:100%; height:100%; min-width:100px; min-height:645px;"></div>
 				<!--placeholder for ms1 plot (if data is available)-->
 				<!--if(options.ms1peaks && options.ms1peaks.length > 0) {
 					<div id="msplot" style="width:'+options.width+'px;height:100px;"></div>
 				}-->
 			</td>
 			<tal:if condition="python: peptide != None">
-				<td valign="top" id="ionTableLoc1" width="1px" class="options"><!--placeholder for the ion table-->
+				<td valign="top" id="ionTableLoc1" width="1" class="options"><!--placeholder for the ion table-->
 					<div id="ionTableDiv_${hash}">
 						<!--placeholder for file name, scan number, modifications etc.-->
 						<div id="modinfo" style="margin-top:5px;"></div>
@@ -237,7 +228,6 @@
 			SpecView.SetSelectedIons([]);
 		});
 	</tal:else>
-
 	dojo.query("#zoom_${hash} input", container).forEach(function(node, index, arr) {
 		dojo.connect(node, "onclick", null, function(evt) {
 			var zoom = "";
@@ -247,15 +237,17 @@
 			SpecView.SetAxisZoom(zoom);
 		});
 	});
-	dojo.connect(dojo.byId("resetZoom_${hash}"), "onclick", null, function(evt) {
+	dojo.connect(dojo.byId("zoomout_${hash}"), "onclick", null, function(evt) {
 		SpecView.ResetZoom();
+	});
+	dojo.connect(dojo.byId("zoomundo_${hash}"), "onclick", null, function(evt) {
+		SpecView.UndoZoom();
 	});
 	dojo.connect(dojo.byId("enableTooltip_${hash}"), "onclick", null, function(evt) {
 		SpecView.SetTooltip(dojo.byId("enableTooltip_${hash}").checked);
 	});
-
 	/*function printPlot() {
-		dojo.query("#printLink_${hash}", container).click(function() {
+		dojo.query("#print_${hash}", container).click(function() {
 	
 			// create another div and move the plots into that div
 			$(document.body).append('<div id="tempPrintDiv"></div>');
@@ -263,11 +255,9 @@
 			$("#tempPrintDiv").siblings().addClass("noprint");
 	
 	
-			container.find(".bar").addClass('noprint');
 			container.find('#optionsTable').addClass('noprint');
 			container.find('#ionTableLoc1').addClass('noprint');
 			container.find('#ionTableLoc2').addClass('noprint');
-			container.find('#viewOptionsDiv').addClass('noprint');
 	
 			plotOptions.series.peaks.print = true; // draw the labels in the DOM for sharper print output
 			plotAccordingToChoices();
@@ -276,11 +266,9 @@
 	
 			// remove the class after printing so that if the user prints 
 			// via the browser's print menu the whole page is printed
-			container.find(".bar").removeClass('noprint');
 			container.find('#optionsTable').removeClass('noprint');
 			container.find('#ionTableLoc1').removeClass('noprint');
 			container.find('#ionTableLoc2').removeClass('noprint');
-			container.find('#viewOptionsDiv').removeClass('noprint');
 			$("#tempPrintDiv").siblings().removeClass("noprint");
 	
 	
