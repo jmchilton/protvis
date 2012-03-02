@@ -28,6 +28,7 @@
 	class TagHandler {
 		public:
 			TagHandler(OutputStream *pStream, TagHandlerEntry *pHandlers) : m_pStream(pStream), m_pHandlers(pHandlers) { }
+			virtual ~TagHandler() { }
 			virtual void End() { }
 			virtual OutputStream *BeginChild(DWORD nIndex) { return NULL; }
 			//virtual void EndChild(OutputStream *pStream); //Not used
@@ -56,6 +57,7 @@
 			cls(OutputStream *pStream, TagHandlerEntry *pHandlers = ms_pHandlers##cls) : base(pStream, pHandlers) BOOST_PP_COMMA_IF(ISEMPTY(__VA_ARGS__)) __VA_ARGS__ { } \
 		public: \
 			static TagHandlerEntry ms_pHandlers##cls[]; \
+			virtual ~cls() { /*destruction is done in cls::End()*/ } \
 			static TagHandler *New(BaseState *pState, OutputStream *pStream, const XML_Char **pszAttrs) { \
 				cls *obj = new cls(pStream); \
 				if (!obj->Begin((struct _State *)pState, pszAttrs)) { \

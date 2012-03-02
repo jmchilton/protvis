@@ -14,21 +14,21 @@ cpptestinc() {
 	echo -n "Searching for $1 headers: "
 	shift
 	for i in $@; do
-		cat > __test.c <<%%%
+		cat > __test.cpp <<%%%
 #include <$i>
 int main() { return 0; }
 %%%
 		$cpp __test.cpp -o __test.o $incdirs $libdirs 2>/dev/null 1>/dev/null
-		if [ $? -eq 0 ]; then
+		if [ $? -eq 0 ] && [ -e __test.o ]; then
 			echo "$i"
 			includes="$includes $i"
-			rm __test.c __test.o
+			rm __test.cpp __test.o 2>/dev/null
 			return
 		fi
 	done
 	echo "(Not found)"
 	echo "Tried: $*"
-	rm __test.c
+	rm __test.cpp 2>/dev/null
 	exit
 }
 
