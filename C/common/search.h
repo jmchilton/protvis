@@ -109,7 +109,8 @@
 					const char *szToken2 = strchr(szToken, 'e');
 					nPrecision = szToken == NULL ? strlen(szToken) : (szToken2 - szToken) - strlen(szToken2 + 1);
 				}
-				return abs(nValue - nPhrase) < pow(10, -nPrecision);
+				nValue -= nPhrase;
+				return (nValue >= 0 ? nValue : -nValue) < pow(10, -nPrecision);
 			}
 			
 			bool Compare(int nValue, const char *szPhrase) {

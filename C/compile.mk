@@ -4,9 +4,9 @@ RM=rm
 MKDIR=mkdir -p
 
 #flags
-#CFLAGS=-c -Wall -O3 -fPIC
-CFLAGS=-c -Wall -g -fPIC
-LDFLAGS=-O3
+#CFG_CFLAGS=-c -Wall -O3 -fPIC
+CFG_CFLAGS=-c -Wall -g -fPIC
+CFG_LDFLAGS=-O3
 
 #directories
 BUILD_DIR=bin

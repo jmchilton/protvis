@@ -18,7 +18,7 @@ cpptestinc() {
 #include <$i>
 int main() { return 0; }
 %%%
-		$cpp __test.c -o __test.o $incdirs $libdirs 2>/dev/null 1>/dev/null
+		$cpp __test.cpp -o __test.o $incdirs $libdirs 2>/dev/null 1>/dev/null
 		if [ $? -eq 0 ]; then
 			echo "$i"
 			includes="$includes $i"
@@ -88,3 +88,5 @@ for i in $includes; do
 done
 
 echo "PYTHON_LIB=-lpython`python --version 2>&1 | awk '{print $2}' | cut -b -3`" >> $config
+echo "CFLAGS=\$(CFG_CFLAGS) $incdirs" >> $config
+echo "LDFLAGS=\$(CFG_LDFLAGS) $libdirs" >> $config
