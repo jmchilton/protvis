@@ -9,82 +9,68 @@
 			File: ${spectrum.file}, Scan: ${spectrum.scan}<tal:if condition="python: peptide != None">, Precursor m/z: ${peptide.precursor_neutral_mass}</tal:if>, Charge: ${spectrum.charge}
 		</div>
 	</div>
-	<table cellpadding="0" cellspacing="5" width="100%">
+	<table cellpadding="0" cellspacing="5" width="100%" class="graph">
 		<tr>
 			<tal:if condition="python: peptide != None"><!--options table-->
-				<td valign="top" id="optionsTable" width="1px">
-					<table cellpadding="2" cellspacing="2">
-						<tr> <!-- Ions -->
-							<td class="optionCell">
-								<b>Ions:</b>
-								<div id="ion_choice_${hash}" style="margin-bottom: 10px">
-									<nobr><b>a</b> <input type="checkbox" value="1" id="a_1"/>1<sup>+</sup> <input type="checkbox" value="2" id="a_2"/>2<sup>+</sup> <input type="checkbox" value="3" id="a_3"/>3<sup>+</sup></nobr><br/>
-									<nobr><b>b</b> <input type="checkbox" value="1" id="b_1" checked="checked"/>1<sup>+</sup>
-										<tal:if condition="python: opt_charge >= 2"><input type="checkbox" value="2" id="b_2" checked="checked"/>2<sup>+</sup></tal:if>
-										<tal:else condition="python: opt_charge < 2"><input type="checkbox" value="2" id="b_2"/>2<sup>+</sup></tal:else>
-										<tal:if condition="python: opt_charge >= 3"><input type="checkbox" value="3" id="b_3" checked="checked"/>3<sup>+</sup></tal:if>
-										<tal:else condition="python: opt_charge < 3"><input type="checkbox" value="3" id="b_3"/>3<sup>+</sup></tal:else>
-									</nobr><br/>
-									<nobr><b>c</b> <input type="checkbox" value="1" id="c_1"/>1<sup>+</sup> <input type="checkbox" value="2" id="c_2"/>2<sup>+</sup> <input type="checkbox" value="3" id="c_3"/>3<sup>+</sup></nobr><br/>
-									<nobr><b>x</b> <input type="checkbox" value="1" id="x_1"/>1<sup>+</sup> <input type="checkbox" value="2" id="x_2"/>2<sup>+</sup> <input type="checkbox" value="3" id="x_3"/>3<sup>+</sup></nobr><br/>
-									<nobr><b>y</b> <input type="checkbox" value="1" id="y_1" checked="checked"/>1<sup>+</sup>
-										<tal:if condition="python: opt_charge >= 2"><input type="checkbox" value="2" id="y_2" checked="checked"/>2<sup>+</sup></tal:if>
-										<tal:else condition="python: opt_charge < 2"><input type="checkbox" value="2" id="y_2"/>2<sup>+</sup></tal:else>
-										<tal:if condition="python: opt_charge >= 3"><input type="checkbox" value="3" id="y_3" checked="checked"/>3<sup>+</sup></tal:if>
-										<tal:else condition="python: opt_charge < 3"><input type="checkbox" value="3" id="y_3"/>3<sup>+</sup></tal:else>
-									</nobr><br/>
-									<nobr><b>z</b> <input type="checkbox" value="1" id="z_1"/>1<sup>+</sup> <input type="checkbox" value="2" id="z_2"/>2<sup>+</sup> <input type="checkbox" value="3" id="z_3"/>3<sup>+</sup></nobr><br/>
-									<span id="deselectIonsLink_${hash}" style="font-size:8pt;text-decoration: underline; color:sienna;cursor:pointer;">[Deselect All]</span>
-								</div>
-								<b>Neutral Loss:</b>
-								<div id="nl_choice_${hash}">
-									<nobr> <input type="checkbox" value="h2o" id="h2o"/> H<sub>2</sub>O (<b>o</b>)</nobr><br>
-									<nobr> <input type="checkbox" value="nh3" id="nh3"/> NH<sub>3</sub> (<b>*</b>)</nobr>
-								</div>
-							</td>
-						</tr>
-						<tr> <!-- mass type, mass tolerance etc. -->
-							<td id="massType_${hash}" class="optionCell">
-								<div id="massTypeOpt_${hash}"> Mass Type:<br/>
-									<nobr><input type="radio" name="massType" value="mono" checked="checked"/><b>Mono</b> <input type="radio" name="massType" value="avg"/><b>Avg</b></nobr>
-								</div>
-								<div style="margin-top:10px;">
-									<nobr>Mass Tol: <input id="massError_${hash}" type="text" value="0.5" size="4"/></nobr>
-								</div>
-								<div style="margin-top:10px;" align="center">
-									<input id="update_${hash}" name="massType" type="button" value="Update"/>
-								</div>
-							</td>
-						</tr>
-						<tr> <!-- peak assignment method -->
-							<td class="optionCell">
-								<div> Peak Assignment:<br/>
-									<input type="radio" name="peakAssignOpt" value="intense" checked="checked"/><b>Most Intense</b><br/>
-									<input type="radio" name="peakAssignOpt" value="close"/><b>Nearest Match</b>
-								</div>
-							</td>
-						</tr>
-						<tr> <!-- peak labels -->
-							<td class="optionCell">
-								<div> Peak Labels:<br/>
-									<input type="radio" name="peakLabelOpt" value="ion" checked="checked"/><b>Ion</b>
-									<input type="radio" name="peakLabelOpt" value="mz"/><b>m/z</b><br/>
-									<input type="radio" name="peakLabelOpt" value="none"/><b>None</b>
-								</div>
-							</td>
-						</tr>
-						<tr> <!-- precursor -->
-							<td class="optionCell">
-								<div> Filter:<br/>
-									<input type="checkbox" value="precursor" id="hide_precursor_${hash}" checked="checked"/>Precursor Ion
-								</div>
-							</td>
-						</tr>
-					</table>
+				<td valign="top" id="optionsTable" width="1px" class="options">
+					<div class="group"> <!-- Ions -->
+						<div class="head">Ions:</div>
+						<div id="ion_choice_${hash}" style="margin-bottom: 10px">
+							<nobr><b>a</b> <input type="checkbox" value="1" id="a_1"/>1<sup>+</sup> <input type="checkbox" value="2" id="a_2"/>2<sup>+</sup> <input type="checkbox" value="3" id="a_3"/>3<sup>+</sup></nobr><br/>
+							<nobr><b>b</b> <input type="checkbox" value="1" id="b_1" checked="checked"/>1<sup>+</sup>
+								<tal:if condition="python: opt_charge >= 2"><input type="checkbox" value="2" id="b_2" checked="checked"/>2<sup>+</sup></tal:if>
+								<tal:else condition="python: opt_charge < 2"><input type="checkbox" value="2" id="b_2"/>2<sup>+</sup></tal:else>
+								<tal:if condition="python: opt_charge >= 3"><input type="checkbox" value="3" id="b_3" checked="checked"/>3<sup>+</sup></tal:if>
+								<tal:else condition="python: opt_charge < 3"><input type="checkbox" value="3" id="b_3"/>3<sup>+</sup></tal:else>
+							</nobr><br/>
+							<nobr><b>c</b> <input type="checkbox" value="1" id="c_1"/>1<sup>+</sup> <input type="checkbox" value="2" id="c_2"/>2<sup>+</sup> <input type="checkbox" value="3" id="c_3"/>3<sup>+</sup></nobr><br/>
+							<nobr><b>x</b> <input type="checkbox" value="1" id="x_1"/>1<sup>+</sup> <input type="checkbox" value="2" id="x_2"/>2<sup>+</sup> <input type="checkbox" value="3" id="x_3"/>3<sup>+</sup></nobr><br/>
+							<nobr><b>y</b> <input type="checkbox" value="1" id="y_1" checked="checked"/>1<sup>+</sup>
+								<tal:if condition="python: opt_charge >= 2"><input type="checkbox" value="2" id="y_2" checked="checked"/>2<sup>+</sup></tal:if>
+								<tal:else condition="python: opt_charge < 2"><input type="checkbox" value="2" id="y_2"/>2<sup>+</sup></tal:else>
+								<tal:if condition="python: opt_charge >= 3"><input type="checkbox" value="3" id="y_3" checked="checked"/>3<sup>+</sup></tal:if>
+								<tal:else condition="python: opt_charge < 3"><input type="checkbox" value="3" id="y_3"/>3<sup>+</sup></tal:else>
+							</nobr><br/>
+							<nobr><b>z</b> <input type="checkbox" value="1" id="z_1"/>1<sup>+</sup> <input type="checkbox" value="2" id="z_2"/>2<sup>+</sup> <input type="checkbox" value="3" id="z_3"/>3<sup>+</sup></nobr><br/>
+							<span id="deselectIonsLink_${hash}" class="link font_small">[Deselect All]</span>
+						</div>
+						<div class="head">Neutral Loss:</div>
+						<div id="nl_choice_${hash}">
+							<nobr> <input type="checkbox" value="h2o" id="h2o"/> H<sub>2</sub>O (<b>o</b>)</nobr><br>
+							<nobr> <input type="checkbox" value="nh3" id="nh3"/> NH<sub>3</sub> (<b>*</b>)</nobr>
+						</div>
+					</div>
+					<div id="massType_${hash}" class="group"> <!-- mass type, mass tolerance etc. -->
+						<div class="head">Mass Type:</div>
+						<div id="massTypeOpt_${hash}"><nobr><input type="radio" name="massType" value="mono" checked="checked"/><b>Mono</b> <input type="radio" name="massType" value="avg"/><b>Avg</b></nobr></div>
+						<div style="margin-top:10px;">
+							<nobr>Mass Tol: <input id="massError_${hash}" type="text" value="0.5" size="4"/></nobr>
+						</div>
+						<div style="margin-top:10px;" align="center">
+							<input id="update_${hash}" name="massType" type="button" value="Update"/>
+						</div>
+					</div>
+					<div class="group"> <!-- peak assignment method -->
+						<div class="head">Peak Assignment:</div>
+						<input type="radio" name="peakAssignOpt" value="intense" checked="checked"/>Most Intense<br/>
+						<input type="radio" name="peakAssignOpt" value="close"/>Nearest Match
+						
+					</div>
+					<div class="group"> <!-- peak labels -->
+						<div class="head">Peak Labels:</div>
+						<input type="radio" name="peakLabelOpt" value="ion" checked="checked"/>Ion
+						<input type="radio" name="peakLabelOpt" value="mz"/>m/z<br/>
+						<input type="radio" name="peakLabelOpt" value="none"/>None
+						
+					</div>
+					<div class="group"> <!-- precursor -->
+						<div class="head">Filter:</div>
+						<input type="checkbox" value="precursor" id="hide_precursor_${hash}" checked="checked"/>Precursor Ion
+					</div>
 				</td>
 			</tal:if>
-			<td style="background-color: white; padding:5px; border:1px dotted #cccccc;" valign="middle" align="center">
-				<div id="msmsplot_${hash}" align="bottom" style="width:100%;height:500px;"></div>
+			<td valign="middle" align="center" class="plot">
+				<div id="msmsplot_${hash}" align="bottom" style="width:100%; height:100%; min-width:100px; min-height:450px;"></div>
 				<div id="viewOptionsDiv" align="top" style="margin-top:10px;">
 					<nobr>
 						<span style="width:100%; font-size:8pt; margin-top:5px; color:sienna;">Click and drag in the plot to zoom or pan. Zoom: </span>
@@ -100,7 +86,7 @@
 				}-->
 			</td>
 			<tal:if condition="python: peptide != None">
-				<td valign="top" id="ionTableLoc1" width="1px"><!--placeholder for the ion table-->
+				<td valign="top" id="ionTableLoc1" width="1px" class="options"><!--placeholder for the ion table-->
 					<div id="ionTableDiv_${hash}">
 						<!--placeholder for file name, scan number, modifications etc.-->
 						<div id="modinfo" style="margin-top:5px;"></div>

@@ -1270,158 +1270,7 @@ function Ion_Z (sequence, startIdx, charge, massType) {
 
 //The Graph
 MsPlot = function(container, data, opts) {
-	function Val() {
-		var o = arguments[0];
-		if (o != null) {
-			for (var i = 1; i < arguments.length - 1; ++i) {
-				if (o.hasOwnProperty(arguments[i])) {
-					o = o[arguments[i]];
-				} else {
-					o = arguments[arguments.length - 1];
-					break;
-				}
-			}
-		}
-		return o;
-	}
-
-	function DataRange(dataset) {
-		for (var i in dataset.data) {
-			var d = dataset.data[i];
-			obj.DataRange.x.min = Math.min(obj.DataRange.x.min, d[0]);
-			obj.DataRange.x.max = Math.max(obj.DataRange.x.max, d[0]);
-			obj.DataRange.y.min = Math.min(obj.DataRange.y.min, d[1]);
-			obj.DataRange.y.max = Math.max(obj.DataRange.y.max, d[1]);
-		}
-	}
-
-	function RenderFrame() {
-		function Ticks(len, spacing, view) {
-			var ticks = [];
-			if (len > 0) {
-				var max_ticks = len / spacing;
-				var range = view.max - view.min;
-				var scale = 1;
-				if (range > max_ticks) {
-					while (true) {
-						if (range > max_ticks * scale * 10) {
-							scale *= 10;
-						} else if (range > max_ticks * scale * 5) {
-							scale *= 5;
-							break;
-						} else if (range > max_ticks * scale * 4) {
-							scale *= 4;
-							break;
-						} else if (range > max_ticks * scale * 2) {
-							scale *= 2;
-							break;
-						} else {
-							break;
-						}
-					}
-				} else if (range < max_ticks) {
-					while (true) {
-						if (range < max_ticks * scale / 10) {
-							scale /= 10;
-						} else if (range < max_ticks * scale / 5) {
-							scale /= 5;
-							break;
-						} else if (range < max_ticks * scale / 4) {
-							scale /= 4;
-							break;
-						} else if (range < max_ticks * scale / 2) {
-							scale /= 2;
-							break;
-						} else {
-							break;
-						}
-					}
-				}
-				var m = Math.floor(view.min / scale) * scale;
-				if (view.min == m) {
-					ticks.push(m);
-				}
-				for (var i = m + scale; i <= view.max; i += scale) {
-					ticks.push(i);
-				}
-			}
-			return ticks;
-		}
-
-		obj.FrameGroup.createRect({x:padding[0] - 1, y:padding[1] - 1, width:obj.Width + 2, height:obj.Height + 2}).setFill("white").setStroke({color:"black", width:1});
-		//x-axis
-		var ticks = Ticks(obj.Width, 100, obj.ViewRange.x);
-		for (var i = 0; i < ticks.length; ++i) {
-			var x = (ticks[i] - obj.ViewRange.x.min) * obj.ScaleX + padding[0];
-			obj.FrameGroup.createLine({x1:x, y1:obj.GraphBottom + 1, x2:x, y2:obj.GraphBottom + 4}).setStroke({color:"black", width:1});
-			obj.FrameGroup.createText({x:x, y:obj.GraphBottom + 16, text:ticks[i].toPrecision(), align:"middle"}).setFont({family:"Arial", size:"10px"}).setFill("black");
-		}
-		//y axis
-		var scale = 100 / obj.DataRange.y.max;
-		ticks = Ticks(obj.Height, 50, {min: obj.ViewRange.y.min * scale, max: obj.ViewRange.y.max * scale});
-		for (var i = 0; i < ticks.length; ++i) {
-			var y = obj.GraphBottom - (ticks[i] - obj.ViewRange.y.min * scale) * obj.ScaleY / scale;
-			obj.FrameGroup.createLine({x1:padding[0] - 1, y1:y, x2:padding[0] - 4, y2:y}).setStroke({color:"black", width:1});
-			obj.FrameGroup.createText({x:padding[0] - 6, y:y + 4, text:ticks[i].toPrecision() + "%", align:"end"}).setFont({family:"Arial", size:"10px"}).setFill("black");
-		}
-	}
-
-	function RenderData(data) {
-		for (var i in data.data) {
-			var d = data.data[i];
-			if (d[0] >= obj.ViewRange.x.min && d[0] <= obj.ViewRange.x.max && d[1] > obj.ViewRange.y.min) {
-				var x = (d[0] - obj.ViewRange.x.min) * obj.ScaleX + padding[0];
-				var y = obj.GraphBottom - (d[1] - obj.ViewRange.y.min) * obj.ScaleY;
-				if (y < padding[1]) {
-					y = padding[1];
-				}
-				obj.DataGroup.createLine({x1:x, y1:obj.GraphBottom, x2:x, y2:y}).setStroke({color:data.color, width:1});
-			}
-		}
-		//Do the labels seperate so they show ontop of the peaks
-		if (data.labels) {
-			var rot = dojox.gfx.matrix.rotategAt;
-			for (var i in data.data) {
-				var d = data.data[i];
-				if (d[0] >= obj.ViewRange.x.min && d[0] <= obj.ViewRange.x.max && d[1] > obj.ViewRange.y.min) {
-					var x = (d[0] - obj.ViewRange.x.min) * obj.ScaleX + padding[0];
-					var y = obj.GraphBottom - (d[1] - obj.ViewRange.y.min) * obj.ScaleY;
-					if (y < padding[1]) {
-						y = padding[1];
-					}
-					obj.DataGroup.createText({x:x, y:y, text:data.labels[i], align:"start"}).setFont({family:"Arial", size:"13px"}).setFill(data.color).setTransform(rot(270, {x:x, y:y - 4}));
-				}
-			}
-		}
-	}
-	
-	function PointOnGraph(e) {
-		var elem = dojo.position(container, true);
-		return { x:e.pageX - elem.x, y:e.pageY - elem.y };
-	}
-
-	function PointInGraph(pt) {
-		return pt.x >= padding[0] && pt.x <= obj.Width + padding[0] && pt.y >= padding[1] && pt.y <= obj.Height + padding[1];
-	}
-
-	this.SetSelection = function(axis) {
-		this.Options.selection.axis = axis;
-	}
-	
-	this.SetTooltip = function(show) {
-		this.Options.tooltip = show;
-	}
-
-	this.Destroy = function() {
-		if (this.Tooltip) {
-			dijit.Tooltip.hide(this.Tooltip.pos);
-			this.Tooltip = null;
-		}
-		this.Surface.destroy();
-	}
-
 	var obj = this;
-	var padding = [50, 30, 20, 20]; //l, t, r, b
 
 	this.DataRange = {
 		x: { min:Number.POSITIVE_INFINITY, max:Number.NEGATIVE_INFINITY },
@@ -1435,186 +1284,118 @@ MsPlot = function(container, data, opts) {
 		DataRange(data);
 		data = [data];
 	}
-	this.ViewRange = {
-		x: { min:Val(opts, "axis", "x", "min", this.DataRange.x.min), max:Val(opts, "axis", "x", "max", this.DataRange.x.max) },
-		y: { min:Val(opts, "axis", "y", "min", 0), max:Val(opts, "axis", "y", "max", this.DataRange.y.max * 1.1) }
+	
+	var defaults = {
+		axis: {
+			x: {
+				min: this.DataRange.x.min,
+				max: this.DataRange.x.max,
+				label: "m/z"
+			},
+			y: {
+				min: 0,
+				max: this.DataRange.y.max * 1.1,
+				label: "Intensity"
+			}
+		}
 	};
+	
+	MixIn(defaults, opts);
+	dojo.mixin(this, new BaseGraph(container, defaults));
 
-	this.Surface = dojox.gfx.createSurface(container, container.clientWidth, container.clientHeight);
-	this.Options = dojo.clone(opts);
-	this.FrameGroup = this.Surface.createGroup();
-	this.Width = container.clientWidth - padding[0] - padding[2];
-	this.Height = container.clientHeight - padding[1] - padding[3];
-	this.GraphBottom = container.clientHeight - padding[3];
-	this.ScaleX = this.Width / (this.ViewRange.x.max - this.ViewRange.x.min);
-	this.ScaleY = this.Height / (this.ViewRange.y.max - this.ViewRange.y.min);
-	RenderFrame();
-	this.DataGroup = this.Surface.createGroup();
-	for (var i in data) {
-		RenderData(data[i]);
+	function DataRange(dataset) {
+		for (var i in dataset.data) {
+			var d = dataset.data[i];
+			obj.DataRange.x.min = Math.min(obj.DataRange.x.min, d[0]);
+			obj.DataRange.x.max = Math.max(obj.DataRange.x.max, d[0]);
+			obj.DataRange.y.min = Math.min(obj.DataRange.y.min, d[1]);
+			obj.DataRange.y.max = Math.max(obj.DataRange.y.max, d[1]);
+		}
 	}
-	this.Handlers = {}
-	this.Selection = null;
-	this.DragPoint = null;
-	this.Overlays = this.Surface.createGroup();
-	this.Interact = this.Surface.createGroup();
-	this.Interact.createRect({x:0, y:0, width:container.clientWidth, height:container.clientHeight}).setFill("rgba(0,0,0,0)").setStroke(null);
-	this.Tooltip = null;
-	this.Interact.connect("onmousedown", this, function(evt) {
-		dojo._base.event.stop(evt);
 
-		var pt = PointOnGraph(evt);
-		if (this.Options.selection) {
-			if (this.Selection != null) {
-				return;
-			}
-			this.DragPoint = {
-				x: pt.x < padding[0] ? padding[0] : pt.x > this.Width + padding[0] ? this.Width + padding[0] : pt.x,
-				y: pt.y < padding[1] ? padding[1] : pt.y > this.Height + padding[1] ? this.Height + padding[1] : pt.y,
-				active: false,
-				on: PointInGraph(pt)
-			};
-			//this.Handlers.onmouseup = this.Interact.connect("onmouseup", this, function(evt) {
-			this.Handlers.onmouseup = dojo.connect(window, "onmouseup", this, function(evt) {
-				var pt = PointOnGraph(evt);
-				if (this.DragPoint.active && this.Options.selection.callback) {
-					var r = this.ViewRange;
-					if (this.Options.selection.axis.indexOf("x") < 0) {
-						var x1 = padding[0];
-						var x2 = this.Width + padding[0];
-					} else {
-						var x1 = this.DragPoint.x;
-						var x2 = pt.x < padding[0] ? padding[0] : pt.x > this.Width + padding[0] ? this.Width + padding[0] : pt.x;
-					}
-					if (this.Options.selection.axis.indexOf("y") < 0) {
-						var y1 = padding[1];
-						var y2 = this.Height + padding[1];
-					} else {
-						var y1 = this.DragPoint.y;
-						var y2 = pt.y < padding[1] ? padding[1] : pt.y > this.Height + padding[1] ? this.Height + padding[1] : pt.y;
-					}
-					this.Options.selection.callback.call(this.Options.selection.data, { x:{ min: (Math.min(x1, x2) - padding[0]) / this.ScaleX + r.x.min, max: (Math.max(x1, x2) - padding[0]) / this.ScaleX + r.x.min }, y:{ min: (this.Height + padding[1] - Math.max(y1, y2)) / this.ScaleY + r.y.min, max: (this.Height + padding[1] - Math.min(y1, y2)) / this.ScaleY + r.y.min } });
+	function RenderData(data) {
+		for (var i in data.data) {
+			var d = data.data[i];
+			if (d[0] >= obj.ViewRange.x.min && d[0] <= obj.ViewRange.x.max && d[1] > obj.ViewRange.y.min) {
+				var x = (d[0] - obj.ViewRange.x.min) * obj.ScaleX + obj.Padding[0];
+				var y = obj.GraphBottom - (d[1] - obj.ViewRange.y.min) * obj.ScaleY;
+				if (y < obj.Padding[1]) {
+					y = obj.Padding[1];
 				}
-				if (this.Selection) {
-					obj.Overlays.remove(this.Selection);
-					this.Selection = null;
-				}
-				this.DragPoint = null;
-				for (var h in this.Handlers) {
-					dojo.disconnect(this.Handlers[h]);
-				}
-				this.Handlers = {}
-			});
-			this.Handlers.onkeypress = dojo.connect(window, "onkeypress", this, function(evt) {
-				if (evt.which == 27) {
-					if (this.Selection) {
-						obj.Overlays.remove(this.Selection);
-						this.Selection = null;
-					}
-					this.DragPoint = null;
-					for (var h in this.Handlers) {
-						dojo.disconnect(this.Handlers[h]);
-					}
-					this.Handlers = {}
-				}
-			});
-			this.Handlers.onmousemove = dojo.connect(window, "onmousemove", this, function(evt) {
-				if (this.DragPoint != null) {
-					var pt = PointOnGraph(evt);
-					dojo._base.event.stop(evt);
-					if (this.DragPoint.active) {
-						if (this.Options.selection.axis.indexOf("x") >= 0) {
-							var x1 = this.DragPoint.x;
-							var x2 = pt.x < padding[0] ? padding[0] : pt.x > this.Width + padding[0] ? this.Width + padding[0] : pt.x;
-							this.Selection.rawNode.setAttribute("x", Math.min(x1, x2));
-							this.Selection.rawNode.setAttribute("width", Math.max(x1, x2) - Math.min(x1, x2));
-						}
-						if (this.Options.selection.axis.indexOf("y") >= 0) {
-							var y1 = this.DragPoint.y;
-							var y2 = pt.y < padding[1] ? padding[1] : pt.y > this.Height + padding[1] ? this.Height + padding[1] : pt.y;
-							this.Selection.rawNode.setAttribute("y", Math.min(y1, y2));
-							this.Selection.rawNode.setAttribute("height", Math.max(y1, y2) - Math.min(y1, y2));
-						}
-					} else {
-						if (Math.abs(pt.x - this.DragPoint.x) > 5 || Math.abs(pt.y - this.DragPoint.y) > 5) {
-							if (!this.DragPoint.on && PointInGraph(pt)) {
-								this.DragPoint.on = true;
-							}
-							if (this.DragPoint.on) {
-								var x1 = this.DragPoint.x, y1 = this.DragPoint.y, x2 = pt.x, y2 = pt.y;
-								if (this.Options.selection.axis.indexOf("x") < 0) {
-									x1 = padding[0];
-									x2 = this.Width + padding[0];
-								}
-								if (this.Options.selection.axis.indexOf("y") < 0) {
-									y1 = padding[1];
-									y2 = this.Height + padding[1];
-								}
-								var x1 = Math.min(x1, x2), y1 = Math.min(y1, y2), x2 = Math.max(x1, x2), y2 = Math.max(y1, y2);
-								this.Selection = this.Overlays.createRect({x:x1, y:y1, width:x2 - x1, height:y2 - y1}).setFill("rgba(0,0,190,0.2)").setStroke({color:"rgba(0,0,190,0.7)", width:0.5});
-								this.DragPoint.active = true;
-							}
-						}
-					}
-				}
-			});
-			/*this.Handlers.onmouseleave = this.Surface.connect("onmouseleave", this, function(evt) {
-				console.log(evt);
-				this.Surface.connect("onmouseenter", this, function(evt) {
-					console.log(evt);
-				});
-			});*/
-		} else if (this.Options.Dragable) {
-		}
-	});
-	this.Interact.connect("onmousemove", this, function(evt) {
-	//dojo.connect(window, "onmousemove", this, function(evt) {
-		if (this.DragPoint == null && this.Options.tooltip) {
-			var pt = PointOnGraph(evt);
-			if (PointInGraph(pt)) {
-				var closest = {i:-1, j:-1, dist:Number.POSITIVE_INFINITY};
-				var m = { x: pt.x - padding[0], y: pt.y };
-				for (var i in data) {
-					for (var j in data[i].data) {
-						var d = data[i].data[j];
-						if (d[0] >= obj.ViewRange.x.min && d[0] <= obj.ViewRange.x.max && d[1] > obj.ViewRange.y.min) {
-							var a = { x: (d[0] - this.ViewRange.x.min) * this.ScaleX, y: this.GraphBottom - (d[1] - this.ViewRange.y.min) * obj.ScaleY };
-							if (a.y < m.y + 8) {
-								var b = { x: a.x, y: this.GraphBottom };
-								var dist = Math.sqrt(Math.pow((b.y - a.y) * (m.x - a.x) + (b.x - a.x) * (m.y - a.y), 2) / (Math.pow(b.x - a.x, 2) + Math.pow(b.y - a.y, 2)));
-								if (dist <= closest.dist) {
-									closest = {i:i, j:j, dist:dist};
-								}
-							}
-						}
-					}
-				}
-				if (closest.i >= 0 && closest.dist < 10) {
-					var d = data[closest.i].data[closest.j];
-					var elem = dojo.position(container, false);
-					if (this.Tooltip && this.Tooltip.i == closest.i && this.Tooltip.j == closest.j) {
-						this.Tooltip.node.style.left = Math.round((d[0] - this.ViewRange.x.min) * this.ScaleX + padding[0] + elem.x - 5) + "px";
-						this.Tooltip.node.style.top = (evt.pageY - this.Tooltip.node.offsetHeight / 2) + "px";
-					} else {
-						this.Tooltip = {i:closest.i, j:closest.j, pos:{x: Math.round((d[0] - this.ViewRange.x.min) * this.ScaleX + padding[0] + elem.x - 5), y: evt.pageY, w: 1, h: 1}};
-						dijit.Tooltip.show('<div style="white-space:nowrap;">m/z: ' + d[0].toFixed(3) + "<br/>Intensity: " + d[1].toFixed(3) + "</div>", this.Tooltip.pos, ["after", "before"], false, "ltr");
-						this.Tooltip.node = dijit.Tooltip._masterTT.domNode;
-						this.Tooltip.node.setAttribute("style", "pointer-events:none;" + this.Tooltip.node.getAttribute("style"));
-					}
-				} else if (this.Tooltip) {
-					dijit.Tooltip.hide(this.Tooltip.pos);
-					this.Tooltip = null;
-				}
-			} else if (this.Tooltip) {
-				dijit.Tooltip.hide(this.Tooltip.pos);
-				this.Tooltip = null;
+				obj.DataGroup.createLine({x1:x, y1:obj.GraphBottom, x2:x, y2:y}).setStroke({color:data.color, width:1});
 			}
 		}
-	});
-	this.Interact.connect("onmouseout", this, function(evt) {
-		if (this.Tooltip) {
+		//Do the labels seperate so they show ontop of the peaks
+		if (data.labels) {
+			var rot = dojox.gfx.matrix.rotategAt;
+			for (var i in data.data) {
+				var d = data.data[i];
+				if (d[0] >= obj.ViewRange.x.min && d[0] <= obj.ViewRange.x.max && d[1] > obj.ViewRange.y.min) {
+					var x = (d[0] - obj.ViewRange.x.min) * obj.ScaleX + obj.Padding[0];
+					var y = obj.GraphBottom - (d[1] - obj.ViewRange.y.min) * obj.ScaleY;
+					if (y < obj.Padding[1]) {
+						y = obj.Padding[1];
+					}
+					obj.DataGroup.createText({x:x, y:y, text:data.labels[i], align:"start"}).setFont({family:"Arial", size:"13px"}).setFill(data.color).setTransform(rot(270, {x:x, y:y - 4}));
+				}
+			}
+		}
+	}
+	
+	this.OnTooltip = function(evt, pt) {
+		var closest = {i:-1, j:-1, dist:Number.POSITIVE_INFINITY};
+		var m = { x: pt.x - this.Padding[0], y: pt.y };
+		for (var i in data) {
+			for (var j in data[i].data) {
+				var d = data[i].data[j];
+				if (d[0] >= this.ViewRange.x.min && d[0] <= this.ViewRange.x.max && d[1] > this.ViewRange.y.min) {
+					var a = { x: (d[0] - this.ViewRange.x.min) * this.ScaleX, y: this.GraphBottom - (d[1] - this.ViewRange.y.min) * this.ScaleY };
+					if (a.y < m.y + 8) {
+						var b = { x: a.x, y: this.GraphBottom };
+						var dist = Math.sqrt(Math.pow((b.y - a.y) * (m.x - a.x) + (b.x - a.x) * (m.y - a.y), 2) / (Math.pow(b.x - a.x, 2) + Math.pow(b.y - a.y, 2)));
+						if (dist <= closest.dist) {
+							closest = {i:i, j:j, dist:dist};
+						}
+					}
+				}
+			}
+		}
+		if (closest.i >= 0 && closest.dist < 10) {
+			var d = data[closest.i].data[closest.j];
+			var elem = dojo.position(container, false);
+			if (this.Tooltip && this.Tooltip.i == closest.i && this.Tooltip.j == closest.j) {
+				this.Tooltip.node.style.left = Math.round((d[0] - this.ViewRange.x.min) * this.ScaleX + this.Padding[0] + elem.x - 5) + "px";
+				this.Tooltip.node.style.top = (evt.pageY - this.Tooltip.node.offsetHeight / 2) + "px";
+			} else {
+				this.Tooltip = {i:closest.i, j:closest.j, pos:{x: Math.round((d[0] - this.ViewRange.x.min) * this.ScaleX + this.Padding[0] + elem.x - 5), y: evt.pageY, w: 1, h: 1}};
+				dijit.Tooltip.show('<div style="white-space:nowrap;">m/z: ' + d[0].toFixed(3) + "<br/>Intensity: " + d[1].toFixed(3) + "</div>", this.Tooltip.pos, ["after", "before"], false, "ltr");
+				this.Tooltip.node = dijit.Tooltip._masterTT.domNode;
+				this.Tooltip.node.setAttribute("style", "pointer-events:none;" + this.Tooltip.node.getAttribute("style"));
+			}
+		} else if (this.Tooltip) {
 			dijit.Tooltip.hide(this.Tooltip.pos);
 			this.Tooltip = null;
 		}
-	});
+	}
+	
+	this.RenderData = function() {
+		if (this.DataGroup) {
+			this.DataGroup.clear();
+		} else {
+			this.DataGroup = this.Surface.createGroup();
+		}
+		for (var i in data) {
+			RenderData(data[i]);
+		}
+	}
+	
+	this.RecalcLayout = function() {
+		this.ScaleX = this.Width / (this.ViewRange.x.max - this.ViewRange.x.min);
+		this.ScaleY = this.Height / (this.ViewRange.y.max - this.ViewRange.y.min);
+		this.FrameGroup.clear();
+		this.RenderFrame();
+		this.RenderData();
+	}
+	
+	this.Initialise();
 }

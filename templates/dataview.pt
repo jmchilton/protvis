@@ -3,8 +3,7 @@
 	<head>
 		<meta http-equiv="content-type" content="text/html; charset=utf-8" />
 		<title>Results</title>
-		<link href="/res/styles/list.css" type="text/css" rel="stylesheet" />
-		<link href="/res/styles/specview.css" type="text/css" rel="stylesheet" />
+		<link href="/res/styles/protvis.css" type="text/css" rel="stylesheet" />
 		<link href="/res/dojo/dijit/themes/dijit.css" rel="stylesheet" />
 		<link id="themeStyles" href="/res/dojo/dijit/themes/claro/claro.css" type="text/css" rel="stylesheet" />
 		<link id="themeStyles" href="/res/dojo/dojox/html/resources/ellipsis.css" type="text/css" rel="stylesheet" />

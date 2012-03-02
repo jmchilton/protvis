@@ -1,0 +1,47 @@
+body {color:#303030; font-size:11pt; background-color:#F4F4F4;}
+table {border:3px solid #F4F4F4; border-collapse:collapse; font-size:14px;}
+td, th {border:none; padding:2px 8px 2px 8px;}
+th {background-color:#B8B8E0; text-align:center; border:3px solid #F4F4F4; font-weight:bold;}
+th.sort {text-decoration:underline; cursor:pointer;}
+th.sort_asc {padding-right:15px; background:url(/res/images/sort_asc.png) right no-repeat #B8B8E0;}
+th.sort_dsc {padding-right:15px; background:url(/res/images/sort_dsc.png) right no-repeat #B8B8E0;}
+tr.row {background-color:#E9E9FF;}
+tr.rowodd {background-color:#DDDDFF;}
+tr.rowdecoy {background-color:#FFE9E9;}
+tr.rowdecoyodd {background-color:#FFDDDD;}
+tr.stuckdecoy {background-color:#E9FFE9;}
+tr.stuckdecoyodd {background-color:#DDFFDD;}
+tr.stuck {background-color:#E9FFE9;}
+tr.stuckodd {background-color:#DDFFDD;}
+tr.stuckover {background-color:#C9FFC9;}
+tr.stuckoverodd {background-color:#BBFFBB;}
+.notice {background-color:#E9E9FF;}
+.noticeodd {background-color:#DDDDFF;}
+.indistinguishable {font-weight:bold; color:green; text-decoration:underline; cursor:pointer;}
+.more {color:green; text-decoration:underline; cursor:pointer;}
+.modification {color:red; font-weight:bold;}
+.error {color:red;}
+.info {font-size:11pt;}
+.desc {color:#505050;}
+.peptide_full {color:#707070;}
+.peptide {color:#303030; font-weight:bold;}
+.link {text-decoration:underline; cursor:pointer;}
+.dijitContentPaneLoading {background:url(../dojo/dijit/themes/claro/images/loadingAnimation.gif) no-repeat; padding-left:24px; min-height:20px;}
+table.graph {border:1px solid #444444;}
+table.graph td.plot {background-color:white; padding:5px;}
+table.graph td.options {background-color:#eeeeee; padding:0px 5px; border:1px solid #444444; vertical-align:top;}
+table.graph td.options div.group {background-color:white; border:1px dotted #666666; padding:5px; margin:5px 0px;}
+table.graph td.options div.group .head {font-weight:bold; margin-bottom:3px;}
+table.graph td.options div.group div.tip {margin-top:7px; color:#707070;}
+@media print {.noprint {display:none;}}
+div.lorikeet {width:100%; color:#000000; font-family:"Trebuchet MS",Arial,sans-serif; font-size:10pt; font-style:normal; margin:0; padding:0;}
+div.lorikeet div.bar {background-color:#F5F5DC; color:black;}
+div.lorikeet .link {text-decoration:underline; cursor:pointer; color:#444444;}
+div.lorikeet .font_small {font-size:8pt;}
+div.lorikeet #ionTable {border-collapse:collapse; border:1px solid #666666; margin-top:5px;}
+div.lorikeet #ionTable th {background-color:#CCCCCC; border:1px solid #666666; padding:5px;}
+div.lorikeet #ionTable td {border:1px solid #666666; text-align:center; background-color:#FFFFFF; font-size:8pt; padding:5px;}
+div.lorikeet #ionTable td.seq {font-weight:bold; background-color:#CCCCCC;}
+div.lorikeet #ionTable td.modified{background-color:#E9E9FF;}
+div.lorikeet #ionTable td.numCell {background-color:#E3E3E3; color:#444444;}
+div.lorikeet #ionTable td.matchIon {font-weight:bold; opacity:0.8; filter:alpha(opacity=80); -moz-opacity:0.8; color:white;}
