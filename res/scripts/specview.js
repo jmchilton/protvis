@@ -43,6 +43,7 @@ SpecViewer = function(container, opts) {
 		}
 	}
 	dojo.mixin(this.Options, opts);
+	this.maxInt = getMaxInt(this.Options.peaks);
 	var selected = [];
 	for (i in this.Options.selectedIons) {
 		selected.push(Ion.get(this.Options.selectedIons[i][0], this.Options.selectedIons[i][1]));
@@ -58,28 +59,38 @@ SpecViewer = function(container, opts) {
 	this.selectedNeutralLossChanged = false;
 
 	this.PlotOptions = {
-		axis: {},
+		axis: {
+			y: {
+				scale: 100.0 / this.maxInt,
+				format: function(val, precision) { return FormatPrecision(val, precision) + "%"; }
+			}
+		},
 		tooltip: this.Options.tooltip,
 		editable: this.Options.editable,
 		selection: {
 			axis: "x",
-			callback: function(range) {
-				obj.ZoomRange = range;
-				var datasets = obj.getDatasets();
-				if (obj.PlotOptions.selection.axis.indexOf("y") < 0) {
-					var maxInt = 0;
-					for (var i in datasets) {
-						var d = datasets[i].data;
-						for (var j in d) {
-							var v = d[j];
-							if (v[0] >= range.x.min && v[0] <= range.x.max && v[1] > maxInt) {
-								maxInt = v[1];
+			callback: function(isRange, range) {
+				if (isRange) {
+					obj.ZoomRange = range;
+					var datasets = obj.getDatasets();
+					if (obj.PlotOptions.selection.axis.indexOf("y") < 0) {
+						var maxInt = 0;
+						for (var i in datasets) {
+							var d = datasets[i].data;
+							for (var j in d) {
+								var v = d[j];
+								if (v[0] >= range.x.min && v[0] <= range.x.max && v[1] > maxInt) {
+									maxInt = v[1];
+								}
 							}
 						}
+						obj.ZoomRange.y.max = maxInt * 1.1;
 					}
-					obj.ZoomRange.y.max = maxInt * 1.1;
+					obj.createPlot(datasets);
+				} else if (obj.Options.editable) {
+					//select ion
+					console.log(range.x, range.y);
 				}
-				obj.createPlot(datasets);
 			}
 		}
 	};
@@ -787,7 +798,6 @@ SpecViewer = function(container, opts) {
 
 	this.showModInfo();
 
-	this.maxInt = getMaxInt(this.Options.peaks);
 
 	var ds = this.getDatasets();
 	this.makeIonTable();

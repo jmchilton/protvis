@@ -38,7 +38,7 @@ div.lorikeet {width:100%; color:#000000; font-family:"Trebuchet MS",Arial,sans-s
 div.lorikeet div.bar {background-color:#F5F5DC; color:black;}
 div.lorikeet .link {text-decoration:underline; cursor:pointer; color:#444444;}
 div.lorikeet .font_small {font-size:8pt;}
-div.lorikeet #ionTable {border-collapse:collapse; border:1px solid #666666; margin-top:5px;}
+div.lorikeet #ionTable {border-collapse:collapse; border:1px solid #666666; margin:5px 0px;}
 div.lorikeet #ionTable th {background-color:#CCCCCC; border:1px solid #666666; padding:5px;}
 div.lorikeet #ionTable td {border:1px solid #666666; text-align:center; background-color:#FFFFFF; font-size:8pt; padding:5px;}
 div.lorikeet #ionTable td.seq {font-weight:bold; background-color:#CCCCCC;}

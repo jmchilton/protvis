@@ -70,7 +70,7 @@
 				</td>
 			</tal:if>
 			<td valign="middle" align="center" class="plot">
-				<div id="msmsplot_${hash}" align="bottom" style="width:100%; height:100%; min-width:100px; min-height:450px;"></div>
+				<div id="msmsplot_${hash}" align="bottom" style="width:100%; height:100%; min-width:100px; min-height:525px;"></div>
 				<div id="viewOptionsDiv" align="top" style="margin-top:10px;">
 					<nobr>
 						<span style="width:100%; font-size:8pt; margin-top:5px; color:sienna;">Click and drag in the plot to zoom or pan. Zoom: </span>
