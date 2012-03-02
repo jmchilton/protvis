@@ -25,3 +25,4 @@ C/bin/*
 C/*/*.o
 C/config.mk
 C/Libraries/*
+*.so

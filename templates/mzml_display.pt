@@ -1,0 +1,106 @@
+<tal:var define="global hash python: unique_dataset()" />
+<table class="graph" cellpadding="0" cellspacing="5" width="100%" style="height:100%;"><tr>
+	<td class="options" width="180">
+		<div class="group">
+			<div class="head">Zoom/Pan:</div>
+			<div id="zoom_${hash}">&nbsp;X:<input name="x" type="checkbox" checked="checked"/>&nbsp;Y:<input name="y" type="checkbox" checked="checked" /></div>
+			<nobr><button id="zoomundo_${hash}">Undo Zoom</button><button id="zoomout_${hash}">Show All</button></nobr>
+			<div class="tip">Click and drag in the plot to zoom or pan.</div>
+		</div>
+		<div class="group">
+			<div class="head">Show:</div>
+			<div id="visible_${hash}">
+				<input style="margin-left:0" name="ms1smooth" type="checkbox"/>MS1 Smoothed<br/>
+				<input style="margin-left:0" name="ms1points" type="checkbox" checked="checked"/>MS1 Data Points<br/>
+				<input id="ms2_${hash}" style="margin-left:0" name="ms2" type="checkbox" checked="checked"/>MS2
+			</div>
+			<div class="head2">MS1 Contrast:</div>
+			<div id="contrast_${hash}"></div>
+		</div>
+	</td>
+	<td class="plot">
+		<div id="lcview_${hash}" style="width:100%; height:100%; min-width:100px; min-height:600px;"></div>
+	</td>
+</tr></table>
+<script>
+	dojo.require("dijit.form.HorizontalSlider");
+
+	var zooms = new Array();
+	
+	var lc = new LcPlot(dojo.byId("lcview_${hash}"), {
+		axis: {
+			x: {
+				min: <tal:echo content="python: results[0]"/>,
+				max: <tal:echo content="python: results[1]"/>,
+			},
+			y: {
+				min: <tal:echo content="python: results[2]"/>,
+				max: <tal:echo content="python: results[3]"/>,
+			}
+		},
+		maxIntensity: <tal:echo content="python: results[4]"/>,
+		datafile: ${info.datafile},
+		file: "${info.file}",
+		selection: {
+			axis: "xy",
+			data: null,
+			callback: function(isRange, range) {
+				if (isRange) {
+					var vr = lc.ViewRange;
+					if (lc.Zoom(range)) {
+						zooms.push(vr);
+					}
+				} else if (dojo.byId("ms2_${hash}").checked) {
+					//select spectrum
+					console.log(range.x, range.y);
+				}
+			}
+		}
+	});
+
+	var contrast = new dijit.form.HorizontalSlider({
+			name: "contrast",
+			value: 0.5,
+			minimum: 0.01,
+			maximum: 1,
+			intermediateChanges: false,
+			pageIncrement: 5,
+			style: "width:170px;",
+			onChange: function(value){
+				lc.SetContrast(value);
+			}
+		}, "contrast_${hash}");
+	
+	dojo.connect(dojo.byId("zoomundo_${hash}"), "onclick", null, function(evt) {
+		if (zooms.length > 0) {
+			lc.Zoom(zooms.pop());
+		}
+	});
+	
+	dojo.connect(dojo.byId("zoomout_${hash}"), "onclick", null, function(evt) {
+		var vr = lc.ViewRange;
+		if (lc.Zoom()) {
+			zooms.push(vr);
+		}
+	});
+	
+	dojo.query("#zoom_${hash} input").forEach(function(node, index, arr) {
+		dojo.connect(node, "onclick", null, function(evt) {
+			var zoom = "";
+			dojo.query("#zoom_${hash} input:checked").forEach(function(node, index, arr) {
+				zoom += node.name;
+			});
+			lc.SetSelection(zoom);
+		});
+	});
+	
+	dojo.query("#visible_${hash} input").forEach(function(node, index, arr) {
+		dojo.connect(node, "onclick", null, function(evt) {
+			var visible = {ms1smooth:false, ms1points:false, ms2: false};
+			dojo.query("#visible_${hash} input:checked").forEach(function(node, index, arr) {
+				visible[node.name] = true;
+			});
+			lc.SetVisible(visible);
+		});
+	});
+</script>

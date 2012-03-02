@@ -30,11 +30,11 @@ tr.stuckoverodd {background-color:#BBFFBB;}
 table.graph {border:1px solid #444444;}
 table.graph td.plot {background-color:white; padding:5px;}
 table.graph td.options {background-color:#eeeeee; padding:0px 5px; border:1px solid #444444; vertical-align:top;}
+@media print {table.graph td.options {display:none;}}
 table.graph td.options div.group {background-color:white; border:1px dotted #666666; padding:5px; margin:5px 0px;}
 table.graph td.options div.group .head {font-weight:bold; margin-bottom:3px;}
 table.graph td.options div.group .head2 {font-weight:bold; margin:10px 0px 3px 0px;}
 table.graph td.options div.group div.tip {margin-top:7px; color:#707070;}
-@media print {.noprint {display:none;}}
 div.lorikeet {width:100%; color:#000000; font-family:"Trebuchet MS",Arial,sans-serif; font-size:10pt; font-style:normal; margin:0; padding:0;}
 div.lorikeet .link {text-decoration:underline; cursor:pointer; color:#444444;}
 div.lorikeet .font_small {font-size:8pt;}
@@ -45,3 +45,7 @@ div.lorikeet #ionTable td.seq {font-weight:bold; background-color:#CCCCCC;}
 div.lorikeet #ionTable td.modified{background-color:#E9E9FF;}
 div.lorikeet #ionTable td.numCell {background-color:#E3E3E3; color:#444444;}
 div.lorikeet #ionTable td.matchIon {font-weight:bold; opacity:0.8; filter:alpha(opacity=80); -moz-opacity:0.8; color:white;}
+@media print {
+.noprint {display:none;}
+.printbreak {page-break-after:always}
+}

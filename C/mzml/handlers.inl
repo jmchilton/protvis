@@ -69,7 +69,6 @@ inline void MzML::AddSpectrum1(float nStartTime, DWORD nCount, float *pMz, float
 inline void MzML::Info(FILE *pFile, float &nMinTime, float &nMaxTime, float &nMinMz, float &nMaxMz, float &nMaxIntensity) {
 	fseek(pFile, 3 * sizeof(DWORD), SEEK_SET);
 	READ_STRUCTURE(pFile, info, 5, (float, float, float, float, float));
-	printf("%f %f %f %f %f\n", info._1, info._2, info._3, info._4, info._0);
 	nMinTime = info._1;
 	nMaxTime = info._2;
 	nMinMz = info._3;

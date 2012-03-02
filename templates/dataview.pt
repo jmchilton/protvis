@@ -505,8 +505,8 @@
 	<body class="claro">
 		<div id="selectBtn"></div>
 		<tal:if condition="python: nfiles > 1">
-			<div id="navigation">
-				<div class="more" onclick="ToggleNavigation();"><span id="navigation_toggle_sh">Hide</span> Navigation</div>
+			<div id="navigation" class="printbreak">
+				<div class="more noprint" onclick="ToggleNavigation();"><span id="navigation_toggle_sh">Hide</span> Navigation</div>
 				<div id="navigation_graph" style="width:100%; height:auto; overflow:auto; text-align:center;"></div>
 				<br/>
 			</div>

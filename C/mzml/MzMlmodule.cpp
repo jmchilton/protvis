@@ -11,7 +11,9 @@ static PyObject *ToBinary(PyObject *self, PyObject *args) {
 		return NULL;
 	}
 	State state(szDest);
-	Transcode(fileno(PyFile_AsFile(pFile)), &state);
+	int fd = fileno(PyFile_AsFile(pFile));
+	lseek(fd, 0, SEEK_SET);
+	Transcode(fd, &state);
 	return Py_BuildValue("i", FILETYPE_MZML);
 }
 
