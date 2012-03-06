@@ -5,6 +5,13 @@ inline void Spectrum::SetStartTime(float nTime) {
 	m_nStartTime = nTime;
 }
 
+inline void Spectrum::EatAll(FILE *pFile, DWORD nCount) {
+	for (DWORD i = 0; i < nCount; ++i) {
+		READ_STRUCTURE(pFile, header, 2, (DWORD, DWORD));
+		fseek(pFile, 2 * sizeof(float) + header._0 * (sizeof(float) * 2) + header._1 * sizeof(float), SEEK_CUR);
+	}
+}
+
 inline void Spectrum::SearchAll(FILE *pFile, SearchStatus &stat, DWORD nCount) {
 	for (DWORD i = 0; i < nCount; ++i) {
 		READ_STRUCTURE(pFile, header, 4, (DWORD, DWORD, float, float));
@@ -40,13 +47,37 @@ inline PyObject *Spectrum::GetInfo(FILE *pFile) {
 	return Py_BuildValue("{s:O,s:O,s:O}", "pepmass", nPepMass > 0 ? PyFloat_FromDouble(nPepMass) : Py_BuildValue(""), "intensity", pIntensity, "ions", pList);
 }
 
+inline PyObject *Spectrum::PointsMS2All(FILE *pFile, DWORD nCount) {
+	PyObject *pList = PyList_New(nCount);
+	if (pList == NULL) {
+		return NULL;
+	}
+	for (uint32_t i = 0; i < nCount; ++i) {
+		off_t offPos = ftell(pFile);
+		READ_STRUCTURE(pFile, spectrum, 4, (DWORD, DWORD, float, float));
+		PyObject *pValue = Py_BuildValue("[f,f,k]", spectrum._2, spectrum._3, offPos);
+		if (!pValue) {
+			Py_DECREF(pList);
+			return NULL;
+		}
+		fseek(pFile, spectrum._0 * (2 * sizeof(float)) + spectrum._1 * sizeof(float), SEEK_CUR);
+		PyList_SET_ITEM(pList, i, pValue);
+	}
+	return pList;
+}
+
 inline void Run::AddSpectrumN(DWORD nIndex) {
 	m_arrSpectrums.Push(Index(nIndex, m_pStream->Tell()));
 }
 
 inline void Run::Search(FILE *pFile, SearchStatus &stat) {
 	READ_STRUCTURE(pFile, header, 2, (DWORD, DWORD));
-	SpectrumList::SearchAll(pFile, stat, header._0);
+	Spectrum::SearchAll(pFile, stat, header._0);
+}
+
+inline PyObject *Run::PointsMS2(FILE *pFile) {
+	READ_STRUCTURE(pFile, header, 2, (DWORD, DWORD));
+	return Spectrum::PointsMS2All(pFile, header._0);
 }
 
 inline PyObject *MzML::GetSpectrum(FILE *pFile, const char *szSpectrumName) {
@@ -74,4 +105,9 @@ inline void MzML::Info(FILE *pFile, float &nMinTime, float &nMaxTime, float &nMi
 	nMinMz = info._3;
 	nMaxMz = info._4;
 	nMaxIntensity = info._0;
+}
+
+inline PyObject *MzML::PointsMS2(FILE *pFile) {
+	fseek(pFile, 3 * sizeof(DWORD) + 5 * sizeof(float), SEEK_SET);
+	return Run::PointsMS2(pFile);
 }

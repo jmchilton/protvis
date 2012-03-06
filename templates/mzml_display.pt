@@ -17,6 +17,13 @@
 			<div class="head2">MS1 Contrast:</div>
 			<div id="contrast_${hash}"></div>
 		</div>
+		<div class="group">
+			<div class="head">Cursor:</div>
+			<table cellpadding="0" cellspacing="0" style="border:none" width="100%">
+				<tr><td width="1" style="text-align:right">Time:</td><td><div id="cx_${hash}"></div></td></tr>
+				<tr><td style="text-align:right">m/z:</td><td><div id="cy_${hash}"></div></td></tr>
+			</table>
+		</div>
 	</td>
 	<td class="plot">
 		<div id="lcview_${hash}" style="width:100%; height:100%; min-width:100px; min-height:600px;"></div>
@@ -26,6 +33,7 @@
 	dojo.require("dijit.form.HorizontalSlider");
 
 	var zooms = new Array();
+	var points = [<tal:for repeat="p points">[<tal:echo content="python: str(round(p[0],3)) + ',' + str(round(p[1],3)) + ',' + str(p[2])"/>],</tal:for>];
 	
 	var lc = new LcPlot(dojo.byId("lcview_${hash}"), {
 		axis: {
@@ -51,8 +59,62 @@
 						zooms.push(vr);
 					}
 				} else if (dojo.byId("ms2_${hash}").checked) {
-					//select spectrum
-					console.log(range.x, range.y);
+					if (lc.Closest && lc.Closest.i >= 0 && lc.Closest.dist < 100) {
+						var p = points[lc.Closest.i];
+						ShowSpectrum(${dataset}, "mzml", p[2]);
+					}
+				}
+			}
+		},
+		show: {
+			ms1smooth: false,
+			ms1points: true,
+			ms2: true
+		},
+		tooltip: {
+			enable: true,
+			show: function(evt, pt, obj) {
+				var x = (pt.x - obj.Padding[0]) / obj.ScaleX + obj.ViewRange.x.min;
+				var y = (obj.Height + obj.Padding[1] - pt.y) / obj.ScaleY + obj.ViewRange.y.min;
+				dojo.byId("cx_${hash}").innerHTML = x.toFixed(3) + " min";
+				dojo.byId("cy_${hash}").innerHTML = y.toFixed(3);
+				var closest = {i:-1, dist:Number.POSITIVE_INFINITY};
+				var m = { x: pt.x - obj.Padding[0], y: pt.y };
+				for (var i in points) {
+					var p = points[i];
+					if (p[0] >= obj.ViewRange.x.min && p[0] <= obj.ViewRange.x.max && p[1] > obj.ViewRange.y.min && p[1] < obj.ViewRange.y.max) {
+						var a = { x: (p[0] - obj.ViewRange.x.min) * obj.ScaleX, y: obj.GraphBottom - (p[1] - obj.ViewRange.y.min) * obj.ScaleY };
+						var dist = (a.x - m.x) * (a.x - m.x) + (a.y - m.y) * (a.y - m.y);
+						if (dist <= closest.dist) {
+							closest = {i:i, dist:dist};
+						}
+					}
+				}
+				if (closest.i >= 0 && closest.dist < 100) {
+					var p = points[closest.i];
+					var elem = dojo.position(obj.Container, false);
+					if (!this.Tooltip || this.Tooltip.i != closest.i) {
+						this.Tooltip = {i:closest.i, pos:{x: Math.round((p[0] - obj.ViewRange.x.min) * obj.ScaleX + obj.Padding[0] + elem.x + window.scrollX - 5), y: Math.round(obj.GraphBottom - (p[1] - obj.ViewRange.y.min) * obj.ScaleY + elem.y + window.scrollY), w: 1, h: 1}};
+						dijit.Tooltip.show('<div style="white-space:nowrap;">m/z: ' + p[0].toFixed(3) + "<br/>Intensity: " + p[1].toFixed(3) + "</div>", this.Tooltip.pos, ["after", "before"], false, "ltr");
+						this.Tooltip.node = dijit.Tooltip._masterTT.domNode;
+						this.Tooltip.node.setAttribute("style", "pointer-events:none;" + this.Tooltip.node.getAttribute("style"));
+					}
+					lc.Closest = closest;
+				} else {
+					if (this.Tooltip) {
+						dijit.Tooltip.hide(this.Tooltip.pos);
+						this.Tooltip = null;
+					}
+					lc.Closest = null;
+				}
+				
+			},
+			hide: function() {
+				dojo.byId("cx_${hash}").innerHTML = "";
+				dojo.byId("cy_${hash}").innerHTML = "";
+				if (this.Tooltip) {
+					dijit.Tooltip.hide(this.Tooltip.pos);
+					this.Tooltip = null;
 				}
 			}
 		}

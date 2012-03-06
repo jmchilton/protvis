@@ -3,7 +3,7 @@
 #include "handlers.h"
 
 bool CVParam::Begin(State *pState, const XML_Char **pszAttrs) {
-	TRACEPOS(m_pStream, "CVParam.__init__(): ");
+	TRACEPOS(m_pStream, "CVParam::Begin(): ");
 	const XML_Char *szCvRef = Attr(pszAttrs, "cvRef");
 	const XML_Char *szAccession = Attr(pszAttrs, "accession");
 	const XML_Char *szUnitCvRef = Attr(pszAttrs, "unitCvRef");
@@ -33,6 +33,7 @@ bool CVParam::Begin(State *pState, const XML_Char **pszAttrs) {
 }
 
 bool ParamGroup::Begin(State *pState, const XML_Char **pszAttrs) {
+	TRACEPOS(m_pStream, "ParamGroup::Begin(): ");
 	return true;
 }
 
@@ -54,12 +55,12 @@ DWORD ParamGroup::GetParamsCount() {
 	return m_pCvParam == NULL ? 0 : m_pCvParam->GetLength() / sizeof(CVParamData);
 }
 
-bool SelectedIonList::Begin(State *pState, const XML_Char **pszAttrs) {
-	TRACEPOS(m_pStream, "SelectedIonList.__init__(): ");
+bool SelectedIon::Begin(State *pState, const XML_Char **pszAttrs) {
+	TRACEPOS(m_pStream, "SelectedIon::Begin(): ");
 	return true;
 }
 
-void SelectedIonList::End() {
+void SelectedIon::End() {
 	CVParamData *pParams = GetParams();
 	for (DWORD i = GetParamsCount(); i > 0; --i, ++pParams) {
 		if (pParams->nAccession == ACC_MS_PRECURSOR_MZ) {
@@ -69,8 +70,21 @@ void SelectedIonList::End() {
 	}
 }
 
+bool SelectedIonList::Begin(State *pState, const XML_Char **pszAttrs) {
+	TRACEPOS(m_pStream, "SelectedIonList::Begin(): ");
+	return true;
+}
+
+OutputStream *SelectedIonList::BeginChild(DWORD nIndex) {
+	switch (nIndex) {
+		case 0: //selectedIon
+			return m_pStream;
+	}
+	return NULL;
+}
+
 bool Precursor::Begin(State *pState, const XML_Char **pszAttrs) {
-	TRACEPOS(m_pStream, "Precursor.__init__(): ");
+	TRACEPOS(m_pStream, "Precursor::Begin(): ");
 	return true;
 }
 
@@ -89,7 +103,7 @@ OutputStream *Precursor::BeginChild(DWORD nIndex) {
 }
 
 bool PrecursorList::Begin(State *pState, const XML_Char **pszAttrs) {
-	TRACEPOS(m_pStream, "Precursor.__init__(): ");
+	TRACEPOS(m_pStream, "Precursor::Begin(): ");
 	return true;
 }
 
@@ -101,7 +115,7 @@ OutputStream *PrecursorList::BeginChild(DWORD nIndex) {
 }
 
 bool Binary::Begin(State *pState, const XML_Char **pszAttrs) {
-	TRACEPOS(m_pStream, "Binary.__init__(): ");
+	TRACEPOS(m_pStream, "Binary::Begin(): ");
 	m_pDataArray = (BinaryDataArray *)pState->colPath.Peek();
 	return true;
 }
@@ -122,7 +136,7 @@ void Binary::RawData(const char *szData, int nLength) {
 }
 
 bool BinaryDataArray::Begin(State *pState, const XML_Char **pszAttrs) {
-	TRACEPOS(m_pStream, "BinaryDataArray.__init__(): ");
+	TRACEPOS(m_pStream, "BinaryDataArray::Begin(): ");
 	m_pSpectrum = (Spectrum *)pState->pSpectrum;
 	return true;
 }
@@ -171,7 +185,7 @@ OutputStream *BinaryDataArray::BeginChild(DWORD nIndex) {
 }
 
 bool BinaryDataArrayList::Begin(State *pState, const XML_Char **pszAttrs) {
-	TRACEPOS(m_pStream, "BinaryDataArrayListList.__init__(): ");
+	TRACEPOS(m_pStream, "BinaryDataArrayListList::Begin(): ");
 	return true;
 }
 
@@ -183,7 +197,7 @@ OutputStream *BinaryDataArrayList::BeginChild(DWORD nIndex) {
 }
 
 bool Scan::Begin(State *pState, const XML_Char **pszAttrs) {
-	TRACEPOS(m_pStream, "Scan.__init__(): ");
+	TRACEPOS(m_pStream, "Scan::Begin(): ");
 	m_pSpectrum = pState->pSpectrum;
 	return true;
 }
@@ -206,7 +220,7 @@ OutputStream *Scan::BeginChild(DWORD nIndex) {
 }
 
 bool ScanList::Begin(State *pState, const XML_Char **pszAttrs) {
-	TRACEPOS(m_pStream, "ScanList.__init__(): ");
+	TRACEPOS(m_pStream, "ScanList::Begin(): ");
 	return true;
 }
 
@@ -218,7 +232,7 @@ OutputStream *ScanList::BeginChild(DWORD nIndex) {
 }
 
 bool Spectrum::Begin(State *pState, const XML_Char **pszAttrs) {
-	TRACEPOS(m_pStream, "Spectrum.__init__(): ");
+	TRACEPOS(m_pStream, "Spectrum::Begin(): ");
 	pState->pSpectrum = this;
 	m_pMzML = pState->pMzML;
 	m_pRun = pState->pRun;
@@ -266,7 +280,7 @@ void Spectrum::End() {
 		DWORD nIonCount = m_pMz == NULL || m_pIntensity == NULL || m_pMz->GetLength() != m_pIntensity->GetLength() ? 0 : m_pMz->GetLength() / sizeof(float);
 		DWORD nPrecursorCount = m_pPrecursorList == NULL ? 0 : m_pPrecursorList->GetLength() / sizeof(float);
 		if (nIonCount > 0) {
-			WRITE_STRUCTURE(m_pStream, 4, (DWORD, DWORD, float, float), (nIonCount, nPrecursorCount, m_nStartTime, 0.0f)); //FIXME: Peptide Mass
+			WRITE_STRUCTURE(m_pStream, 4, (DWORD, DWORD, float, float), (nIonCount, nPrecursorCount, m_nStartTime, m_pPrecursorList == NULL ? -1.0f : *(float *)m_pPrecursorList->GetBuffer()));
 			const float *pMz = (const float *)m_pMz->GetBuffer();
 			const float *pInt = (const float *)m_pIntensity->GetBuffer();
 			for (DWORD i = 0; i < nIonCount; ++i) {
@@ -308,8 +322,20 @@ OutputStream *Spectrum::BeginChild(DWORD nIndex) {
 	return ParamGroup::BeginChild(nIndex - 3);
 }
 
+bool SpectrumList::Begin(State *pState, const XML_Char **pszAttrs)  {
+	TRACEPOS(m_pStream, "SpectrumList::Begin(): ");
+	return true;
+}
+
+OutputStream *SpectrumList::BeginChild(DWORD nIndex) {
+	if (nIndex == 0) { /*spectrum*/
+		return m_pStream;
+	}
+	return TagHandler::BeginChild(nIndex - 1);
+}
+
 bool Run::Begin(State *pState, const XML_Char **pszAttrs) {
-	TRACEPOS(m_pStream, "Run.__init__(): ");
+	TRACEPOS(m_pStream, "Run::Begin(): ");
 	pState->pRun = this;
 	m_offStartPos = m_pStream->Tell();
 	ALLOC_STRUCTURE(m_pStream, 2, (DWORD, DWORD));
@@ -319,21 +345,20 @@ bool Run::Begin(State *pState, const XML_Char **pszAttrs) {
 void Run::End() {
 	off_t offEndPos = m_pStream->Tell();
 	m_pStream->Seek(m_offStartPos);
-	WRITE_STRUCTURE(m_pStream, 2, (DWORD, DWORD), (m_nSpectrumLists, offEndPos - m_offStartPos));
+	WRITE_STRUCTURE(m_pStream, 2, (DWORD, DWORD), (m_arrSpectrums.GetLength(), offEndPos - m_offStartPos));
 	m_pStream->Seek(offEndPos);
 	m_pStream->WriteBuffered(m_arrSpectrums.GetBuffer(), m_arrSpectrums.GetLength() * sizeof(Index));
 }
 
 OutputStream *Run::BeginChild(DWORD nIndex) {
 	if (nIndex == 0) { //spectrumList
-		++m_nSpectrumLists;
 		return m_pStream;
 	}
 	return ParamGroup::BeginChild(nIndex - 1);
 }
 
 bool MzML::Begin(State *pState, const XML_Char **pszAttrs) {
-	TRACEPOS(m_pStream, "MzML.__init__(): ");
+	TRACEPOS(m_pStream, "MzML::Begin(): ");
 	pState->pMzML = this;
 	ALLOC_STRUCTURE(m_pStream, 8, (DWORD, DWORD, DWORD, float, float, float, float, float));
 	return true;
@@ -407,7 +432,7 @@ OutputStream *MzML::BeginChild(DWORD nIndex) {
 }
 
 bool IndexedMzML::Begin(State *pState, const XML_Char **pszAttrs) {
-	TRACEPOS(m_pStream, "IndexedMzML.__init__(): ");
+	TRACEPOS(m_pStream, "IndexedMzML::Begin(): ");
 	return true;
 }
 
@@ -437,7 +462,8 @@ PARAM_GROUP_CHILDREN(					Scan,					{ "scanWindowList", &ScanWindowList::New });
 PARAM_GROUP_CHILDREN(						ScanWindowList,		{ "scanWindow", &ParamGroup::New });
 TAG_HANDLER_CHILDREN(				PrecursorList,				{ "precursor", &Precursor::New });
 TAG_HANDLER_CHILDREN(					Precursor,				{ "activation", &ParamGroup::New }, { "isolationWindow", &ParamGroup::New }, { "selectedIonList", &SelectedIonList::New });
-TAG_HANDLER_CHILDREN(						SelectedIonList,	{ "selectedIon", &ParamGroup::New });
+TAG_HANDLER_CHILDREN(						SelectedIonList,	{ "selectedIon", &SelectedIon::New });
+PARAM_EMPTY_CHILDREN(							SelectedIon);
 TAG_HANDLER_CHILDREN(				BinaryDataArrayList,		{ "binaryDataArray", &BinaryDataArray::New });
 PARAM_GROUP_CHILDREN(					BinaryDataArray,		{ "binary", &Binary::New });
 TAG_HANDLER_CHILDREN(						Binary,				{ NULL, NULL });

@@ -2,7 +2,7 @@
 <tal:var define="global opt_charge python: max(1, int(spectrum['charge']) - 1)" />
 <div id="specview_${hash}" class="lorikeet">
 	<div style="width:100%; padding:5px; text-align:center;">
-		<tal:if condition="python: peptide != None">
+		<tal:if condition="python: peptide != None and len(peptide['peptides']) > 0">
 			<div style="width:100%;"><span id="peptide_${hash}" style="font-weight:bold;"></span>, MH+ <span id="neutralMass_${hash}"></span>, m/z <span id="mz_${hash}"></span></div>
 		</tal:if>
 		<div style="margin-top:5px; width:100%;" class="font_small">
@@ -103,7 +103,7 @@
 
 	var container = dojo.byId("specview_${hash}");
 
-	<tal:if condition="python: peptide == None">
+	<tal:if condition="python: peptide == None or len(peptide['peptides']) == 0">
 		var SpecView = new SpecViewer(dojo.byId("msmsplot_${hash}"), {				
 			scanNum: ${spectrum.scan},
 			charge: ${spectrum.charge},
@@ -112,7 +112,7 @@
 			ionTableContainer: dojo.byId("ionTableDiv_${hash}")
 		});
 	</tal:if>
-	<tal:else condition="python: peptide != None">
+	<tal:else condition="python: peptide != None and len(peptide['peptides']) > 0">
 		<tal:if condition="python: try_get(peptide, 'peptide') == None">
 			var peptides = [<tal:for repeat="pep peptide.peptides">{peptide:"${pep.peptide}", <tal:if condition="python: pep['masstol'] != None">masstol:<tal:echo content="python: round(pep['masstol'], 3)"/>, </tal:if>mods:[<tal:if condition="python: pep.mods != None"><tal:for repeat="mod pep.mods">{index: ${mod.index}, modMass: ${mod.mass}, aminoAcid: '${mod.aa}'},</tal:for></tal:if>]<tal:if condition="python: pep.mods != None">, nterm:${pep.nterm}, cterm:${pep.cterm}</tal:if>},</tal:for>];
 			

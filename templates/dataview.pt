@@ -227,7 +227,9 @@
 					]).play();
 					CurrentDataset = set;
 				}
-				Flowchart.Select(set.Dataset);
+				if (Flowchart) {
+					Flowchart.Select(set.Dataset);
+				}
 			}
 			
 			function QueueAnimation(anim) {

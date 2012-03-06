@@ -4,6 +4,7 @@
 	#include <expat.h>
 	#include <string.h>
 	#include "../common/handlers.h"
+	#include "../common/inc.h"
 	#include "../common/search.h"
 	#include "msplot.h"
 	
@@ -55,6 +56,7 @@
 				DWORD m_nCount; \
 		};
 	#define PARAM_GROUP_CHILDREN(cls, ...) TAG_HANDLER_CHILDREN(cls, __VA_ARGS__, { "cvParam", &CVParam::New })
+	#define PARAM_EMPTY_CHILDREN(cls, ...) TAG_HANDLER_CHILDREN(cls, { "cvParam", &CVParam::New })
 
 	#define ACC_MS_SCAN_START		1000016
 	#define ACC_MS_SPECTRUM_LEVEL	1000511
@@ -103,10 +105,16 @@
 
 	LIST_TYPE(ScanWindowList, ParamGroup, "scanWindow");
 	
-	class SelectedIonList : public ParamGroup {
+	class SelectedIon : public ParamGroup {
 		//This element is not written to file directly
-		X_HANDLER(SelectedIonList, ParamGroup);
+		X_HANDLER(SelectedIon, ParamGroup);
 		virtual void End();
+	};
+	
+	class SelectedIonList : public TagHandler {
+		//This element is not written to file directly
+		TAG_HANDLER(SelectedIonList);
+		virtual OutputStream *BeginChild(DWORD nIndex);
 	};
 
 	class Precursor : public TagHandler {
@@ -116,10 +124,7 @@
 	};
 
 	class PrecursorList : public TagHandler {
-		/*struct PrecursorList {
-			DWORD precursor__count; //Taken as total of all selectedIonList's within all Precursor's
-			float precursors[precursor__count];
-		}*/
+		//This element is not written to file directly
 		TAG_HANDLER(PrecursorList);
 		virtual OutputStream *BeginChild(DWORD nIndex);
 	};
@@ -186,7 +191,7 @@
 			DWORD ion__count;
 			DWORD precursor__count;
 			float scan_start_time; //negative number if not specified
-			float peptide_mass; //negative number if not specified
+			float precursor_mz; //negative number if not specified
 			Ion ions[ion__count];
 			float precursor_mz[precursor__count];
 		}*/
@@ -194,9 +199,10 @@
 		virtual void End();
 		virtual OutputStream *BeginChild(DWORD nIndex);
 		void SetStartTime(float nTime);
-		static void EatAll(FILE *f);
+		static void EatAll(FILE *pFile, DWORD nCount);
 		static void SearchAll(FILE *f, SearchStatus &stat, DWORD nCount);
 		static PyObject *GetInfo(FILE *pFile); //Assumes the file is pointing to the correct place
+		static PyObject *PointsMS2All(FILE *pFile, DWORD nCount);
 		
 		private:
 			off_t m_offStartPos;
@@ -212,7 +218,13 @@
 		friend class BinaryDataArray;
 	};
 	
-	LIST_TYPE(SpectrumList, Spectrum, "spectrum");
+	class SpectrumList : public TagHandler {
+		/*struct SpectrumList {
+			Spectrum spectrum;
+		}*/
+		TAG_HANDLER(SpectrumList);
+		virtual OutputStream *BeginChild(DWORD nIndex);
+	};
 
 	class Run : public ParamGroup {
 		/*struct Index {
@@ -227,11 +239,12 @@
 			//ChromatogramList chromatogramList[chromatogramList__count];
 			Index index[spectrumList__count]; // <--index__offset
 		}*/
-		X_HANDLER(Run, ParamGroup, m_arrSpectrums(256), m_nSpectrumLists(0));
+		X_HANDLER(Run, ParamGroup, m_arrSpectrums(256));
 		virtual void End();
 		virtual OutputStream *BeginChild(DWORD nIndex);
 		void AddSpectrumN(DWORD nIndex);
 		static void Search(FILE *pFile, SearchStatus &stat);
+		static PyObject *PointsMS2(FILE *pFile);
 
 		private:
 			typedef struct _Index {
@@ -243,9 +256,9 @@
 			
 			LiteralArray<Index> m_arrSpectrums;
 			off_t m_offStartPos;
-			DWORD m_nSpectrumLists;
 			//DWORD m_nChromatogramLists;
 			//MemoryStream *m_pChromatogramLists;
+			friend class Spectrum; //FIXME: Debug
 	};
 
 	class MzML : public TagHandler {
@@ -282,6 +295,7 @@
 		static unsigned long GetSpectrumOffset(FILE *pFile, const char *szSpectrumName);
 		static void SearchSpectrums(FILE *pFile, SearchStatus &stat);
 		static void Info(FILE *pFile, float &nMinTime, float &nMaxTime, float &nMinMz, float &nMaxMz, float &nMaxIntensity);
+		static PyObject *PointsMS2(FILE *pFile);
 
 		private:
 			typedef struct _MS1Data {

@@ -436,8 +436,9 @@ def ListResults(req):
 		parser = Parsers[t]
 		if t == "mzml" and TryGet(req.GET, "list") != "1":
 			results = parser.Display(fname + "_" + req.GET["n"], req.GET)
+			points = parser.points_ms2(fname + "_" + req.GET["n"])
 			info = { "type": t, "file": req.GET["file"], "datafile": n, "query": req.GET["q"], "datas": links.Types() }
-			return render_to_response(templates + t + "_display.pt", { "info": info, "results": results, "url": Literal(req.path_qs) }, request = req)
+			return render_to_response(templates + t + "_display.pt", { "info": info, "results": results, "points": points, "url": Literal(req.path_qs), "dataset": req.GET["n"] }, request = req)
 		else:
 			if TryGet(req.GET, "level") == "adv":
 				[scores, total, results] = parser.Search(fname + "_" + req.GET["n"], EncodeTermsAdvanced(urllib.unquote(req.GET["q"])))
@@ -608,7 +609,7 @@ def SpectumLC(req):
 	if (req.GET["level"] == "1p"):
 		return Response(parser.spectrum_ms1_points(fname + "_" + req.GET["n"], float(req.GET["contrast"]), int(req.GET["w"]), int(req.GET["h"]), x1, x2, y1, y2), request=req, content_type="image/png")
 	if (req.GET["level"] == "2"):
-		return Response(parser.spectrum_ms2(fname + "_" + req.GET["n"], req.GET["w"], req.GET["h"], x1, x2, y1, y2), request=req, content_type="image/png")
+		return Response(parser.spectrum_ms2(fname + "_" + req.GET["n"], int(req.GET["w"]), int(req.GET["h"]), x1, x2, y1, y2), request=req, content_type="image/png")
 	#except:
 	#	return HTTPBadRequest()
 

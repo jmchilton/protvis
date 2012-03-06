@@ -138,6 +138,20 @@ static PyObject *SpectrumMS2(PyObject *self, PyObject *args) {
 	return pRet;
 }
 
+static PyObject *PointsMS2(PyObject *self, PyObject *args) {
+	const char *szFileName;
+	if (!PyArg_ParseTuple(args, "s", &szFileName)) {
+		return NULL;
+	}
+	FILE *pFile = fopen(szFileName, "r");
+	if (pFile == NULL) {
+		return Py_BuildValue("");
+	}
+	PyObject *pList = MzML::PointsMS2(pFile);
+	fclose(pFile);
+	return pList;
+}
+
 static PyMethodDef Methods[] = {
     {"ToBinary", ToBinary, METH_VARARGS, ""},
     {"GetSpectrum", GetSpectrum, METH_VARARGS, ""},
@@ -149,6 +163,7 @@ static PyMethodDef Methods[] = {
     {"spectrum_ms1_smooth", SpectrumMS1Smooth, METH_VARARGS, ""},
     {"spectrum_ms1_points", SpectrumMS1Points, METH_VARARGS, ""},
     {"spectrum_ms2", SpectrumMS2, METH_VARARGS, ""},
+    {"points_ms2", PointsMS2, METH_VARARGS, ""},
     {NULL, NULL, 0, NULL}
 };
 

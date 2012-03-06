@@ -67,7 +67,9 @@ SpecViewer = function(container, opts) {
 				format: function(val, precision) { return FormatPrecision(val, precision) + "%"; }
 			}
 		},
-		tooltip: this.Options.tooltip,
+		tooltip: {
+			enable: this.Options.tooltip
+		},
 		editable: this.Options.editable,
 		selection: {
 			axis: "x",
@@ -579,7 +581,7 @@ SpecViewer = function(container, opts) {
 	}
 
 	this.SetTooltip = function(show) {
-		this.PlotOptions.tooltip = show;
+		this.PlotOptions.tooltip.enable = show;
 		if (this.plot) {
 			this.plot.SetTooltip(show);
 		}
@@ -649,103 +651,105 @@ SpecViewer = function(container, opts) {
 	// ION TABLE
 	//---------------------------------------------------------
 	this.makeIonTable = function() {
-		function getSelectedIons(selectedIonTypes, term) {
-			var ions = [];
-			for(var i = 0; i < selectedIonTypes.length; i += 1) {
-				var sion = selectedIonTypes[i];
-				if((term == 'n' && (sion.type == "a" || sion.type == "b" || sion.type == "c")) || (term == 'c' && (sion.type == "x" || sion.type == "y" || sion.type == "z"))) {
-					ions.push(sion);
+		if (this.Options.sequence) {
+			function getSelectedIons(selectedIonTypes, term) {
+				var ions = [];
+				for(var i = 0; i < selectedIonTypes.length; i += 1) {
+					var sion = selectedIonTypes[i];
+					if((term == 'n' && (sion.type == "a" || sion.type == "b" || sion.type == "c")) || (term == 'c' && (sion.type == "x" || sion.type == "y" || sion.type == "z"))) {
+						ions.push(sion);
+					}
 				}
+				ions.sort(function(m,n) {
+					return m.type == n.type ? m.charge - n.charge : m.type - n.type;
+				});
+				return ions;
 			}
-			ions.sort(function(m,n) {
-				return m.type == n.type ? m.charge - n.charge : m.type - n.type;
-			});
-			return ions;
-		}
 
-		function getCalculatedSeries(ion) {
-			return obj.ionSeries[ion.type][ion.charge];
-		}
-
-		function round(number) {
-			return number.toFixed(4);
-		}
-
-		if (this.Options.ionTableContainer) {
-		 	// selected ions
-			var ntermIons = getSelectedIons(this.Options.selectedIons, 'n');
-			var ctermIons = getSelectedIons(this.Options.selectedIons, 'c');
-
-			var myTable = '<table id="ionTable" cellpadding="2" class="font_small">';
-			myTable += "<thead>";
-			myTable += "<tr>";
-			// nterm ions
-			for(var i = 0; i < ntermIons.length; i += 1) {
-				myTable += "<th>" +ntermIons[i].label+  "</th>";   
+			function getCalculatedSeries(ion) {
+				return obj.ionSeries[ion.type][ion.charge];
 			}
-			myTable += "<th>#</th>"; 
-			myTable += "<th>Seq</th>"; 
-			myTable += "<th>#</th>"; 
-			// cterm ions
-			for(var i = 0; i < ctermIons.length; i += 1) {
-				myTable += "<th>" +ctermIons[i].label+  "</th>"; 
+
+			function round(number) {
+				return number.toFixed(4);
 			}
-			myTable += "</tr>";
-			myTable += "</thead>";
 
-			myTable += "<tbody>";
-			for(var i = 0; i < this.Options.sequence.length; i += 1) {
-				myTable +=   "<tr>";
+			if (this.Options.ionTableContainer) {
+			 	// selected ions
+				var ntermIons = getSelectedIons(this.Options.selectedIons, 'n');
+				var ctermIons = getSelectedIons(this.Options.selectedIons, 'c');
 
+				var myTable = '<table id="ionTable" cellpadding="2" class="font_small">';
+				myTable += "<thead>";
+				myTable += "<tr>";
 				// nterm ions
-				for(var n = 0; n < ntermIons.length; n += 1) {
-					if(i < this.Options.sequence.length - 1) {
-						var seriesData = getCalculatedSeries(ntermIons[n]);
-						var cls = "";
-						var style = "";
-						if(seriesData[i].match) {
-							cls="matchIon";
-							style="style='background-color:"+Ion.getSeriesColor(ntermIons[n])+";'";
-						}
-						myTable += "<td class='"+cls+"' "+style+" >" +round(seriesData[i].mz)+  "</td>";  
-					}
-					else {
-						myTable += "<td>&nbsp;</td>"; 
-					} 
+				for(var i = 0; i < ntermIons.length; i += 1) {
+					myTable += "<th>" +ntermIons[i].label+  "</th>";   
 				}
-
-				myTable += "<td class='numCell'>"+(i+1)+"</td>";
-				if(Peptide.varMods[i+1])
-					myTable += "<td class='seq modified'>"+this.Options.sequence[i]+"</td>";
-				else
-					myTable += "<td class='seq'>"+this.Options.sequence[i]+"</td>";
-				myTable += "<td class='numCell'>"+(this.Options.sequence.length - i)+"</td>";
-
+				myTable += "<th>#</th>"; 
+				myTable += "<th>Seq</th>"; 
+				myTable += "<th>#</th>"; 
 				// cterm ions
-				for(var c = 0; c < ctermIons.length; c += 1) {
-					if(i > 0) {
-						var seriesData = getCalculatedSeries(ctermIons[c]);
-						var idx = this.Options.sequence.length - i - 1;
-						var cls = "";
-						var style = "";
-						if(seriesData[idx].match) {
-							cls="matchIon";
-							style="style='background-color:"+Ion.getSeriesColor(ctermIons[c])+";'";
-						}
-						myTable += "<td class='"+cls+"' "+style+" >" +round(seriesData[idx].mz)+"</td>";  
-					}
-					else {
-						myTable += "<td>" +"&nbsp;"+  "</td>"; 
-					} 
+				for(var i = 0; i < ctermIons.length; i += 1) {
+					myTable += "<th>" +ctermIons[i].label+  "</th>"; 
 				}
+				myTable += "</tr>";
+				myTable += "</thead>";
 
+				myTable += "<tbody>";
+				for(var i = 0; i < this.Options.sequence.length; i += 1) {
+					myTable +=   "<tr>";
+
+					// nterm ions
+					for(var n = 0; n < ntermIons.length; n += 1) {
+						if(i < this.Options.sequence.length - 1) {
+							var seriesData = getCalculatedSeries(ntermIons[n]);
+							var cls = "";
+							var style = "";
+							if(seriesData[i].match) {
+								cls="matchIon";
+								style="style='background-color:"+Ion.getSeriesColor(ntermIons[n])+";'";
+							}
+							myTable += "<td class='"+cls+"' "+style+" >" +round(seriesData[i].mz)+  "</td>";  
+						}
+						else {
+							myTable += "<td>&nbsp;</td>"; 
+						} 
+					}
+
+					myTable += "<td class='numCell'>"+(i+1)+"</td>";
+					if(Peptide.varMods[i+1])
+						myTable += "<td class='seq modified'>"+this.Options.sequence[i]+"</td>";
+					else
+						myTable += "<td class='seq'>"+this.Options.sequence[i]+"</td>";
+					myTable += "<td class='numCell'>"+(this.Options.sequence.length - i)+"</td>";
+
+					// cterm ions
+					for(var c = 0; c < ctermIons.length; c += 1) {
+						if(i > 0) {
+							var seriesData = getCalculatedSeries(ctermIons[c]);
+							var idx = this.Options.sequence.length - i - 1;
+							var cls = "";
+							var style = "";
+							if(seriesData[idx].match) {
+								cls="matchIon";
+								style="style='background-color:"+Ion.getSeriesColor(ctermIons[c])+";'";
+							}
+							myTable += "<td class='"+cls+"' "+style+" >" +round(seriesData[idx].mz)+"</td>";  
+						}
+						else {
+							myTable += "<td>" +"&nbsp;"+  "</td>"; 
+						} 
+					}
+
+				}
+				myTable += "</tr>";
+
+				myTable += "</tbody>";
+				myTable += "</table>";
+
+				this.Options.ionTableContainer.innerHTML = myTable;
 			}
-			myTable += "</tr>";
-
-			myTable += "</tbody>";
-			myTable += "</table>";
-
-			this.Options.ionTableContainer.innerHTML = myTable;
 		}
 	}
 
@@ -1324,6 +1328,42 @@ MsPlot = function(container, data, opts) {
 				max: this.DataRange.y.max * 1.1,
 				label: "Intensity"
 			}
+		},
+		tooltip: {
+			show: function(evt, pt, obj) {
+				var closest = {i:-1, j:-1, dist:Number.POSITIVE_INFINITY};
+				var m = { x: pt.x - obj.Padding[0], y: pt.y };
+				for (var i in data) {
+					for (var j in data[i].data) {
+						var d = data[i].data[j];
+						if (d[0] >= obj.ViewRange.x.min && d[0] <= obj.ViewRange.x.max && d[1] > obj.ViewRange.y.min) {
+							var a = { x: (d[0] - obj.ViewRange.x.min) * obj.ScaleX, y: obj.GraphBottom - (d[1] - obj.ViewRange.y.min) * obj.ScaleY };
+							if (a.y < m.y + 8) {
+								var b = { x: a.x, y: obj.GraphBottom };
+								var dist = Math.sqrt(Math.pow((b.y - a.y) * (m.x - a.x) + (b.x - a.x) * (m.y - a.y), 2) / (Math.pow(b.x - a.x, 2) + Math.pow(b.y - a.y, 2)));
+								if (dist <= closest.dist) {
+									closest = {i:i, j:j, dist:dist};
+								}
+							}
+						}
+					}
+				}
+				if (closest.i >= 0 && closest.dist < 10) {
+					var d = data[closest.i].data[closest.j];
+					var elem = dojo.position(container, false);
+					if (this.Tooltip && this.Tooltip.i == closest.i && this.Tooltip.j == closest.j) {
+						this.Tooltip.node.style.left = Math.round((d[0] - obj.ViewRange.x.min) * obj.ScaleX + obj.Padding[0] + elem.x - 5) + "px";
+						this.Tooltip.node.style.top = (evt.pageY - this.Tooltip.node.offsetHeight / 2) + "px";
+					} else {
+						this.Tooltip = {i:closest.i, j:closest.j, pos:{x: Math.round((d[0] - obj.ViewRange.x.min) * obj.ScaleX + obj.Padding[0] + elem.x - 5), y: evt.pageY, w: 1, h: 1}};
+						dijit.Tooltip.show('<div style="white-space:nowrap;">m/z: ' + d[0].toFixed(3) + "<br/>Intensity: " + d[1].toFixed(3) + "</div>", this.Tooltip.pos, ["after", "before"], false, "ltr");
+						this.Tooltip.node = dijit.Tooltip._masterTT.domNode;
+						this.Tooltip.node.setAttribute("style", "pointer-events:none;" + this.Tooltip.node.getAttribute("style"));
+					}
+				} else {
+					this.hide();
+				}
+			}
 		}
 	};
 	
@@ -1366,42 +1406,6 @@ MsPlot = function(container, data, opts) {
 					obj.DataGroup.createText({x:x, y:y, text:data.labels[i], align:"start"}).setFont({family:"Arial", size:"13px"}).setFill(data.color).setTransform(rot(270, {x:x, y:y - 4}));
 				}
 			}
-		}
-	}
-	
-	this.OnTooltip = function(evt, pt) {
-		var closest = {i:-1, j:-1, dist:Number.POSITIVE_INFINITY};
-		var m = { x: pt.x - this.Padding[0], y: pt.y };
-		for (var i in data) {
-			for (var j in data[i].data) {
-				var d = data[i].data[j];
-				if (d[0] >= this.ViewRange.x.min && d[0] <= this.ViewRange.x.max && d[1] > this.ViewRange.y.min) {
-					var a = { x: (d[0] - this.ViewRange.x.min) * this.ScaleX, y: this.GraphBottom - (d[1] - this.ViewRange.y.min) * this.ScaleY };
-					if (a.y < m.y + 8) {
-						var b = { x: a.x, y: this.GraphBottom };
-						var dist = Math.sqrt(Math.pow((b.y - a.y) * (m.x - a.x) + (b.x - a.x) * (m.y - a.y), 2) / (Math.pow(b.x - a.x, 2) + Math.pow(b.y - a.y, 2)));
-						if (dist <= closest.dist) {
-							closest = {i:i, j:j, dist:dist};
-						}
-					}
-				}
-			}
-		}
-		if (closest.i >= 0 && closest.dist < 10) {
-			var d = data[closest.i].data[closest.j];
-			var elem = dojo.position(container, false);
-			if (this.Tooltip && this.Tooltip.i == closest.i && this.Tooltip.j == closest.j) {
-				this.Tooltip.node.style.left = Math.round((d[0] - this.ViewRange.x.min) * this.ScaleX + this.Padding[0] + elem.x - 5) + "px";
-				this.Tooltip.node.style.top = (evt.pageY - this.Tooltip.node.offsetHeight / 2) + "px";
-			} else {
-				this.Tooltip = {i:closest.i, j:closest.j, pos:{x: Math.round((d[0] - this.ViewRange.x.min) * this.ScaleX + this.Padding[0] + elem.x - 5), y: evt.pageY, w: 1, h: 1}};
-				dijit.Tooltip.show('<div style="white-space:nowrap;">m/z: ' + d[0].toFixed(3) + "<br/>Intensity: " + d[1].toFixed(3) + "</div>", this.Tooltip.pos, ["after", "before"], false, "ltr");
-				this.Tooltip.node = dijit.Tooltip._masterTT.domNode;
-				this.Tooltip.node.setAttribute("style", "pointer-events:none;" + this.Tooltip.node.getAttribute("style"));
-			}
-		} else if (this.Tooltip) {
-			dijit.Tooltip.hide(this.Tooltip.pos);
-			this.Tooltip = null;
 		}
 	}
 	

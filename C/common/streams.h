@@ -90,12 +90,14 @@
 					const char *ptr = (const char *)pBuffer + nLeft;
 					memcpy(m_pBuffer + m_nBuffered, pBuffer, nLeft);
 					write(m_nDesc, m_pBuffer, FILESTREAM_BUFFER_SIZE);
-					if (nBytes > FILESTREAM_BUFFER_SIZE) {
+					if (nBytes >= FILESTREAM_BUFFER_SIZE) {
 						write(m_nDesc, ptr, m_nBuffered);
 						m_nBuffered = 0;
 					} else if (nBytes > 0) {
 						memcpy(m_pBuffer, ptr, nBytes);
 						m_nBuffered = nBytes;
+					} else {
+						m_nBuffered = 0;
 					}
 				} else {
 					char *ptr = m_pBuffer + m_nBuffered;

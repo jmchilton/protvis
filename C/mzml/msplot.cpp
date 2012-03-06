@@ -480,6 +480,8 @@ inline MemoryStream *MS1Plot::RenderFromFileInternalPoints(const char *szFileNam
 }
 
 //MS2
+#define MS2_POINT_RADIUS 1
+
 MemoryStream *MS2Plot::RenderFromFile(const char *szFileName, DWORD nWidth, DWORD nHeight, float nMinTime, float nMaxTime, float nMinMz, float nMaxMz) {
 	FILE *pFile = fopen(szFileName, "rb");
 	if (pFile != NULL) {
@@ -487,67 +489,58 @@ MemoryStream *MS2Plot::RenderFromFile(const char *szFileName, DWORD nWidth, DWOR
 		struct Info {
 			float minTime, maxTime;
 			float minMz, maxMz;
+			DWORD scans, indexOffset;
 		};
 		Info info;
 		if (fread(&info, 1, sizeof(Info), pFile) != sizeof(Info)) {
 			fclose(pFile);
 			return NULL;
 		}
-		//fseek(pFile, 3 * sizeof(DWORD) + 5 * sizeof(float));
-		/*char *pSrcData = (char *)malloc(info.size);
-		if (fread(pSrcData, 1, info.size, pFile) != info.size) {
+		DWORD nDataSize = info.indexOffset - (3 * sizeof(DWORD) + 5 * sizeof(float) + 2 * sizeof(DWORD));
+		char *pSrcData = (char *)malloc(nDataSize);
+		if (fread(pSrcData, 1, nDataSize, pFile) != nDataSize) {
 			fclose(pFile);
 			return NULL;
 		}
 		fclose(pFile);
-		return RenderFromFileInternal(pSrcData, info.count, nWidth, nHeight, nContrast, nMinTime >= 0 ? nMinTime : info.minTime, nMaxTime >= 0 ? nMaxTime : info.maxTime, nMinMz >= 0 ? nMinMz : info.minMz, nMaxMz >= 0 ? nMaxMz : info.maxMz);*/
+		return RenderFromFileInternal(pSrcData, info.scans, nWidth, nHeight, nMinTime >= 0 ? nMinTime : info.minTime, nMaxTime >= 0 ? nMaxTime : info.maxTime, nMinMz >= 0 ? nMinMz : info.minMz, nMaxMz >= 0 ? nMaxMz : info.maxMz);
 	}
 	return NULL;
 }
 
-inline MemoryStream *MS2Plot::RenderFromFileInternal(char *pSrcData, uint32_t nScans, DWORD nWidth, DWORD nHeight, float nMinTime, float nMaxTime, float nMinMz, float nMaxMz) {
-	return NULL;
-	/*unsigned nPixels = nWidth * nHeight;
-	float *pImg = (float *)malloc(nPixels * sizeof(float));
+inline MemoryStream *MS2Plot::RenderFromFileInternal(char *pSrcData, uint32_t nSpectrums, DWORD nWidth, DWORD nHeight, float nMinTime, float nMaxTime, float nMinMz, float nMaxMz) {
+	unsigned nPixels = nWidth * nHeight;
+	BYTE *pImg = (BYTE *)malloc(nPixels * sizeof(BYTE));
 	if (pImg == NULL) {
 		return NULL;
 	}
+	memset(pImg, 0, nPixels * sizeof(BYTE));
 	float nScaleX = (nWidth - 1) / (nMaxTime - nMinTime);
 	float nScaleY = (nHeight - 1) / (nMaxMz - nMinMz);
 	unsigned nPosX, nPosY;
-	float nVal, nFactorX, nFactorY;
 	unsigned nIdx;
 	char *pSrcDataPtr = pSrcData;
-	for (uint32_t i = 0; i < nScans; ++i) {
-		Scan *pScan = (Scan *)pSrcDataPtr;
-		if (pScan->nStartTime >= nMinTime && pScan->nStartTime <= nMaxTime) {
-			nVal = (pScan->nStartTime - nMinTime) * nScaleX;
-			nFactorX = nVal - floor(nVal);
-			nPosX = (unsigned)nVal;
-			for (unsigned j = 0; j < pScan->nPoints; ++j) {
-				const ScanPoint<float> &point = pScan->pPoints[j];
-				nVal = (nMaxMz - point.mz) * nScaleY;
-				nFactorY = nVal - floor(nVal);
-				nPosY = (unsigned)nVal;
-				nIdx = nPosY * nWidth + nPosX;
-				pImg[nIdx] = (1.0f - nFactorX) * (1.0f - nFactorY);
-				if (nPosX + 1 < nWidth) {
-					++nIdx;
-					pImg[nIdx] =  nFactorX * (1.0f - nFactorY);
-					if (nPosY + 1 < nHeight) {
-						nIdx += nWidth;
-						pImg[nIdx] = nFactorX * nFactorY;
-						--nIdx;
-						goto MS2DoX1Y2;
+	for (uint32_t i = 0; i < nSpectrums; ++i) {
+		Spectrum *pSpectrum = (Spectrum *)pSrcDataPtr;
+		if (pSpectrum->precursor_mz >= 0 && pSpectrum->scan_start_time >= nMinTime && pSpectrum->scan_start_time <= nMaxTime) {
+			nPosX = (unsigned)((pSpectrum->scan_start_time - nMinTime) * nScaleX) - MS2_POINT_RADIUS;
+			nPosY = ((unsigned)((nMaxMz - pSpectrum->precursor_mz) * nScaleY) - MS2_POINT_RADIUS) * nWidth;
+			//pImg[nPosY * nWidth + nPosX] = 0xFF;
+			int x, y;
+			for (y = -MS2_POINT_RADIUS; y <= MS2_POINT_RADIUS; ++y) {
+				if (nPosY >= 0 && (unsigned)nPosY < nPixels) {
+					nIdx = nPosY + nPosX;
+					for (x = -MS2_POINT_RADIUS; x <= MS2_POINT_RADIUS; ++x) {
+						if (nPosX + x + MS2_POINT_RADIUS >= 0 && nPosX + x + MS2_POINT_RADIUS < nWidth) {
+							pImg[nIdx] = 0xFF;
+						}
+						++nIdx;
 					}
-				} else if (nPosY + 1 < nHeight) {
-					nIdx += nWidth;
-MS2DoX1Y2:
-					pImg[nIdx] = (1.0f - nFactorX) * nFactorY;
 				}
+				nPosY += nWidth;
 			}
 		}
-		pSrcDataPtr += sizeof(Scan) + pScan->nPoints * sizeof(ScanPoint<float>);
+		pSrcDataPtr += sizeof(Spectrum) + pSpectrum->ion__count * (2 * sizeof(float)) + pSpectrum->precursor__count * sizeof(float);
 	}
 	free(pSrcData);
 	MemoryStream *pStream = new MemoryStream();
@@ -578,12 +571,15 @@ MS2DoX1Y2:
 			png_bytep *pRow = pRows;
 			DWORD *pData = (DWORD *)(pRows + nHeight);
 			for (unsigned i = 0; i < nHeight; ++i) {
-				*pRow++ = pData + nWidth * i * 4;
+				*pRow++ = (png_bytep)(pData + nWidth * i);
 			}
 			//Generate bitmap
 			BYTE *pImgPtr = pImg;
 			for (unsigned i = 0; i < nPixels; ++i) {
-				*pData++ = *pImgPtr++ ? 0x00FF00FF : 0xFF00FF00;
+				/*if (*pImgPtr) {
+					printf("%u\n", i);
+				}*/
+				*pData++ = (*pImgPtr++ << 24) | 0x0000FF;
 			}
 			png_write_image(png_ptr, pRows);
 			png_write_end(png_ptr, NULL);
@@ -591,5 +587,5 @@ MS2DoX1Y2:
 		}
 	}
 	free(pImg);
-	return pStream;*/
+	return pStream;
 }

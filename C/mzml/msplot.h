@@ -123,7 +123,15 @@
 			static MemoryStream *RenderFromFile(const char *szFileName, DWORD nWidth, DWORD nHeight, float nMinTime = -1.0f, float nMaxTime = -1.0f, float nMinMz = -1.0f, float nMaxMz = -1.0f);
 			
 		private:
-			static MemoryStream *RenderFromFileInternal(char *pSrcData, uint32_t nScans, DWORD nWidth, DWORD nHeight, float nMinTime, float nMaxTime, float nMinMz, float nMaxMz);
+			typedef struct {
+				DWORD ion__count;
+				DWORD precursor__count;
+				float scan_start_time; //negative number if not specified
+				float precursor_mz; //negative number if not specified
+				//Ion ions[ion__count];
+				//float precursor_mz[precursor__count];
+			} Spectrum;
+			static MemoryStream *RenderFromFileInternal(char *pSrcData, uint32_t nSpectrums, DWORD nWidth, DWORD nHeight, float nMinTime, float nMaxTime, float nMinMz, float nMaxMz);
 	};
 	
 	void InitaliseMS1Cache(); //Must be called before doing any rendering
