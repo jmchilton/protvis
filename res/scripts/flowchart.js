@@ -8,7 +8,6 @@ var BoxWidth = 140;
 var BoxHeight = 45;
 var BoxHSpacing = 50, BoxVSpacing = (BoxSlots * 2 + 1) * BoxSlotSpacing, BoxVSize = BoxVSpacing + BoxHeight;
 var Colors = [ "#ff5900", "#0d56ff", "#4dde00", "#a600a6", "#ff9700", "#2618b1", "#1049a9", "#009999", "#e9003a" ];
-//[255, 89, 0], [13, 86, 255], [77, 222, 0], [166, 0, 166], [255, 151, 0], [38, 24, 177], [16, 73, 169], [0, 153, 153], [233, 0, 58]
 var ruler = null;
 
 FlowChart = function(parent, files, OnSelect) {

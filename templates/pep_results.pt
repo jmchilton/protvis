@@ -16,7 +16,7 @@
 		<tr tal:attributes="class string:info ${row.style}${repeat.row.odd}">
 			<td><span class="peptide_full">${row.HitInfo.peptide_prev_aa}<span id="peptide_${hash}_${repeat.row.index}" class="link peptide" onclick="SearchPeptide('${row.HitInfo.peptide}', ${info.datafile});" tipurl="${row.HitInfo.peptide}" tal:content="python: render_peptide(row.HitInfo)"></span>${row.HitInfo.peptide_next_aa}</span></td>
 			<td>
-				<tal:if condition="python: info['datas'] & 0x8"><span class="link" onclick="var prot = FindFilesWithDependancy(${info.datafile}, [10, 11])[0]; SwitchDataset(prot); LoadContents(prot, '/results?file=${info.file}&n=' + prot + '&type=prot&q=${row.HitInfo.protein}&max=50');">${row.HitInfo.protein}</span></tal:if>
+				<tal:if condition="python: info['datas'] & 0x8"><span class="link" onclick="var prot = FindFilesWithDependancy(${info.datafile}, [10, 11])[0]; SwitchDataset(prot); LoadContents(prot, '/results?file=${info.file}&n=' + prot + '&q=${row.HitInfo.protein}&max=50');">${row.HitInfo.protein}</span></tal:if>
 				<tal:else condition="python: not info['datas'] & 0x8">${row.HitInfo.protein}</tal:else>
 			</td>
 			<td style="text-align: center;">${row.HitInfo.massdiff}</td>

@@ -61,7 +61,7 @@
 				} else if (dojo.byId("ms2_${hash}").checked) {
 					if (lc.Closest && lc.Closest.i >= 0 && lc.Closest.dist < 100) {
 						var p = points[lc.Closest.i];
-						ShowSpectrum(${dataset}, "mzml", p[2]);
+						ShowSpectrum(${info.datafile}, "mzml", p[2]);
 					}
 				}
 			}
@@ -78,7 +78,7 @@
 				var y = (obj.Height + obj.Padding[1] - pt.y) / obj.ScaleY + obj.ViewRange.y.min;
 				dojo.byId("cx_${hash}").innerHTML = x.toFixed(3) + " min";
 				dojo.byId("cy_${hash}").innerHTML = y.toFixed(3);
-				var closest = {i:-1, dist:Number.POSITIVE_INFINITY};
+				var closest = { i: -1, dist: Number.POSITIVE_INFINITY };
 				var m = { x: pt.x - obj.Padding[0], y: pt.y };
 				for (var i in points) {
 					var p = points[i];
@@ -95,7 +95,7 @@
 					var elem = dojo.position(obj.Container, false);
 					if (!this.Tooltip || this.Tooltip.i != closest.i) {
 						this.Tooltip = {i:closest.i, pos:{x: Math.round((p[0] - obj.ViewRange.x.min) * obj.ScaleX + obj.Padding[0] + elem.x + window.scrollX - 5), y: Math.round(obj.GraphBottom - (p[1] - obj.ViewRange.y.min) * obj.ScaleY + elem.y + window.scrollY), w: 1, h: 1}};
-						dijit.Tooltip.show('<div style="white-space:nowrap;">m/z: ' + p[0].toFixed(3) + "<br/>Intensity: " + p[1].toFixed(3) + "</div>", this.Tooltip.pos, ["after", "before"], false, "ltr");
+						dijit.Tooltip.show('<div style="white-space:nowrap;">Retention Time: ' + p[0].toFixed(3) + "<br/>m/z: " + p[1].toFixed(3) + "<br/>Spectrum: ${info.file}." + p[2] + "." + p[2] + ".?</div>", this.Tooltip.pos, ["after", "before"], false, "ltr"); //FIXME: implement charge
 						this.Tooltip.node = dijit.Tooltip._masterTT.domNode;
 						this.Tooltip.node.setAttribute("style", "pointer-events:none;" + this.Tooltip.node.getAttribute("style"));
 					}
@@ -163,6 +163,7 @@
 				visible[node.name] = true;
 			});
 			lc.SetVisible(visible);
+			lc.SetTooltip(visible.ms2);
 		});
 	});
 </script>

@@ -29,6 +29,7 @@ dependencies = {
                         "dojo._base.connect",
                         "dojo.fx",
                         "dojo.fx.Toggler",
+                        "dojo.hash",
                         "dojo.io.iframe",
                         "dojo.selector.acme",
                         "dojox.charting.MouseInteractionSupport",

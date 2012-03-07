@@ -18,4 +18,7 @@
 		</tal:else>
 	</tal:for></tr></tal:for>
 </table>
-<script>TableManager.Add("peptides", "${sortcol}");</script>
+<script>
+SwitchDataset(${datafile}, "data_peptides");
+TableManager.Add("peptides", "${sortcol}");
+</script>

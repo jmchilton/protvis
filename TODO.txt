@@ -3,7 +3,12 @@ Show other hits in query (page X of Y)
 Advanced search
 default selected node after drag-drop upload
 Make errors more descriptive
-resize specview on window size change
+resize graphs on window size change to smaller window
 zooming in really close freeze spectrum viewer. Probably evaluates to 0
 upload missing files form
 navigation with back/forward buttons (hash URL)
+pan graphs
+add gridlines to graphs
+optimise mouse move code for specview and LC MS2 data to reduce CPU usage
+daemonize server
+uploading files from standalone with multiple top-level files breaks node graph

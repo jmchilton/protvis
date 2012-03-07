@@ -1792,6 +1792,8 @@ class Mixturemodel(TagHandler):
 			return self.Stream
 		if name == "point":
 			return NullStream()
+		if name == "mixturemodel":
+			return NullStream()
 		raise ValueError(name)
 		
 class Inputfile(TagHandler):

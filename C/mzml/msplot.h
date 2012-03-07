@@ -131,7 +131,7 @@
 				//Ion ions[ion__count];
 				//float precursor_mz[precursor__count];
 			} Spectrum;
-			static MemoryStream *RenderFromFileInternal(char *pSrcData, uint32_t nSpectrums, DWORD nWidth, DWORD nHeight, float nMinTime, float nMaxTime, float nMinMz, float nMaxMz);
+			static MemoryStream *RenderFromFileInternal(char *pSrcData, uint32_t nSpectrums, DWORD nWidth, DWORD nHeight, int nScale, float nMinTime, float nMaxTime, float nMinMz, float nMaxMz);
 	};
 	
 	void InitaliseMS1Cache(); //Must be called before doing any rendering

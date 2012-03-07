@@ -244,6 +244,8 @@
 		virtual OutputStream *BeginChild(DWORD nIndex);
 		void AddSpectrumN(DWORD nIndex);
 		static void Search(FILE *pFile, SearchStatus &stat);
+		static PyObject *GetSpectrum(FILE *pFile, DWORD nScan);
+		static unsigned long GetSpectrumOffset(FILE *pFile, DWORD nScan);
 		static PyObject *PointsMS2(FILE *pFile);
 
 		private:
@@ -291,8 +293,8 @@
 		virtual void End();
 		virtual OutputStream *BeginChild(DWORD nIndex);
 		void AddSpectrum1(float nStartTime, DWORD nCount, float *pMz, float *pIntensity);
-		static PyObject *GetSpectrum(FILE *pFile, const char *szSpectrumName);
-		static unsigned long GetSpectrumOffset(FILE *pFile, const char *szSpectrumName);
+		static PyObject *GetSpectrum(FILE *pFile, DWORD nScan);
+		static unsigned long GetSpectrumOffset(FILE *pFile, DWORD nScan);
 		static void SearchSpectrums(FILE *pFile, SearchStatus &stat);
 		static void Info(FILE *pFile, float &nMinTime, float &nMaxTime, float &nMinMz, float &nMaxMz, float &nMaxIntensity);
 		static PyObject *PointsMS2(FILE *pFile);

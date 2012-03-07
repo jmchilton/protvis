@@ -75,17 +75,48 @@ inline void Run::Search(FILE *pFile, SearchStatus &stat) {
 	Spectrum::SearchAll(pFile, stat, header._0);
 }
 
+inline PyObject *Run::GetSpectrum(FILE *pFile, DWORD nScan) {
+	return NULL; //FIXME: implement
+}
+
+inline unsigned long Run::GetSpectrumOffset(FILE *pFile, DWORD nScan) {
+	READ_STRUCTURE(pFile, header, 2, (DWORD, DWORD));
+	fseek(pFile, header._1, SEEK_CUR);
+	DWORD nSize = (header._0 + 1) / 2;
+	Index *pIndex = (Index *)malloc(nSize * sizeof(Index));
+	fread(pIndex, 1, nSize * sizeof(Index), pFile);
+	if (pIndex[(header._0 - 1) / 2].scanId < nScan) {
+		if (header._0 & 0x01) {
+			--nSize;
+		}
+		fread(pIndex, 1, nSize * sizeof(Index), pFile);
+	}
+	//FIXME: binary search for small performance gain
+	for (DWORD i = 0; i < nSize; ++i) {
+		if (pIndex[i].scanId == nScan) {
+			free(pIndex);
+			return pIndex[i].spectrum__offset;
+		} else if (pIndex[i].scanId > nScan) {
+			free(pIndex);
+			return (DWORD)-1;
+		}
+	}
+	return (DWORD)-1;
+}
+
 inline PyObject *Run::PointsMS2(FILE *pFile) {
 	READ_STRUCTURE(pFile, header, 2, (DWORD, DWORD));
 	return Spectrum::PointsMS2All(pFile, header._0);
 }
 
-inline PyObject *MzML::GetSpectrum(FILE *pFile, const char *szSpectrumName) {
-	return NULL; //FIXME: implement
+inline PyObject *MzML::GetSpectrum(FILE *pFile, DWORD nScan) {
+	fseek(pFile, 3 * sizeof(DWORD) + 5 * sizeof(float), SEEK_SET);
+	return Run::GetSpectrum(pFile, nScan);
 }
 
-inline unsigned long MzML::GetSpectrumOffset(FILE *pFile, const char *szSpectrumName) {
-	return 0; //FIXME: implement
+inline unsigned long MzML::GetSpectrumOffset(FILE *pFile, DWORD nScan) {
+	fseek(pFile, 3 * sizeof(DWORD) + 5 * sizeof(float), SEEK_SET);
+	return Run::GetSpectrumOffset(pFile, nScan);
 }
 
 inline void MzML::SearchSpectrums(FILE *pFile, SearchStatus &stat) {

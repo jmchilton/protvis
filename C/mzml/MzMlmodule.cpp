@@ -22,9 +22,26 @@ static PyObject *GetSpectrum(PyObject *self, PyObject *args) {
 	if (!PyArg_ParseTuple(args, "ss", &szFileName, &szSpectrumName)) {
 		return NULL;
 	}
+	const char *szSpecName = strchr(szSpectrumName, '.');
+	char *szEnd;
+	DWORD nScan;
+	if (szSpecName == NULL) {
+		nScan = strtoul(szSpectrumName, &szEnd, 10);
+		if (szEnd <= szSpectrumName) {
+			return Py_BuildValue("");
+		}
+	} else {
+		if (strncmp(szSpectrumName, szFileName, szSpecName - szSpectrumName) != 0) {
+			return Py_BuildValue("");
+		}
+		nScan = strtoul(szSpecName + 1, &szEnd, 10);
+		if (szEnd == NULL || szEnd == szSpecName) {
+			return Py_BuildValue("");
+		}
+	}
 	FILE *pFile = fopen(szFileName, "r");
 	if (pFile != NULL) {
-		PyObject *pRet = MzML::GetSpectrum(pFile, szSpectrumName);
+		PyObject *pRet = MzML::GetSpectrum(pFile, nScan);
 		fclose(pFile);
 		return pRet;
 	}
@@ -52,13 +69,30 @@ static PyObject *GetOffsetFromSpectrum(PyObject *self, PyObject *args) {
 	if (!PyArg_ParseTuple(args, "ss", &szFileName, &szSpectrumName)) {
 		return NULL;
 	}
+	const char *szSpecName = strchr(szSpectrumName, '.');
+	char *szEnd;
+	DWORD nScan;
+	if (szSpecName == NULL) {
+		nScan = strtoul(szSpectrumName, &szEnd, 10);
+		if (szEnd <= szSpectrumName) {
+			return Py_BuildValue("");
+		}
+	} else {
+		if (strncmp(szSpectrumName, szFileName, szSpecName - szSpectrumName) != 0) {
+			return Py_BuildValue("");
+		}
+		nScan = strtoul(szSpecName + 1, &szEnd, 10);
+		if (szEnd == NULL || szEnd == szSpecName) {
+			return Py_BuildValue("");
+		}
+	}
 	FILE *pFile = fopen(szFileName, "r");
 	if (pFile != NULL) {
-		unsigned long nOffset = MzML::GetSpectrumOffset(pFile, szSpectrumName);
+		unsigned long nOffset = MzML::GetSpectrumOffset(pFile, nScan);
 		fclose(pFile);
 		return Py_BuildValue("k", nOffset);
 	}
-	return Py_BuildValue("k", 0);
+	return Py_BuildValue("");
 }
 
 static PyObject *Search(PyObject *self, PyObject *args) {
@@ -93,7 +127,7 @@ static PyObject *Display(PyObject *self, PyObject *args) {
 		MzML::Info(pFile, nMinTime, nMaxTime, nMinMz, nMaxMz, nMaxIntensity);
 		fclose(pFile);
 		return Py_BuildValue("[f,f,f,f,f]", nMinTime, nMaxTime, nMinMz, nMaxMz, nMaxIntensity);
-	} 
+	}
 	return Py_BuildValue("");
 }
 

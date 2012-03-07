@@ -21,6 +21,41 @@
 			dojo.require("dojox.gfx");
 			dojo.require("dojox.form.Uploader");
 			dojo.require("dojox.form.uploader.plugins.IFrame");
+			require(["dojo/_base/connect", "dojo/hash"], function(connect, hash){
+				connect.subscribe("/dojo/hashchange", null, NavigateHash);
+			});
+			
+			function NavigateHash(hash) {
+				function NavigateToResults(index) {
+						SwitchDataset(index);
+						if (dojo.byId("data_" + index).children.length == 0) {
+							LoadContents(index, "/results?file=${file}&n=" + index + "&q=&max=50");
+						}
+						Flowchart.Select(index);
+				}
+
+				if (hash.length == 0) {
+					NavigateToResults("${index}");
+				} else {
+					hash = decodeURIComponent(hash);
+					var params = hash.split(";");
+					var section = params[0][0];
+					params[0] = params[0].substr(1);
+					switch (section) {
+						case 'P': //PepXML peptide
+							LoadContents("peptides", "/peptide?file=${file}&n=" + params[0] + "&peptide=" + params[1]);
+							break;
+							
+						case 'R': //Generic results
+							NavigateToResults(params[0]);
+							break;
+							
+						case 'S': //Spectrum view
+							ShowSpectrum(params[0], GetTypeName(Files[index].type, false), params[1], params[2]);
+							break;
+					}
+				}
+			}
 			
 			var Location = function(dataset, table) {
 				if (!table) {
@@ -251,7 +286,11 @@
 
 			function LoadContents(container, url) {
 				CurrentContents[container] = { url: BaseUrl(url), container: container };
-				var oldhits = dojo.byId("data_" + container).firstChild;
+				var oldhits = dojo.byId("data_" + container);
+				if (!oldhits) {
+					return;
+				}
+				oldhits = oldhits.firstChild;
 				if (oldhits == null) {
 					var anim = dojo.fx.wipeIn({
 						node: dojo.byId("searching"),
@@ -337,22 +376,7 @@
 			}
 			
 			function SearchPeptide(peptide, datafile) {
-				CurrentPeptide = peptide;
-				LastDataset = CurrentDataset;
-				dojo.xhrGet({
-					url: "/peptide?file=${file}&n=" + datafile + "&peptide=" + peptide,
-					load: function(results) {
-						elem = dojo.byId("data_peptides")
-						elem.innerHTML = "<span class='link' onclick='ReturnToResults();'>Back to all results</span>" + results;
-						SwitchDataset(datafile, "data_peptides");
-					},
-					error: function() {
-						DetailsDialog.attr("title", "Query Results");
-						DetailsDialog.attr("content", "Query Error. Server could not be reached");
-						DetailsDialog.attr("style", "width: 300px;");
-						DetailsDialog.show();
-					}
-				});
+				window.location.hash = "P" + datafile + ";" + peptide;
 			}
 
 			function ToggleSpectrums() {
@@ -366,8 +390,7 @@
 			}
 			
 			function ShowSpectrum(dataset, type, offset, spectrum) {
-				SwitchDataset(dataset, "data_spectrum");
-				LoadContents("spectrum", "/spectrum?file=${file}&n=" + dataset + "&type=" + type + "&off=" + offset + "&spectrum=" + encodeURIComponent(spectrum));
+				LoadContents("spectrum", "/spectrum?file=${file}&n=" + dataset + "&off=" + offset + (spectrum ? "&spectrum=" + encodeURIComponent(spectrum) : ""));
 			}
 			
 			function ShowSpectrumFromPeptide(pepn, spectrum, pep_qoff, pep_hoff) {
@@ -381,9 +404,9 @@
 			function SelectInfo(title, type, params) {
 				var width = params["width"] ? params["width"] : 500;
 				dojo.xhrGet({
-					url: "/select?file=${file}&type=" + type + (params["datafile"] == undefined ? '' : "&n=" + params["datafile"]) + (params["params"] ? "&" + params["params"] : ''),
+					url: "/select?file=${file}&type=" + type + (params["datafile"] == undefined ? "" : "&n=" + params["datafile"]) + (params["params"] ? "&" + params["params"] : ''),
 					load: function(results) {
-						DetailsDialog.attr("content", '<div id="" style="overflow:auto; width:' + (width - 16) + 'px;max-height:400px;">' + results + '</div>');
+						DetailsDialog.attr("content", '<div style="overflow:auto; width:' + (width - 16) + 'px;max-height:400px;">' + results + '</div>');
 					},
 					error: function() {
 						DetailsDialog.attr("content", "Query Error. Server could not be reached");
@@ -459,8 +482,8 @@
 				]).play();
 			}
 
-			function ReturnToResults() {
-				SwitchDataset(LastDataset);
+			function ReturnToResults(dataset) {
+				window.location.hash = "R" + dataset;
 			}
 
 			function ToggleNavigation() {
@@ -475,10 +498,6 @@
 			}
 
 			dojo.ready(function() {
-				// Populate content initially
-				CurrentPage = "${index}";
-				LoadContents("${index}", "/results?file=${file}&n=${index}&type=${type}&q=&max=50");
-				DetailsDialog = new dijit.Dialog({ style: "width: 400px" });
 				<tal:if condition="python: nfiles > 1">
 					var got = 0;
 					for (i in Files) {
@@ -491,15 +510,18 @@
 						dojo.byId("navigation_graph").style.display = "none";
 					}
 					Flowchart = new FlowChart(dojo.byId("navigation_graph"), Files, function(evt, file) {
-						var type = GetTypeName(file["type"], false);
-						SwitchDataset(file["index"]);
-						if (dojo.byId("data_" + file["index"]).children.length == 0) {
-							LoadContents(file["index"], "/results?file=${file}&n=" + file["index"] + "&type=" + type + "&q=&max=50");
-						}
-						Flowchart.Select(file["index"]);
+						window.location.hash = "R" + file.index;
 					});
 					Flowchart.Select(${index});
 				</tal:if>
+				if (window.location.hash) {
+					CurrentPage = null;
+					NavigateHash(window.location.hash.substr(1));
+				} else {
+					CurrentPage = "${index}";
+					LoadContents(CurrentPage, "/results?file=${file}&n=${index}&q=&max=50");
+				}
+				DetailsDialog = new dijit.Dialog({ style: "width: 400px" });
 			});
 		</script>
 		<script type="text/javascript" src="/res/scripts/main.js"></script>

@@ -480,7 +480,16 @@ inline MemoryStream *MS1Plot::RenderFromFileInternalPoints(const char *szFileNam
 }
 
 //MS2
-#define MS2_POINT_RADIUS 1
+
+template <typename T>
+inline T min(T x, T y) {
+	return x < y ? x : y;
+}
+
+template <typename T>
+inline T max(T x, T y) {
+	return x > y ? x : y;
+}
 
 MemoryStream *MS2Plot::RenderFromFile(const char *szFileName, DWORD nWidth, DWORD nHeight, float nMinTime, float nMaxTime, float nMinMz, float nMaxMz) {
 	FILE *pFile = fopen(szFileName, "rb");
@@ -503,12 +512,27 @@ MemoryStream *MS2Plot::RenderFromFile(const char *szFileName, DWORD nWidth, DWOR
 			return NULL;
 		}
 		fclose(pFile);
-		return RenderFromFileInternal(pSrcData, info.scans, nWidth, nHeight, nMinTime >= 0 ? nMinTime : info.minTime, nMaxTime >= 0 ? nMaxTime : info.maxTime, nMinMz >= 0 ? nMinMz : info.minMz, nMaxMz >= 0 ? nMaxMz : info.maxMz);
+		if (nMinTime < 0) {
+			nMinTime = info.minTime;
+		}
+		if (nMaxTime < 0) {
+			nMaxTime = info.maxTime;
+		}
+		if (nMinMz < 0) {
+			nMinMz = info.minMz;
+		}
+		if (nMaxMz < 0) {
+			nMaxMz = info.maxMz;
+		}
+		float nScaleX = (info.maxTime - info.minTime) / (nMaxTime - nMinTime);
+		float nScaleY = (info.maxMz - info.minMz) / (nMaxMz - nMinMz);
+		int nScale = (DWORD)min(max(1, (int)(min(nScaleX, nScaleY) / 3.0f)), 5);
+		return RenderFromFileInternal(pSrcData, info.scans, nWidth, nHeight, nScale, nMinTime, nMaxTime, nMinMz, nMaxMz);
 	}
 	return NULL;
 }
 
-inline MemoryStream *MS2Plot::RenderFromFileInternal(char *pSrcData, uint32_t nSpectrums, DWORD nWidth, DWORD nHeight, float nMinTime, float nMaxTime, float nMinMz, float nMaxMz) {
+inline MemoryStream *MS2Plot::RenderFromFileInternal(char *pSrcData, uint32_t nSpectrums, DWORD nWidth, DWORD nHeight, int nScale, float nMinTime, float nMaxTime, float nMinMz, float nMaxMz) {
 	unsigned nPixels = nWidth * nHeight;
 	BYTE *pImg = (BYTE *)malloc(nPixels * sizeof(BYTE));
 	if (pImg == NULL) {
@@ -523,15 +547,15 @@ inline MemoryStream *MS2Plot::RenderFromFileInternal(char *pSrcData, uint32_t nS
 	for (uint32_t i = 0; i < nSpectrums; ++i) {
 		Spectrum *pSpectrum = (Spectrum *)pSrcDataPtr;
 		if (pSpectrum->precursor_mz >= 0 && pSpectrum->scan_start_time >= nMinTime && pSpectrum->scan_start_time <= nMaxTime) {
-			nPosX = (unsigned)((pSpectrum->scan_start_time - nMinTime) * nScaleX) - MS2_POINT_RADIUS;
-			nPosY = ((unsigned)((nMaxMz - pSpectrum->precursor_mz) * nScaleY) - MS2_POINT_RADIUS) * nWidth;
+			nPosX = (unsigned)((pSpectrum->scan_start_time - nMinTime) * nScaleX) - nScale;
+			nPosY = ((unsigned)((nMaxMz - pSpectrum->precursor_mz) * nScaleY) - nScale) * nWidth;
 			//pImg[nPosY * nWidth + nPosX] = 0xFF;
 			int x, y;
-			for (y = -MS2_POINT_RADIUS; y <= MS2_POINT_RADIUS; ++y) {
+			for (y = -nScale; y <= nScale; ++y) {
 				if (nPosY >= 0 && (unsigned)nPosY < nPixels) {
 					nIdx = nPosY + nPosX;
-					for (x = -MS2_POINT_RADIUS; x <= MS2_POINT_RADIUS; ++x) {
-						if (nPosX + x + MS2_POINT_RADIUS >= 0 && nPosX + x + MS2_POINT_RADIUS < nWidth) {
+					for (x = -nScale; x <= nScale; ++x) {
+						if (nPosX + x + nScale >= 0 && nPosX + x + nScale < nWidth) {
 							pImg[nIdx] = 0xFF;
 						}
 						++nIdx;
