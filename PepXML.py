@@ -2065,7 +2065,7 @@ class MsmsPipelineAnalysis(TagHandler):
 
 #externally usable functions
 
-def ToBinary(f, dst):
+def ToBinary(f, dst, name):
 	"""
 	struct _PeptideInstance {
 		String Peptide;

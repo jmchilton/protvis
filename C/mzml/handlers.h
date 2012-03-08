@@ -183,13 +183,14 @@
 	class MzML;
 	class Spectrum : public ParamGroup {
 		/*struct Ion {
-			float mass;
+			float mz;
 			float intensity;
 		}
 		//ONLY IF (m_nMsLevel > 1)
 		struct Spectrum {
 			DWORD ion__count;
 			DWORD precursor__count;
+			DWORD scan;
 			float scan_start_time; //negative number if not specified
 			float precursor_mz; //negative number if not specified
 			Ion ions[ion__count];
@@ -245,7 +246,7 @@
 		void AddSpectrumN(DWORD nIndex);
 		static void Search(FILE *pFile, SearchStatus &stat);
 		static PyObject *GetSpectrum(FILE *pFile, DWORD nScan);
-		static unsigned long GetSpectrumOffset(FILE *pFile, DWORD nScan);
+		static DWORD GetSpectrumOffset(FILE *pFile, DWORD nScan);
 		static PyObject *PointsMS2(FILE *pFile);
 
 		private:
@@ -278,6 +279,7 @@
 			//ScanSettingsList scanSettingsList; //ONLY IF (OptionalFlags & 0x04)
 			//InstrumentConfigurationList instrumentConfigurationList;
 			//DataProcessingList dataProcessingList;
+			DWORD run__offset;
 			DWORD ms1__offset;
 			DWORD ms1__size;
 			DWORD ms1__count;
@@ -286,6 +288,7 @@
 			float ms1_maxTime;
 			float ms1_minMz;
 			float ms1_maxMz;
+			String spectrum_name;
 			Run run;
 			MS1Spectrum ms1spectrum[ms1spectrum__count]; // <--ms1__offset, sorted lowest to highest retention time
 		}*/
@@ -293,11 +296,12 @@
 		virtual void End();
 		virtual OutputStream *BeginChild(DWORD nIndex);
 		void AddSpectrum1(float nStartTime, DWORD nCount, float *pMz, float *pIntensity);
-		static PyObject *GetSpectrum(FILE *pFile, DWORD nScan);
-		static unsigned long GetSpectrumOffset(FILE *pFile, DWORD nScan);
+		static PyObject *GetSpectrum(FILE *pFile, const char *szSpectrumName);
+		static DWORD GetSpectrumOffset(FILE *pFile, const char *szSpectrumName);
 		static void SearchSpectrums(FILE *pFile, SearchStatus &stat);
-		static void Info(FILE *pFile, float &nMinTime, float &nMaxTime, float &nMinMz, float &nMaxMz, float &nMaxIntensity);
+		static void Info(FILE *pFile, float &nMinTime, float &nMaxTime, float &nMinMz, float &nMaxMz, float &nMaxIntensity, char *&szName); //MUST call free() on szName
 		static PyObject *PointsMS2(FILE *pFile);
+		static void SkipHeaders(FILE *pFile);
 
 		private:
 			typedef struct _MS1Data {
@@ -310,6 +314,7 @@
 			} MS1Data;
 			
 			LiteralArray<MS1Data> m_arrMS1Data;
+			off_t m_offRun;
 	};
 	
 	class IndexedMzML : public TagHandler {
@@ -323,10 +328,11 @@
 	UNUSED_HANDLERS(PrecursorIonList);
 	
 	typedef struct _State : public BaseState {
-		_State(const char *szFilePath);
+		_State(const char *szFilePath, const char *szOriginalFile);
 		MzML *pMzML;
 		Run *pRun;
 		Spectrum *pSpectrum;
+		const char *szFileName;
 	} State;
 	
 	#include "handlers.inl"

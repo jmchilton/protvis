@@ -172,6 +172,7 @@ MemoryStream *MS1Plot::RenderFromFileSmooth(const char *szFileName, DWORD nWidth
 	FILE *pFile = fopen(szFileName, "rb");
 	if (pFile != NULL) {
 		struct Info {
+			DWORD run__offset;
 			DWORD offset;
 			DWORD size;
 			DWORD count;
@@ -255,6 +256,7 @@ MemoryStream *MS1Plot::RenderFromFilePoints(const char *szFileName, DWORD nWidth
 	FILE *pFile = fopen(szFileName, "rb");
 	if (pFile != NULL) {
 		struct Info {
+			DWORD run__offset;
 			DWORD offset;
 			DWORD size;
 			DWORD count;
@@ -494,18 +496,28 @@ inline T max(T x, T y) {
 MemoryStream *MS2Plot::RenderFromFile(const char *szFileName, DWORD nWidth, DWORD nHeight, float nMinTime, float nMaxTime, float nMinMz, float nMaxMz) {
 	FILE *pFile = fopen(szFileName, "rb");
 	if (pFile != NULL) {
-		fseek(pFile, 3 * sizeof(DWORD) + sizeof(float), SEEK_SET);
-		struct Info {
+		struct MzMLInfo {
+			DWORD run__offset;
+			DWORD _1, _2, _3;
+			float maxIntensity;
 			float minTime, maxTime;
 			float minMz, maxMz;
+		};
+		struct RunInfo {
 			DWORD scans, indexOffset;
 		};
-		Info info;
-		if (fread(&info, 1, sizeof(Info), pFile) != sizeof(Info)) {
+		MzMLInfo mzml;
+		RunInfo run;
+		if (fread(&mzml, 1, sizeof(MzMLInfo), pFile) != sizeof(MzMLInfo)) {
 			fclose(pFile);
 			return NULL;
 		}
-		DWORD nDataSize = info.indexOffset - (3 * sizeof(DWORD) + 5 * sizeof(float) + 2 * sizeof(DWORD));
+		fseek(pFile, mzml.run__offset, SEEK_SET);
+		if (fread(&run, 1, sizeof(RunInfo), pFile) != sizeof(RunInfo)) {
+			fclose(pFile);
+			return NULL;
+		}
+		DWORD nDataSize = run.indexOffset - (mzml.run__offset + 2 * sizeof(DWORD));
 		char *pSrcData = (char *)malloc(nDataSize);
 		if (fread(pSrcData, 1, nDataSize, pFile) != nDataSize) {
 			fclose(pFile);
@@ -513,21 +525,21 @@ MemoryStream *MS2Plot::RenderFromFile(const char *szFileName, DWORD nWidth, DWOR
 		}
 		fclose(pFile);
 		if (nMinTime < 0) {
-			nMinTime = info.minTime;
+			nMinTime = mzml.minTime;
 		}
 		if (nMaxTime < 0) {
-			nMaxTime = info.maxTime;
+			nMaxTime = mzml.maxTime;
 		}
 		if (nMinMz < 0) {
-			nMinMz = info.minMz;
+			nMinMz = mzml.minMz;
 		}
 		if (nMaxMz < 0) {
-			nMaxMz = info.maxMz;
+			nMaxMz = mzml.maxMz;
 		}
-		float nScaleX = (info.maxTime - info.minTime) / (nMaxTime - nMinTime);
-		float nScaleY = (info.maxMz - info.minMz) / (nMaxMz - nMinMz);
+		float nScaleX = (mzml.maxTime - mzml.minTime) / (nMaxTime - nMinTime);
+		float nScaleY = (mzml.maxMz - mzml.minMz) / (nMaxMz - nMinMz);
 		int nScale = (DWORD)min(max(1, (int)(min(nScaleX, nScaleY) / 3.0f)), 5);
-		return RenderFromFileInternal(pSrcData, info.scans, nWidth, nHeight, nScale, nMinTime, nMaxTime, nMinMz, nMaxMz);
+		return RenderFromFileInternal(pSrcData, run.scans, nWidth, nHeight, nScale, nMinTime, nMaxTime, nMinMz, nMaxMz);
 	}
 	return NULL;
 }
@@ -600,9 +612,6 @@ inline MemoryStream *MS2Plot::RenderFromFileInternal(char *pSrcData, uint32_t nS
 			//Generate bitmap
 			BYTE *pImgPtr = pImg;
 			for (unsigned i = 0; i < nPixels; ++i) {
-				/*if (*pImgPtr) {
-					printf("%u\n", i);
-				}*/
 				*pData++ = (*pImgPtr++ << 24) | 0x0000FF;
 			}
 			png_write_image(png_ptr, pRows);

@@ -1436,7 +1436,7 @@ def ConvertFilename(FileName):
 def IsConverted(FileName):
 	return os.path.isfile(ConvertFilename(FileName))
 
-def ToBinary(f, dst):
+def ToBinary(f, dst, name):
 	import Reference
 	Dest = open(dst, "w")
 	stat = EncodingStatus()

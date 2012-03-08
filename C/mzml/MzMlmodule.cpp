@@ -6,11 +6,12 @@
 
 static PyObject *ToBinary(PyObject *self, PyObject *args) {
 	const char *szDest;
+	const char *szOriginalName;
 	PyObject *pFile;
-	if (!PyArg_ParseTuple(args, "Os", &pFile, &szDest)) {
+	if (!PyArg_ParseTuple(args, "Oss", &pFile, &szDest, &szOriginalName)) {
 		return NULL;
 	}
-	State state(szDest);
+	State state(szDest, szOriginalName);
 	int fd = fileno(PyFile_AsFile(pFile));
 	lseek(fd, 0, SEEK_SET);
 	Transcode(fd, &state);
@@ -22,26 +23,9 @@ static PyObject *GetSpectrum(PyObject *self, PyObject *args) {
 	if (!PyArg_ParseTuple(args, "ss", &szFileName, &szSpectrumName)) {
 		return NULL;
 	}
-	const char *szSpecName = strchr(szSpectrumName, '.');
-	char *szEnd;
-	DWORD nScan;
-	if (szSpecName == NULL) {
-		nScan = strtoul(szSpectrumName, &szEnd, 10);
-		if (szEnd <= szSpectrumName) {
-			return Py_BuildValue("");
-		}
-	} else {
-		if (strncmp(szSpectrumName, szFileName, szSpecName - szSpectrumName) != 0) {
-			return Py_BuildValue("");
-		}
-		nScan = strtoul(szSpecName + 1, &szEnd, 10);
-		if (szEnd == NULL || szEnd == szSpecName) {
-			return Py_BuildValue("");
-		}
-	}
 	FILE *pFile = fopen(szFileName, "r");
 	if (pFile != NULL) {
-		PyObject *pRet = MzML::GetSpectrum(pFile, nScan);
+		PyObject *pRet = MzML::GetSpectrum(pFile, szSpectrumName);
 		fclose(pFile);
 		return pRet;
 	}
@@ -69,26 +53,9 @@ static PyObject *GetOffsetFromSpectrum(PyObject *self, PyObject *args) {
 	if (!PyArg_ParseTuple(args, "ss", &szFileName, &szSpectrumName)) {
 		return NULL;
 	}
-	const char *szSpecName = strchr(szSpectrumName, '.');
-	char *szEnd;
-	DWORD nScan;
-	if (szSpecName == NULL) {
-		nScan = strtoul(szSpectrumName, &szEnd, 10);
-		if (szEnd <= szSpectrumName) {
-			return Py_BuildValue("");
-		}
-	} else {
-		if (strncmp(szSpectrumName, szFileName, szSpecName - szSpectrumName) != 0) {
-			return Py_BuildValue("");
-		}
-		nScan = strtoul(szSpecName + 1, &szEnd, 10);
-		if (szEnd == NULL || szEnd == szSpecName) {
-			return Py_BuildValue("");
-		}
-	}
 	FILE *pFile = fopen(szFileName, "r");
 	if (pFile != NULL) {
-		unsigned long nOffset = MzML::GetSpectrumOffset(pFile, nScan);
+		unsigned long nOffset = MzML::GetSpectrumOffset(pFile, szSpectrumName);
 		fclose(pFile);
 		return Py_BuildValue("k", nOffset);
 	}
@@ -124,9 +91,12 @@ static PyObject *Display(PyObject *self, PyObject *args) {
 	FILE *pFile = fopen(szFileName, "r");
 	if (pFile != NULL) {
 		float nMinTime, nMaxTime, nMinMz, nMaxMz, nMaxIntensity;
-		MzML::Info(pFile, nMinTime, nMaxTime, nMinMz, nMaxMz, nMaxIntensity);
+		char *szName;
+		MzML::Info(pFile, nMinTime, nMaxTime, nMinMz, nMaxMz, nMaxIntensity, szName);
 		fclose(pFile);
-		return Py_BuildValue("[f,f,f,f,f]", nMinTime, nMaxTime, nMinMz, nMaxMz, nMaxIntensity);
+		PyObject *ret = Py_BuildValue("[f,f,f,f,f,s]", nMinTime, nMaxTime, nMinMz, nMaxMz, nMaxIntensity, szName);
+		free(szName);
+		return ret;
 	}
 	return Py_BuildValue("");
 }

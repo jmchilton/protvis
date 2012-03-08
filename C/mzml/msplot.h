@@ -126,6 +126,7 @@
 			typedef struct {
 				DWORD ion__count;
 				DWORD precursor__count;
+				DWORD scan;
 				float scan_start_time; //negative number if not specified
 				float precursor_mz; //negative number if not specified
 				//Ion ions[ion__count];

@@ -280,7 +280,7 @@ void Spectrum::End() {
 		DWORD nIonCount = m_pMz == NULL || m_pIntensity == NULL || m_pMz->GetLength() != m_pIntensity->GetLength() ? 0 : m_pMz->GetLength() / sizeof(float);
 		DWORD nPrecursorCount = m_pPrecursorList == NULL ? 0 : m_pPrecursorList->GetLength() / sizeof(float);
 		if (nIonCount > 0) {
-			WRITE_STRUCTURE(m_pStream, 4, (DWORD, DWORD, float, float), (nIonCount, nPrecursorCount, m_nStartTime, m_pPrecursorList == NULL ? -1.0f : *(float *)m_pPrecursorList->GetBuffer()));
+			WRITE_STRUCTURE(m_pStream, 5, (DWORD, DWORD, DWORD, float, float), (nIonCount, nPrecursorCount, m_nIndex, m_nStartTime, m_pPrecursorList == NULL ? -1.0f : *(float *)m_pPrecursorList->GetBuffer()));
 			const float *pMz = (const float *)m_pMz->GetBuffer();
 			const float *pInt = (const float *)m_pIntensity->GetBuffer();
 			for (DWORD i = 0; i < nIonCount; ++i) {
@@ -290,7 +290,7 @@ void Spectrum::End() {
 				m_pStream->WriteStream(m_pPrecursorList);
 			}
 		} else {
-			WRITE_STRUCTURE(m_pStream, 4, (DWORD, DWORD, float, float), (0, 0, 0.0f, 0.0f));
+			WRITE_STRUCTURE(m_pStream, 5, (DWORD, DWORD, DWORD, float, float), (0, 0, 0, 0.0f, 0.0f));
 		}
 	}
 	if (m_pMz != NULL) {
@@ -360,7 +360,9 @@ OutputStream *Run::BeginChild(DWORD nIndex) {
 bool MzML::Begin(State *pState, const XML_Char **pszAttrs) {
 	TRACEPOS(m_pStream, "MzML::Begin(): ");
 	pState->pMzML = this;
-	ALLOC_STRUCTURE(m_pStream, 8, (DWORD, DWORD, DWORD, float, float, float, float, float));
+	ALLOC_STRUCTURE(m_pStream, 9, (DWORD, DWORD, DWORD, DWORD, float, float, float, float, float));
+	EncodeStringToFile(m_pStream, pState->szFileName);
+	m_offRun = m_pStream->Tell();
 	return true;
 }
 
@@ -421,7 +423,7 @@ void MzML::End() {
 	}
 	off_t offEndPos = m_pStream->Tell();
 	m_pStream->Seek(0);
-	WRITE_STRUCTURE(m_pStream, 8, (DWORD, DWORD, DWORD, float, float, float, float, float), (offMidPos, offEndPos - offMidPos, m_arrMS1Data.GetLength(), nMaxIntensity, nMinTime, nMaxTime, nMinMz, nMaxMz));
+	WRITE_STRUCTURE(m_pStream, 9, (DWORD, DWORD, DWORD, DWORD, float, float, float, float, float), (m_offRun, offMidPos, offEndPos - offMidPos, m_arrMS1Data.GetLength(), nMaxIntensity, nMinTime, nMaxTime, nMinMz, nMaxMz));
 }
 
 OutputStream *MzML::BeginChild(DWORD nIndex) {
@@ -449,7 +451,13 @@ static TagHandlerEntry gs_pHandlers[] = {
 	{ NULL, NULL }
 };
 
-_State::_State(const char *szFilePath) : BaseState(szFilePath, gs_pHandlers) {
+_State::_State(const char *szFilePath, const char *szOriginalFile) : BaseState(szFilePath, gs_pHandlers) {
+	szFileName = strrchr(szOriginalFile, '/');
+	if (szFileName == NULL) {
+		szFileName = szOriginalFile;
+	} else {
+		++szFileName;
+	}
 }
 
 TAG_HANDLER_CHILDREN(IndexedMzML,								{ "mzML", &MzML::New }); //Unhandled: indexList, indexListOffset, fileChecksum

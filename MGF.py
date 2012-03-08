@@ -178,7 +178,7 @@ class Header:
 				f.seek(4, 1)
 			i += 1
 
-def ToBinary(f, dst):
+def ToBinary(f, dst, name):
 	import Reference
 	dest = open(dst, "w")
 	header = Header(dest)

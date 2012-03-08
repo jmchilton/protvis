@@ -147,11 +147,27 @@
 				}
 				return false;
 			}
+		
+		public:
+			void *pData;
 
 		private:
 			DWORD m_nTotal;
 			Dictionary<PhraseList> m_terms;
 			PyObject *m_pResults;
 	};
+	
+	inline char *DecodeStringFromFile(FILE *pFile) {
+		WORD nLength;
+		fread(&nLength, sizeof(WORD), 1, pFile);
+		char *szStr = (char *)malloc(nLength + 1);
+		if (!szStr) {
+			fseek(pFile, nLength, SEEK_SET);
+			return NULL;
+		}
+		fread(szStr, 1, nLength, pFile);
+		szStr[nLength] = 0;
+		return szStr;
+	}
 
 #endif

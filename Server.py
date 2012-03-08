@@ -199,11 +199,12 @@ def RendererGlobals(system):
 	return { "test": test, "render_peptide": render_peptide, "try_get": TryGet, "urlencode": urllib.quote, "unique_dataset": unique_dataset }
 
 class ConverterThread(Thread):
-	def __init__(self, mod, src, dst):
+	def __init__(self, mod, src, dst, name):
 		Thread.__init__(self)
 		self.Source = src
 		self.Dest = dst
 		self.Module = mod
+		self.Name = name
 		self.Type = Reference.FileType.UNKNOWN
 
 	def run(self):
@@ -213,7 +214,7 @@ class ConverterThread(Thread):
 			close = True
 		else:
 			self.Source.seek(0)
-		self.Type = self.Module.ToBinary(self.Source, self.Dest)
+		self.Type = self.Module.ToBinary(self.Source, self.Dest, self.Name)
 		if close:
 			self.Source.close()
 
@@ -290,7 +291,7 @@ def Upload(req):
 			if f.Type & Reference.FileType.MISSING or f.Type == Reference.FileType.UNKNOWN:
 				threads[i] = None
 			else:
-				t = ConverterThread(GetTypeParser(f.Type), f.Stream, data.name + "_" + str(i))
+				t = ConverterThread(GetTypeParser(f.Type), f.Stream, data.name + "_" + str(i), f.Name)
 				t.start()
 				threads[i] = t
 		f = data.name[len(converted):]
@@ -322,7 +323,7 @@ def Convert(req):
 				if p == None:
 					threads[i] = None
 				else:
-					t = ConverterThread(p, f.Name, data.name + "_" + str(i))
+					t = ConverterThread(p, f.Name, data.name + "_" + str(i), f.Name)
 					t.start()
 					threads[i] = t
 		f = data.name[len(converted):]
@@ -447,7 +448,10 @@ def ListResults(req):
 		return render_to_response(templates + "missing_results.pt", { "links": links, "query": req.GET, "similar": similar }, request = req)
 	else:
 		t = Reference.FileType.NameBasic(links.Links[ni].Type)
-		parser = Parsers[t]
+		try:
+			parser = Parsers[t]
+		except:
+			return Response("The type of the selected file could not be determined")
 		if t == "mzml" and TryGet(req.GET, "list") != "1":
 			results = parser.Display(fname + "_" + n, req.GET)
 			points = parser.points_ms2(fname + "_" + n)

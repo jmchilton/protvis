@@ -33,7 +33,7 @@
 	dojo.require("dijit.form.HorizontalSlider");
 
 	var zooms = new Array();
-	var points = [<tal:for repeat="p points">[<tal:echo content="python: str(round(p[0],3)) + ',' + str(round(p[1],3)) + ',' + str(p[2])"/>],</tal:for>];
+	var points = [<tal:for repeat="p points">[<tal:echo content="python: str(round(p[0],3)) + ',' + str(round(p[1],3)) + ',' + str(p[2]) + ',' + str(p[3])"/>],</tal:for>];
 	
 	var lc = new LcPlot(dojo.byId("lcview_${hash}"), {
 		axis: {
@@ -61,7 +61,7 @@
 				} else if (dojo.byId("ms2_${hash}").checked) {
 					if (lc.Closest && lc.Closest.i >= 0 && lc.Closest.dist < 100) {
 						var p = points[lc.Closest.i];
-						ShowSpectrum(${info.datafile}, "mzml", p[2]);
+						ShowSpectrum(${info.datafile}, "mzml", p[3], "<tal:echo content="python: results[5]"/>." + p[2] + "." + p[2] + ".0");
 					}
 				}
 			}
@@ -95,7 +95,7 @@
 					var elem = dojo.position(obj.Container, false);
 					if (!this.Tooltip || this.Tooltip.i != closest.i) {
 						this.Tooltip = {i:closest.i, pos:{x: Math.round((p[0] - obj.ViewRange.x.min) * obj.ScaleX + obj.Padding[0] + elem.x + window.scrollX - 5), y: Math.round(obj.GraphBottom - (p[1] - obj.ViewRange.y.min) * obj.ScaleY + elem.y + window.scrollY), w: 1, h: 1}};
-						dijit.Tooltip.show('<div style="white-space:nowrap;">Retention Time: ' + p[0].toFixed(3) + "<br/>m/z: " + p[1].toFixed(3) + "<br/>Spectrum: ${info.file}." + p[2] + "." + p[2] + ".?</div>", this.Tooltip.pos, ["after", "before"], false, "ltr"); //FIXME: implement charge
+						dijit.Tooltip.show('<div style="white-space:nowrap;">Retention Time: ' + p[0].toFixed(3) + "<br/>m/z: " + p[1].toFixed(3) + "<br/>Spectrum: <tal:echo content="python: results[5]"/>." + p[2] + "." + p[2] + ".?</div>", this.Tooltip.pos, ["after", "before"], false, "ltr"); //FIXME: implement charge
 						this.Tooltip.node = dijit.Tooltip._masterTT.domNode;
 						this.Tooltip.node.setAttribute("style", "pointer-events:none;" + this.Tooltip.node.getAttribute("style"));
 					}

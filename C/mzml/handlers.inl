@@ -1,3 +1,38 @@
+inline bool DecodeSpectrum(const char *szName, DWORD &nStartScan, DWORD &nEndScan, DWORD &nCharge, const char *szValidateName = NULL) {
+	const char *szStartPtr = NULL, *szEndPtr = NULL, *szChargePtr = NULL, *szPtr;
+	for (;;) {
+		szPtr = strchr(szPtr, '.');
+		if (szPtr == NULL) {
+			if (szStartPtr != NULL) {
+				char *szEnd;
+				nStartScan = strtoul(szStartPtr + 1, &szEnd, 10);
+				if (*szEnd == '.') {
+					nEndScan = strtoul(szEndPtr + 1, &szEnd, 10);
+					if (*szEnd == '.') {
+						nCharge = strtoul(szChargePtr + 1, &szEnd, 10);
+						if (*szEnd == 0) {
+							if (szValidateName != NULL) {
+								for (; szName < szStartPtr && *szValidateName != 0; ++szName, ++szValidateName) {
+									if (*szName != *szValidateName) {
+										if (szName != szStartPtr || stricmp(szValidateName, ".mzml") != 0) {
+											return false;
+										}
+									}
+								}
+								return true;
+							}
+						}
+					}
+				}
+			}
+			return false;
+		}
+		szStartPtr = szEndPtr;
+		szEndPtr = szChargePtr;
+		szChargePtr = szPtr;
+	}
+}
+
 inline void Spectrum::SetStartTime(float nTime) {
 	if (m_nStartTime >= 0.0f) { //FIXME: Do we need this?
 		printf("Scan start time already set to %f\n", m_nStartTime);
@@ -8,15 +43,15 @@ inline void Spectrum::SetStartTime(float nTime) {
 inline void Spectrum::EatAll(FILE *pFile, DWORD nCount) {
 	for (DWORD i = 0; i < nCount; ++i) {
 		READ_STRUCTURE(pFile, header, 2, (DWORD, DWORD));
-		fseek(pFile, 2 * sizeof(float) + header._0 * (sizeof(float) * 2) + header._1 * sizeof(float), SEEK_CUR);
+		fseek(pFile, sizeof(DWORD) + 2 * sizeof(float) + header._0 * (sizeof(float) * 2) + header._1 * sizeof(float), SEEK_CUR);
 	}
 }
 
 inline void Spectrum::SearchAll(FILE *pFile, SearchStatus &stat, DWORD nCount) {
 	for (DWORD i = 0; i < nCount; ++i) {
-		READ_STRUCTURE(pFile, header, 4, (DWORD, DWORD, float, float));
-		stat.Match("time", header._2);
-		stat.Match("pepmass", header._3);
+		READ_STRUCTURE(pFile, header, 5, (DWORD, DWORD, DWORD, float, float));
+		stat.Match("time", header._3);
+		stat.Match("pepmass", header._4);
 		if (stat.IsMatched()) {
 			fseek(pFile, -(2 * sizeof(DWORD) + 2 * sizeof(float)), SEEK_CUR);
 			stat.AddResult(GetInfo(pFile));
@@ -27,7 +62,7 @@ inline void Spectrum::SearchAll(FILE *pFile, SearchStatus &stat, DWORD nCount) {
 }
 
 inline PyObject *Spectrum::GetInfo(FILE *pFile) {
-	READ_STRUCTURE(pFile, header, 4, (DWORD, DWORD, float, float));
+	READ_STRUCTURE(pFile, header, 5, (DWORD, DWORD, DWORD, float, float));
 	PyObject *pList = PyList_New(header._0);
 	if (pList == NULL) {
 		return NULL;
@@ -54,8 +89,8 @@ inline PyObject *Spectrum::PointsMS2All(FILE *pFile, DWORD nCount) {
 	}
 	for (uint32_t i = 0; i < nCount; ++i) {
 		off_t offPos = ftell(pFile);
-		READ_STRUCTURE(pFile, spectrum, 4, (DWORD, DWORD, float, float));
-		PyObject *pValue = Py_BuildValue("[f,f,k]", spectrum._2, spectrum._3, offPos);
+		READ_STRUCTURE(pFile, spectrum, 5, (DWORD, DWORD, DWORD, float, float));
+		PyObject *pValue = Py_BuildValue("[f,f,k,k]", spectrum._3, spectrum._4, spectrum._2, offPos);
 		if (!pValue) {
 			Py_DECREF(pList);
 			return NULL;
@@ -79,7 +114,7 @@ inline PyObject *Run::GetSpectrum(FILE *pFile, DWORD nScan) {
 	return NULL; //FIXME: implement
 }
 
-inline unsigned long Run::GetSpectrumOffset(FILE *pFile, DWORD nScan) {
+inline DWORD Run::GetSpectrumOffset(FILE *pFile, DWORD nScan) {
 	READ_STRUCTURE(pFile, header, 2, (DWORD, DWORD));
 	fseek(pFile, header._1, SEEK_CUR);
 	DWORD nSize = (header._0 + 1) / 2;
@@ -109,36 +144,68 @@ inline PyObject *Run::PointsMS2(FILE *pFile) {
 	return Spectrum::PointsMS2All(pFile, header._0);
 }
 
-inline PyObject *MzML::GetSpectrum(FILE *pFile, DWORD nScan) {
-	fseek(pFile, 3 * sizeof(DWORD) + 5 * sizeof(float), SEEK_SET);
+inline PyObject *MzML::GetSpectrum(FILE *pFile, const char *szSpectrumName) {
+	fseek(pFile, 4 * sizeof(DWORD) + 5 * sizeof(float), SEEK_SET);
+	DWORD nScan, nEndScan, nCharge;
+	char *szName = DecodeStringFromFile(pFile);
+	if (!DecodeSpectrum(szSpectrumName, nScan, nEndScan, nCharge, szName)) {
+		return Py_BuildValue("");
+	}
+	if (szName != NULL) {
+		free(szName);
+	}
 	return Run::GetSpectrum(pFile, nScan);
 }
 
-inline unsigned long MzML::GetSpectrumOffset(FILE *pFile, DWORD nScan) {
-	fseek(pFile, 3 * sizeof(DWORD) + 5 * sizeof(float), SEEK_SET);
+inline DWORD MzML::GetSpectrumOffset(FILE *pFile, const char *szSpectrumName) {
+	fseek(pFile, 4 * sizeof(DWORD) + 5 * sizeof(float), SEEK_SET);
+	DWORD nScan, nEndScan, nCharge;
+	char *szName = DecodeStringFromFile(pFile);
+	if (!DecodeSpectrum(szSpectrumName, nScan, nEndScan, nCharge, szName)) {
+		return (DWORD)-1;
+	}
+	if (szName != NULL) {
+		free(szName);
+	}
 	return Run::GetSpectrumOffset(pFile, nScan);
 }
 
 inline void MzML::SearchSpectrums(FILE *pFile, SearchStatus &stat) {
-	fseek(pFile, 3 * sizeof(DWORD) + 5 * sizeof(float), SEEK_SET);
+	fseek(pFile, 4 * sizeof(DWORD) + 5 * sizeof(float), SEEK_SET);
+	char *szName = DecodeStringFromFile(pFile);
+	if (szName == NULL) {
+		stat.pData = (void *)"";
+	} else {
+		stat.pData = szName;
+	}
 	Run::Search(pFile, stat);
+	if (szName == NULL) {
+		free(szName);
+	}
 }
 
 inline void MzML::AddSpectrum1(float nStartTime, DWORD nCount, float *pMz, float *pIntensity) {
 	m_arrMS1Data.Push(MS1Data(nStartTime, nCount, pMz, pIntensity));
 }
 
-inline void MzML::Info(FILE *pFile, float &nMinTime, float &nMaxTime, float &nMinMz, float &nMaxMz, float &nMaxIntensity) {
-	fseek(pFile, 3 * sizeof(DWORD), SEEK_SET);
+inline void MzML::Info(FILE *pFile, float &nMinTime, float &nMaxTime, float &nMinMz, float &nMaxMz, float &nMaxIntensity, char *&szName) {
+	fseek(pFile, 4 * sizeof(DWORD), SEEK_SET);
 	READ_STRUCTURE(pFile, info, 5, (float, float, float, float, float));
 	nMinTime = info._1;
 	nMaxTime = info._2;
 	nMinMz = info._3;
 	nMaxMz = info._4;
 	nMaxIntensity = info._0;
+	szName = DecodeStringFromFile(pFile);
 }
 
 inline PyObject *MzML::PointsMS2(FILE *pFile) {
-	fseek(pFile, 3 * sizeof(DWORD) + 5 * sizeof(float), SEEK_SET);
+	SkipHeaders(pFile);
 	return Run::PointsMS2(pFile);
+}
+
+inline void MzML::SkipHeaders(FILE *pFile) {
+	DWORD nRunOffset;
+	fread(&nRunOffset, 1, sizeof(DWORD), pFile);
+	fseek(pFile, nRunOffset, SEEK_SET);
 }

@@ -31,7 +31,7 @@ int main(int argc, char *argv[]) {
 		}
 		ClearMS1Cache();
 	} else if (argc == 3) {
-		State state(argv[2]);
+		State state(argv[2], argv[1]);
 		Transcode(argv[1], &state);
 	} else {
 		printf("Usage: %s <xml file> <binary file>\n", argv[0]);
