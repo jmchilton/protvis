@@ -196,7 +196,7 @@ def RendererGlobals(system):
 	def unique_dataset():
 		return abs(hash(time.gmtime()))
 
-	return { "test": test, "render_peptide": render_peptide, "try_get": TryGet, "urlencode": urllib.quote, "unique_dataset": unique_dataset }
+	return { "test": test, "Literal": Literal, "render_peptide": render_peptide, "try_get": TryGet, "urlencode": urllib.quote, "unique_dataset": unique_dataset }
 
 class ConverterThread(Thread):
 	def __init__(self, mod, src, dst, name):
@@ -486,6 +486,8 @@ def ListResults(req):
 				limit = -1
 			if start > 0:
 				if limit > 0:
+					if start + limit > len(results):
+						start -= start % limit
 					results = results[start:start + limit]
 				else:
 					results = results[start:]
@@ -496,7 +498,7 @@ def ListResults(req):
 					r.style = DecodeDecoy(r.HitInfo["protein"])
 				except:
 					r.style = "row"
-			info = { "total": total, "matches": matches, "start": start + 1, "end": start + len(results), "type": t, "score": score, "file": req.GET["file"], "datafile": n, "query": q, "datas": links.Types() }
+			info = { "total": total, "matches": matches, "start": start + 1, "end": start + len(results), "type": t, "score": score, "file": req.GET["file"], "datafile": n, "query": q, "datas": links.Types(), "limit": limit }
 			return render_to_response(templates + t + "_results.pt", { "sortcol": sortcol, "sortdsc": reverse, "info": info, "results": results, "url": Literal(req.path_qs) }, request = req)
 
 def ListPeptide(req):

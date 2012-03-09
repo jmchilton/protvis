@@ -285,7 +285,7 @@
 			}
 
 			function LoadContents(container, url) {
-				CurrentContents[container] = { url: BaseUrl(url), container: container };
+				CurrentContents[container] = { url: url, container: container };
 				var oldhits = dojo.byId("data_" + container);
 				if (!oldhits) {
 					return;
@@ -369,9 +369,56 @@
 				});
 			}
 			
+			function OverrideParams(url, params) {
+				params = dojo.clone(params);
+				var newurl = url;
+				var srch = url.indexOf("?");
+				if (srch >= 0) {
+					newurl = url.substr(srch + 1).split("&");
+					var i = newurl.length - 1;
+					while (i >= 0) {
+						var p = newurl[i].split("=")[0];
+						for (var j in params) {
+							if (p == j) {
+								newurl[i] = j + "=" + params[j];
+								delete params[j];
+								break;
+							}
+						}
+						--i;
+					}
+					var count = 0;
+					for (var p in params) {
+						if (params.hasOwnProperty(p)) {
+							++count;
+						}
+					}
+					newurl = url.substr(0, srch + 1) + newurl.join("&") + (count > 0 ? "&" : "");
+				} else {
+					newurl += "?";
+				}
+				var left = new Array();
+				for (var p in params) {
+					left.push(p + "=" + params[p]);
+				}
+				return newurl + left.join("&");
+			}
+			
 			function FilterCurrent(filter) {
 				if (CurrentContents[CurrentPage] != null) {
-					LoadContents(CurrentContents[CurrentPage]["container"], CurrentContents[CurrentPage]["url"] + "q=" + encodeURIComponent(filter));
+					LoadContents(CurrentContents[CurrentPage]["container"], OverrideParams(CurrentContents[CurrentPage]["url"], {q:encodeURIComponent(filter), start:0}));
+				}
+			}
+			
+			function CurrentNewPage(start) {
+				if (CurrentContents[CurrentPage] != null) {
+					LoadContents(CurrentContents[CurrentPage]["container"], OverrideParams(CurrentContents[CurrentPage]["url"], {start:start}));
+				}
+			}
+			
+			function CurrentResultsSize(max) {
+				if (CurrentContents[CurrentPage] != null) {
+					LoadContents(CurrentContents[CurrentPage]["container"], OverrideParams(CurrentContents[CurrentPage]["url"], {max:max}));
 				}
 			}
 			

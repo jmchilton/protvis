@@ -2209,10 +2209,10 @@ def DefaultSortColumn(scores):
 		return ["ip_prob", reverses]
 	if scores & 0x400:
 		return ["pp_prob", reverses]
-	if scores & 0x08:
-		return ["hyperscore", reverses]
-	elif scores & 0x20:
-		return ["ionscore", reverses]
+	#if scores & 0x08:
+	#	return ["hyperscore", reverses]
+	#elif scores & 0x20:
+	#	return ["ionscore", reverses]
 	return ["expect", reverses]
 
 def select_scores(BaseFile, query):

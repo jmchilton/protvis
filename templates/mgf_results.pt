@@ -9,6 +9,39 @@
 	<tal:if condition="python: info['total'] == 1">Displaying the only result</tal:if>
 	<tal:if condition="python: info['total'] > 1 and info['total'] == len(results)">Displaying all ${info.matches} results</tal:if>
 	<tal:if condition="python: info['total'] > len(results)">Displaying ${info.start}-${info.end} of ${info.matches} results</tal:if>
+	<tal:if condition="python: info['matches'] > len(results) or info['matches'] > 50">
+		<span style="margin-left:25px">Show
+			<tal:if condition="python: info['matches'] > len(results)">
+				page 
+				<select onchange="CurrentNewPage(this.options[this.selectedIndex].value)">
+					<tal:for repeat="page python: range((info['matches'] + info['limit'] - 1) / info['limit'])">
+						<tal:echo content="python: Literal('<option value=\'' + str(page * info['limit']) + '\'' + test(info['start'] >= (page * info['limit'] + 1) and info['start'] <= ((page + 1) * info['limit']), ' selected=\'selected\'', '') + '>' + str(page + 1) + '</option>')"/>
+					</tal:for>
+				</select>
+				<tal:if condition="python: info['matches'] > 50">
+					with
+				</tal:if>
+			</tal:if>
+			<tal:if condition="python: info['matches'] > 50">
+				<select onchange="CurrentResultsSize(this.options[this.selectedIndex].value)">
+					<tal:if condition="python: info['matches'] > 50">
+						<tal:echo content="python: Literal('<option value=\'50\'' + test(info['limit'] == 50, ' selected=\'selected\'', '') + '>50</option>')"/>
+					</tal:if>
+					<tal:if condition="python: info['matches'] > 100">
+						<tal:echo content="python: Literal('<option value=\'100\'' + test(info['limit'] == 100, ' selected=\'selected\'', '') + '>100</option>')"/>
+					</tal:if>
+					<tal:if condition="python: info['matches'] > 250">
+						<tal:echo content="python: Literal('<option value=\'250\'' + test(info['limit'] == 250, ' selected=\'selected\'', '') + '>250</option>')"/>
+					</tal:if>
+					<tal:if condition="python: info['matches'] > 1000">
+						<tal:echo content="python: Literal('<option value=\'1000\'' + test(info['limit'] == 1000, ' selected=\'selected\'', '') + '>1000</option>')"/>
+					</tal:if>
+					<tal:echo content="python: Literal('<option value=\'' + str(info['matches']) + '\'' + test(info['limit'] < 0 or info['limit'] == info['matches'], ' selected=\'selected\'', '') + '>All (' + str(info['matches']) + ')</option>')"/>
+				</select>
+				results per page
+			</tal:if>
+		</span>
+	</tal:if>
 	<br/>
 	<table id="results_${info.datafile}" border="1" style="width: 100%;">
 	<tr><tal:for repeat="col columns"><th id="results_${info.datafile}_column_${col.name}" onclick="TableManager.Sort('results_${info.datafile}','${col.name}');" tal:attributes="class python: 'sort' + test(sortcol==col.name, test(sortdsc, ' sort_dsc', ' sort_asc'), '')">${col.title}</th></tal:for></tr>

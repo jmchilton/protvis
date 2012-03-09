@@ -61,13 +61,13 @@
 			function ShowMessageStatus(left) {
 				if (left != Complete) {
 					Complete = left;
-					dojo.byId("processing").innerHTML = '<div class="dijitContentPaneLoading">Please wait while your files are processed.</div>' + left + " left to complete.";
+					dojo.byId("processing").innerHTML = '<div class="dijitContentPaneLoading">Please wait while your files are processed.</div>' + (left ? left + " left to complete." : "");
 				}
 				ShowMessage("processing");
 			}
 			
 			dojo.ready(function() {
-				ShowMessageStatus("processing");
+				ShowMessageStatus();
 				setTimeout("Update();", 500);
 			});
 		</script>
