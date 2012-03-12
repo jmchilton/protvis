@@ -342,6 +342,9 @@
 				dojo.xhrGet({
 					url: url,
 					load: function(results) {
+						if (results.length == 0) {
+							return this.error();
+						}
 						var cont = document.createElement("div");
 						cont.id = "data_" + container + "_" + ++CurrentResultsID;
 						cont.visible = "false";
@@ -359,7 +362,7 @@
 						cont.id = "data_" + container + "_" + ++CurrentResultsID;
 						cont.visible = "false";
 						cont.style = "display: none";
-						cont.innerHTML = "Query Error. Server could not be reached";
+						cont.innerHTML = 'Query Error. Server could not be reached. <button onclick="LoadContents(\'' + container + '\', \'' + url + '\');">Retry</button>';
 						dojo.byId("data_" + container).appendChild(cont);
 						delete PendingAnimations;
 						PendingAnimations = new Array();

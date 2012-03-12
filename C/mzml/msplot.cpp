@@ -19,6 +19,10 @@ static void PngWriterWrite(png_structp png_ptr, png_bytep data, png_size_t lengt
 static void PngWriterFlush(png_structp png_ptr) {
 }
 
+inline float abs(float x) {
+	return x >= 0 ? x : -x;
+}
+
 //MS1
 //FIXME: Make caching threadsafe
 
