@@ -88,6 +88,6 @@ for i in $includes; do
 	echo "#include <$i>" >> common/inc.h
 done
 
-echo "PYTHON_LIB=-lpython`python --version 2>&1 | awk '{print $2}' | cut -b -3`" >> $config
+#echo "PYTHON_LIB=-lpython`python --version 2>&1 | awk '{print $2}' | cut -b -3`" >> $config
 echo "CFLAGS=\$(CFG_CFLAGS) $incdirs" >> $config
 echo "LDFLAGS=\$(CFG_LDFLAGS) $libdirs" >> $config

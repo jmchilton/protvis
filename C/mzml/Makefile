@@ -18,7 +18,7 @@ $(EXECUTABLE): $(OBJECTS)
 	
 $(PYMODULE): $(PYOBJECTS)
 	$(MKDIR) ../$(BUILD_DIR)
-	$(CC) $(LDFLAGS) $(PYOBJECTS) -o $@ -shared $(LIBS) $(PYTHON_LIB)
+	$(CC) $(LDFLAGS) $(PYOBJECTS) -o $@ -shared $(LIBS) #$(PYTHON_LIB)
 	cp $@ ../../MzML.so
 
 .cpp.o:
