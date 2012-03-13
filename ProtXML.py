@@ -8,6 +8,7 @@ import xml.sax
 import xml.parsers.expat
 from cStringIO import StringIO
 from Common import *
+import Reference
 
 #Util functions
 def GetEngineCode(name):
@@ -1461,12 +1462,13 @@ def select_protein(BaseFile, query):
 	import parameters
 
 	def FindProteinSequence(seq):
-		for f in parameters.PROTEIN_DATABASES:
-			p = subprocess.Popen(["bin/blastdbcmd", "-db", f, "-entry", seq], stdout=subprocess.PIPE)
+		dbs = Reference.FileLinks(BaseFile).Databases + parameters.PROTEIN_DATABASES
+		for f in dbs:
+			p = subprocess.Popen(["bin/blastdbcmd", "-db", f, "-entry", seq, "-outfmt", "%s"], stdout=subprocess.PIPE)
 			(out, err) = p.communicate()
 			p.stdout.close()
-			if len(out) > 0:
-				return "".join(out.split("\n")[1:])
+			if p.wait() == 0:
+				return out.replace("\n", "")
 		return None
 
 	f = open(BaseFile + "_" + query["n"], "r")

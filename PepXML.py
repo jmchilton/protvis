@@ -1118,6 +1118,11 @@ class SearchDatabase(TagHandler):
 		if size_of_residues != None:
 			stream.write(struct.pack("=i", int(size_of_residues)))
 
+	@staticmethod
+	def GetPath(f):
+		f.seek(1, 1)
+		return DecodeStringFromFile(f)
+
 class DistributionPoint(TagHandler):
 	"""
 	struct DistributionPoint {
@@ -1248,6 +1253,7 @@ class SearchSummary(TagHandler):
 		self.Stream.write(struct.pack("=B", 0))
 		EncodeStringToFile(self.Stream, attr["base_name"])
 		EncodeStringToFile(self.Stream, attr["search_engine"])
+		self.Engine = attr["search_engine"].upper()
 		if self.out_data_type != None:
 			EncodeStringToFile(self.Stream, self.out_data_type)
 		if self.out_data != None:
@@ -1266,15 +1272,19 @@ class SearchSummary(TagHandler):
 	def End(self):
 		EndPos = self.Stream.tell()
 		self.Stream.seek(self.StartPos)
-		mass_tolerance = TryGet(self.Parameters, "ITOL")
-		if mass_tolerance != None:
-			if self.Parameters["ITOLU"].Value.lower() != "da":
-				mass_tolerance = None
-		if mass_tolerance == None:
+		mass_tolerance = None
+		if self.Engine == "MASCOT":
+			mass_tolerance = TryGet(self.Parameters, "ITOL")
+			if mass_tolerance != None:
+				if self.Parameters["ITOLU"].Value.lower() != "da":
+					mass_tolerance = None
+		elif "X! TANDEM" in self.Engine:
 			mass_tolerance = TryGet(self.Parameters, "spectrum, fragment monoisotopic mass error")
 			if mass_tolerance != None:
 				if self.Parameters["spectrum, fragment monoisotopic mass error units"].Value.lower() != "daltons":
 					mass_tolerance = None
+		elif self.Engine == "OMSSA":
+			mass_tolerance = TryGet(self.Parameters, "to")
 		self.Stream.write(struct.pack("=B", EncodeOptional(self.out_data_type, self.out_data, mass_tolerance, self.SearchDatabase, self.EnzymaticSearchConstraint)))
 		self.Stream.seek(EndPos)
 		if mass_tolerance != None:
@@ -1328,6 +1338,21 @@ class SearchSummary(TagHandler):
 			if OptionalFlags & 0x02:
 				EatStringFromFile(f)
 			return struct.unpack("=f", f.read(4))[0]
+		return None
+
+	@staticmethod
+	def GetSearchDatabasePath(f):
+		[OptionalFlags] = struct.unpack("=B", f.read(1))
+		if OptionalFlags & 0x08:
+			EatStringFromFile(f)
+			EatStringFromFile(f)
+			if OptionalFlags & 0x01:
+				EatStringFromFile(f)
+			if OptionalFlags & 0x02:
+				EatStringFromFile(f)
+			if OptionalFlags & 0x04:
+				f.seek(4, 1)
+			return SearchDatabase.GetPath(f)
 		return None
 
 class DatabaseRefreshTimestamp(TagHandler):

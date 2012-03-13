@@ -4,7 +4,7 @@
 		<meta http-equiv="content-type" content="text/html; charset=utf-8" />
 		<title>Processing File</title>
 		<link href="/res/dojo/dijit/themes/dijit.css" rel="stylesheet" />
-		<link href="/res/styles/list.css" type="text/css" rel="stylesheet" />
+		<link href="/res/styles/protvis.css" type="text/css" rel="stylesheet" />
 		<link id="themeStyles" href="/res/dojo/dijit/themes/claro/claro.css" type="text/css" rel="stylesheet" />
 		<script type="text/javascript" src="/res/dojo/dojo/dojo.js" data-dojo-config="parseOnLoad: true"></script>
 		<script type="text/javascript">

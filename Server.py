@@ -81,97 +81,34 @@ class JobManager:
 				if t.isAlive():
 					alive += 1
 		if alive == 0:
+			#write the index file
 			data = job["index"]
-			data.write(struct.pack("=I", len(job["files"])))
-			for t, f in job["files"]:
+			fs = 0
+			dbs = 0
+			files = job["files"]
+			for t, f in files:
 				if t != None and t.Type > f.Type:
 					f.Type = t.Type
-				data.write(struct.pack("=BH", f.Type, len(f.Depends)))
-				for d in f.Depends:
-					data.write(struct.pack("=H", test(d < 0, 0xFFFF, d)))
-				EncodeStringToFile(data, f.Name)
+				if (f.Type & ~Reference.FileType.MISSING) == Reference.FileType.DATABASE:
+					dbs += 1
+				else:
+					fs += 1
+			data.write(struct.pack("=II", fs, dbs))
+			for t, f in files:
+				if (f.Type & ~Reference.FileType.MISSING) != Reference.FileType.DATABASE:
+					data.write(struct.pack("=BH", f.Type, len(f.Depends)))
+					for d in f.Depends:
+						data.write(struct.pack("=H", test(d < 0, 0xFFFF, d)))
+					EncodeStringToFile(data, f.Name)
+			for t, f in files:
+				if (f.Type & ~Reference.FileType.MISSING) == Reference.FileType.DATABASE:
+					EncodeStringToFile(data, f.Name)
 			data.close()
 			del self.Jobs[jobid]
 		self.ThreadsLock.release()
 		return alive
 
 Jobs = JobManager()
-
-def GetTypeParser(datatype):
-	modules = {
-		Reference.FileType.MZML: MzML,
-		Reference.FileType.MGF: MGF,
-		Reference.FileType.PEPXML: PepXML, Reference.FileType.PEPXML_MASCOT: PepXML, Reference.FileType.PEPXML_OMSSA: PepXML, Reference.FileType.PEPXML_XTANDEM: PepXML, Reference.FileType.PEPXML_COMPARE: PepXML, Reference.FileType.PEPXML_PEPTIDEPROPHET: PepXML, Reference.FileType.PEPXML_INTERPROPHET: PepXML,
-		Reference.FileType.PROTXML: ProtXML, Reference.FileType.PROTXML_PROTEINPROPHET: ProtXML
-	}
-	try:
-		return modules[datatype]
-	except:
-		return None
-
-class FileLinks:
-	class Link:
-		def __init__(self, f):
-			[self.Type, deps] = struct.unpack("=BH", f.read(1 + 2))
-			self.Depends = [struct.unpack("=H", f.read(2))[0] for i in xrange(deps)]
-			self.Name = DecodeStringFromFile(f)
-
-	def __init__(self, IndexFile):
-		try:
-			f = open(IndexFile, "r")
-		except:
-			raise HTTPNotFound_Data(os.path.split(IndexFile)[1])
-		[files] = struct.unpack("=I", f.read(4))
-		self.Index = IndexFile
-		self.Links = [FileLinks.Link(f) for i in xrange(files)]
-
-	def __getitem__(self, i):
-		if i == 0xFFFF:
-			return None
-		return self.Links[i]
-
-	def __len__(self):
-		return len(self.Links)
-
-	def GetTopFile(self):
-		return self.Index + "_" + str(len(self.Links) - 1)
-
-	def GetTopIndex(self):
-		return len(self.Links) - 1
-
-	def GetTopType(self):
-		return self.Links[len(self.Links) - 1].Type
-
-	def GetTopName(self):
-		return self.Links[len(self.Links) - 1].Name
-
-	def GetTopInfo(self):
-		i = len(self.Links) - 1
-		l = self.Links[i]
-		return { "name": l.Name, "type": l.Type, "index": i }
-
-	def GetInfo(self, index):
-		l = self.Links[index]
-		return { "name": l.Name, "type": l.Type, "index": index }
-
-	def Get(self, index):
-		return self.Links[index]
-
-	def GetParser(self, index):
-		return GetTypeParser(self.Links[index].Type)
-
-	def Types(self):
-		flags = 0
-		for l in self.Links:
-			if l.Type >= Reference.FileType.PROTXML:
-				flags |= 8
-			elif l.Type >= Reference.FileType.PEPXML:
-				flags |= 4
-			elif l.Type == Reference.FileType.MGF:
-				flags |= 2
-			elif l.Type == Reference.FileType.MZML:
-				flags |= 1
-		return flags
 
 def RendererGlobals(system):
 	def render_peptide(peptide):
@@ -291,7 +228,7 @@ def Upload(req):
 			if f.Type & Reference.FileType.MISSING or f.Type == Reference.FileType.UNKNOWN:
 				threads[i] = None
 			else:
-				t = ConverterThread(GetTypeParser(f.Type), f.Stream, data.name + "_" + str(i), f.Name)
+				t = ConverterThread(Reference.GetTypeParser(f.Type), f.Stream, data.name + "_" + str(i), f.Name)
 				t.start()
 				threads[i] = t
 		f = data.name[len(converted):]
@@ -319,7 +256,7 @@ def Convert(req):
 			if f.Type & Reference.FileType.MISSING:
 				threads[i] = None
 			else:
-				p = GetTypeParser(f.Type)
+				p = Reference.GetTypeParser(f.Type)
 				if p == None:
 					threads[i] = None
 				else:
@@ -343,7 +280,7 @@ def QueryInitStatus(req):
 
 def AddFile(req):
 	fname = GetQueryFileName(req.GET)
-	links = FileLinks(fname)
+	links = Reference.FileLinks(fname)
 	try:
 		n = req.GET["n"]
 		ni = int(n)
@@ -359,7 +296,7 @@ def AddFile(req):
 			try:
 				s = req.POST["data"]
 			except:
-				return HTTPBadRequest()
+				return HTTPBadRequest_Param("data")
 	s = s.file
 	s.seek(0)
 	t = l.Type & 0x7F
@@ -373,7 +310,7 @@ def AddFile(req):
 				return HTTPUnsupportedMediaType("File type could not be determined")
 			s.seek(0)
 	s.seek(0)
-	t2 = GetTypeParser(t).ToBinary(s, fname + "_" + n)
+	t2 = Reference.GetTypeParser(t).ToBinary(s, fname + "_" + n)
 	if t2 > t:
 		t = t2
 	l.Type = t
@@ -386,9 +323,11 @@ def AddFile(req):
 
 def View(req):
 	try:
-		links = FileLinks(GetQueryFileName(req.GET))
+		links = Reference.FileLinks(GetQueryFileName(req.GET))
+	except HTTPException:
+		raise
 	except:
-		return HTTPNotFound()
+		return HTTPNotFound_Data(req.GET["file"])
 	try:
 		int(req.GET["n"]) #ensure it is an integer
 		typename = Reference.FileType.NameBasic(links.Links[req.GET["n"]].Type)
@@ -402,9 +341,11 @@ def View(req):
 def ListResults(req):
 	fname = GetQueryFileName(req.GET)
 	try:
-		links = FileLinks(fname)
+		links = Reference.FileLinks(fname)
+	except HTTPException:
+		raise
 	except:
-		return HTTPNotFound()
+		return HTTPNotFound_Data(req.GET["file"])
 	try:
 		n = req.GET["n"]
 		ni = int(n)
@@ -453,6 +394,7 @@ def ListResults(req):
 		except:
 			return Response("The type of the selected file could not be determined")
 		if t == "mzml" and TryGet(req.GET, "list") != "1":
+			print fname + "_" + n
 			results = parser.Display(fname + "_" + n, req.GET)
 			points = parser.points_ms2(fname + "_" + n)
 			info = { "type": t, "file": req.GET["file"], "datafile": n, "query": q, "datas": links.Types() }
@@ -605,7 +547,7 @@ def SelectInfo(req):
 			raise Exception()
 	except:
 		return HTTPBadRequest_Param("type")
-	links = FileLinks(fname)
+	links = Reference.FileLinks(fname)
 	parser = links.GetParser(n)
 	select = eval("parser.select_" + t)
 	results = select(fname, req.GET)
@@ -626,7 +568,7 @@ def SpectumLC(req):
 		h = int(req.GET["h"])
 	except:
 		return HTTPBadRequest_Param("h")
-	parser = FileLinks(fname).GetParser(ni)
+	parser = Reference.FileLinks(fname).GetParser(ni)
 	x1 = TryGet(req.GET, "x1")
 	x2 = TryGet(req.GET, "x2")
 	y1 = TryGet(req.GET, "y1")
@@ -721,7 +663,7 @@ def Spectrum(req):
 	peptide = None
 	score = None
 	if datafile == None:
-		links = FileLinks(fname)
+		links = Reference.FileLinks(fname)
 		possible = []
 		pep_datafile = TryGet(req.GET, "pn")
 		if pep_datafile == None:
@@ -733,12 +675,14 @@ def Spectrum(req):
 			deps = links.Links[int(pep_datafile)].Depends
 			i = 0
 			while i < len(deps):
-				deps += links.Links[deps[i]].Depends
+				if deps[i] >= 0 and deps[i] < len(links.Links):
+					deps += links.Links[deps[i]].Depends
 				i += 1
 			for d in deps:
-				l = links.Links[d]
-				if l.Type == Reference.FileType.MZML or l.Type == Reference.FileType.MGF:
-					possible.append(d)
+				if d >= 0 and d < len(links.Links):
+					l = links.Links[d]
+					if l.Type == Reference.FileType.MZML or l.Type == Reference.FileType.MGF:
+						possible.append(d)
 		pep_datafile = int(pep_datafile)
 		possible = list(set(possible))
 		offset = -1
@@ -772,7 +716,7 @@ def Spectrum(req):
 		datafile = int(datafile)
 	if datafile == None:
 		return AjaxError("The requested spectrum could not be found.<br/> It's name may have been modified by some of the processing tools.", req)
-	links = FileLinks(fname)
+	links = Reference.FileLinks(fname)
 	if filetype == None:
 		filetype = links.Links[datafile].Type
 	i = 0
@@ -796,7 +740,7 @@ def Spectrum(req):
 	if offset == None and datafile != None:
 		offset = parser.GetOffsetFromSpectrum(fname + "_" + str(datafile), spectrum)
 	if offset == None or offset < -1 or datafile == None:
-		raise HTTPBadRequest()
+		raise HTTPBadRequest_Param("n")
 	if spectrum != None:
 		spec = spectrum.split(".")
 		spectrum = { "file": Literal(".".join(spec[:-3]).replace("\\", "\\\\").replace("\"", "\\\"")), "scan": spec[-3], "charge": spec[-1], "ions": parser.GetSpectrumFromOffset(fname + "_" + str(datafile), int(offset)) }
@@ -853,18 +797,20 @@ def Tooltip(req):
 		return render_to_response(templates + "pepxml_peptide_tooltip.pt", { "info": info, "peptides": results, "counts": SearchEngines.items() }, request=req)
 	return HTTPNotFound()
 
+def IndexDatabase(db):
+	p = subprocess.Popen(["bin/blastdbcmd", "-db", db, "-info"], stderr=subprocess.PIPE, stdout=subprocess.PIPE)
+	(out, err) = p.communicate()
+	p.stderr.close()
+	p.stdout.close()
+	if p.wait() != 0:
+		subprocess.call(["bin/makeblastdb", "-in", db, "-parse_seqids"])
+
 if __name__ == "__main__":
 	#check to make sure everything is set up properly
 	if len(parameters.PROTEIN_DATABASES) > 0:
-		print " + Indexing protein databases"
+		print " + Validating protein databases indexes"
 		for f in parameters.PROTEIN_DATABASES:
-			p = subprocess.Popen(["bin/blastdbcmd", "-db", f, "-info"], stderr=subprocess.PIPE, stdout=subprocess.PIPE)
-			(out, err) = p.communicate()
-			p.stderr.close()
-			p.stdout.close()
-			if len(err) > 0:
-				subprocess.call(["bin/makeblastdb", "-in", f, "-parse_seqids"])
-	
+			IndexDatabase(f)
 	Threads = {}
 	JobsTotal = 0
 	ThreadsLock = Lock()

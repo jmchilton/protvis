@@ -262,7 +262,7 @@ FlowChart = function(parent, files, OnSelect) {
 		for (var f in files) {
 			var deps = files[f].deps
 			for (var d in deps) {
-				if (deps[d] >= 0) {
+				if (deps[d] >= 0 && deps[d] < files.length) {
 					c = MakeConnection(files[f], files[deps[d]]);
 				}
 			}
@@ -305,7 +305,7 @@ FlowChart = function(parent, files, OnSelect) {
 			var deps = files[file].deps;
 			if (deps && deps.length > 0) {
 				for (var d in deps) {
-					if (files[deps[d]].parent == file) {
+					if (deps[d] < files.length && files[deps[d]].parent == file) {
 						OffsetChain(files, columns, deps[d], col + 1, y);
 					}
 				}
@@ -326,7 +326,7 @@ FlowChart = function(parent, files, OnSelect) {
 			var height = 0;
 			var heights = new Array();
 			for (var d = 0; d < deps.length;) {
-				if (files[deps[d]].parent == file) {
+				if (deps[d] < files.length && files[deps[d]].parent == file) {
 					var h = GetBoxHeight(columns, files, col + 1, deps[d]);
 					if (h > 0) {
 						heights.push(h);
@@ -444,7 +444,7 @@ FlowChart = function(parent, files, OnSelect) {
 			var deps = files[b].deps;
 			for (var dep in deps) {
 				var d = deps[dep];
-				if (files[d].parent < 0) {
+				if (d < files.length && files[d].parent < 0) {
 					files[d].parent = b;
 				}
 			}
