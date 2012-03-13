@@ -7,7 +7,12 @@ import struct
 from Common import *
 import ProtXML, PepXML, MGF, MzML
 
-GalaxyPath = parameters.GALAXY_ROOT + "/database/files/"
+def EnsureWhitelistFile(fname):
+	fname = os.path.abspath(fname)
+	for dir in parameters.PATH_WHITELIST:
+		if fname.startswith(dir):
+			return True
+	return False
 
 class IncludedFile:
 	class FileInfo:
@@ -302,8 +307,7 @@ class ValidFile:
 		self.Exists = Exists
 
 def ValidateFilename(IncludedFiles, fname, exts = None):
-	fname = os.path.abspath(fname)
-	if not fname.startswith(GalaxyPath):
+	if not EnsureWhitelistFile(fname):
 		raise ValueError(fname)
 	ext = []
 	while True:
@@ -533,28 +537,28 @@ def _References(t, fname, IncludedFiles, Validator):
 	return func(fname, IncludedFiles, Validator)
 
 def LoadChainProt(fname):
-	if not os.path.abspath(fname).startswith(GalaxyPath):
+	if not EnsureWhitelistFile(fname):
 		raise ValueError(fname)
 	IncludedFiles = IncludedFile(fname, FileType.PROTXML)
 	ProtReferences(fname, IncludedFiles, ValidateFilename)
 	return IncludedFiles.Items()
 
 def LoadChainPep(fname):
-	if not os.path.abspath(fname).startswith(GalaxyPath):
+	if not EnsureWhitelistFile(fname):
 		raise ValueError(fname)
 	IncludedFiles = IncludedFile(fname, FileType.PEPXML)
 	PepReferences(fname, IncludedFiles, ValidateFilename)
 	return IncludedFiles.Items()
 
 def LoadChainMgf(fname):
-	if not os.path.abspath(fname).startswith(GalaxyPath):
+	if not EnsureWhitelistFile(fname):
 		raise ValueError(fname)
 	IncludedFiles = IncludedFile(fname, FileType.MGF)
 	MgfReferences(fname, IncludedFiles, ValidateFilename)
 	return IncludedFiles.Items()
 
 def LoadChainMzml(fname):
-	if not os.path.abspath(fname).startswith(GalaxyPath):
+	if not EnsureWhitelistFile(fname):
 		raise ValueError(fname)
 	IncludedFiles = IncludedFile(fname, FileType.MZML)
 	MzmlReferences(fname, IncludedFiles, ValidateFilename)

@@ -17,7 +17,6 @@
 	var cov = new RenderCoverage("coverage_${hash}", "${results.sequence}", [<tal:for repeat="row results.rows"><tal:if condition="python: repeat.row.index > 0">,</tal:if>"${row.peptide}"</tal:for>]);
 	Coverages["${hash}"] = cov;
 	cov = cov.Offsets;
-	console.log(cov);
 	for (var i = 0; i < <tal:echo content="python: len(results.rows)" />; ++i) {
 		dojo.byId("coverage_${hash}_" + i + "_pos").innerHTML = cov[i];
 	}

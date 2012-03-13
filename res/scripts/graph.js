@@ -395,7 +395,6 @@ LcPlot = function(container, opts) {
 			show: function(evt, pt, obj) {
 				var x = (pt.x - obj.Padding[0]) / obj.ScaleX + obj.ViewRange.x.min;
 				var y = (obj.Height + obj.Padding[1] - pt.y) / obj.ScaleY + obj.ViewRange.y.min;
-				console.log(x,y);
 				/*var closest = {i:-1, j:-1, dist:Number.POSITIVE_INFINITY};
 				var m = { x: pt.x - this.Padding[0], y: pt.y };
 				for (var i in data) {
