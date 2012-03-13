@@ -394,7 +394,6 @@ def ListResults(req):
 		except:
 			return Response("The type of the selected file could not be determined")
 		if t == "mzml" and TryGet(req.GET, "list") != "1":
-			print fname + "_" + n
 			results = parser.Display(fname + "_" + n, req.GET)
 			points = parser.points_ms2(fname + "_" + n)
 			info = { "type": t, "file": req.GET["file"], "datafile": n, "query": q, "datas": links.Types() }
