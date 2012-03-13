@@ -18,6 +18,11 @@ PORT = 80
 #Typically /var/www/galaxy
 GALAXY_ROOT = "/var/www/galaxy"
 
+#Any directories that the remote user is allowed to read from.
+#This would be any directories where useful files such as protien databases would lie
+#If using with galaxy, you should also include GALAXY_ROOT+"/database/files/"
+PATH_WHITELIST = [GALAXY_ROOT + "/database/files/"]
+
 #Regex to match against your decoys.
 #Only used for changing display colours.
 DECOY_REGEX = "^decoy_.*"
