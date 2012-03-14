@@ -329,7 +329,7 @@ def View(req):
 	except:
 		return HTTPNotFound_Data(req.GET["file"])
 	try:
-		int(req.GET["n"]) #ensure it is an integer
+		index = int(req.GET["n"])
 		typename = Reference.FileType.NameBasic(links.Links[req.GET["n"]].Type)
 	except:
 		index = links.GetTopInfo()

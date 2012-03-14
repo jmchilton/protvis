@@ -9,8 +9,8 @@ import ProtXML, PepXML, MGF, MzML
 
 def EnsureWhitelistFile(fname):
 	fname = os.path.abspath(fname)
-	for dir in parameters.PATH_WHITELIST:
-		if fname.startswith(dir):
+	for d in parameters.PATH_WHITELIST:
+		if fname.startswith(d):
 			return True
 	return False
 
@@ -260,9 +260,30 @@ class FileLinks:
 		return self.Links[len(self.Links) - 1].Name
 
 	def GetTopInfo(self):
-		i = len(self.Links) - 1
-		l = self.Links[i]
-		return { "name": l.Name, "type": l.Type, "index": i }
+		def ExpandDepends(nodes, node):
+			deps = nodes[node]
+			isdep = False
+			for n in nodes:
+				if n != node and node in nodes[n]:
+					nodes[n] = nodes[n].union(deps)
+					isdep = True
+			return isdep
+
+		nodes = {i: set(self.Links[i].Depends) for i in xrange(len(self.Links))}
+		deps = []
+		for i in nodes:
+			if ExpandDepends(nodes, i):
+				deps.append(i)
+		for i in deps:
+			del nodes[i]
+		maxval = -1
+		maxi = 0
+		for i in nodes:
+			if len(nodes[i]) > maxval:
+				maxval = len(nodes[i])
+				maxi = i
+		l = self.Links[maxi]
+		return { "name": l.Name, "type": l.Type, "index": maxi }
 
 	def GetInfo(self, index):
 		l = self.Links[index]
@@ -345,8 +366,10 @@ def DbReferences(fname, IncludedFiles, Validator):
 		p.stdout.close()
 		return p.wait() == 0
 
-	IncludedFiles.StepIn()
 	fname = os.path.abspath(fname)
+	if not EnsureWhitelistFile(fname):
+		raise ValueError(fname)
+	IncludedFiles.StepIn()
 	if not TestIndex(fname):
 		link = os.path.split(fname)
 		link = abs(hash(link[0])) + "_" + link[1]
