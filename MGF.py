@@ -36,7 +36,6 @@ class Spectrum:
 		float intensity;
 	}
 	struct Spectrum {
-		//String title; //stored in index
 		BYTE OptionalFlags;
 		DWORD ions__count;
 		float pepmass; //ONLY IF (OptionalFlags & 0x01)
@@ -45,18 +44,18 @@ class Spectrum:
 	"""
 	def __init__(self, f):
 		self.stream = f
-		self.params = []
+		#self.params = []
 		self.ions = []
 		self.title = None
 
 	def end(self):
 		pepmass = None
 		intensity = TryGet(TryGet(self.ions, 0), 1)
-		for p in self.params:
-			if p.name == "PEPMASS":
-				pepmass = float(p.value.split(" ")[0])
-			elif p.name == "TITLE":
-				self.title = p.value
+		#for p in self.params:
+		#	if p.name == "PEPMASS":
+		#		pepmass = float(p.value.split(" ")[0])
+		#	elif p.name == "TITLE":
+		#		self.title = p.value
 		self.stream.write(struct.pack("=BI", EncodeOptional(pepmass, intensity), len(self.ions)))
 		if pepmass:
 			self.stream.write(struct.pack("=f", pepmass))
@@ -68,7 +67,11 @@ class Spectrum:
 				self.stream.write(struct.pack("=f", i[0]))
 
 	def parameter(self, param):
-		self.params.append(param)
+		#self.params.append(param)
+		if param.name == "PEPMASS":
+			pepmass = float(param.value.split(" ")[0])
+		elif param.name == "TITLE":
+			self.title = param.value
 
 	def ion(self, mass, intensity):
 		self.ions.append([mass, intensity])
@@ -94,12 +97,14 @@ class Spectrum:
 class Header:
 	"""
 	struct Index {
-		string title;
+		DWORD scan;
+		DWORD charge;
 		DWORD offset;
 	}
 	struct Header {
 		DWORD spectrums__count;
 		DWORD index__offset;
+		String spectrum_name;
 		Spectrum spectrums[spectrums__count];
 		Index spectrum_index[spectrums__count];
 	}
@@ -118,8 +123,7 @@ class Header:
 		self.stream.write(struct.pack("=II", len(self.spectrums), endpos))
 		self.stream.seek(endpos)
 		for spec in self.spectrums:
-			EncodeStringToFile(self.stream, spec[0])
-			self.stream.write(struct.pack("=I", spec[1]))
+			self.stream.write(struct.pack("=III", spec[0], spec[1], spec[2]))
 
 	def parameter(self, param):
 		self.params.append(param)
@@ -128,52 +132,65 @@ class Header:
 		self.spec_offset = self.stream.tell()
 
 	def end_spectrum(self, spectrum):
-		self.spectrums.append([spectrum.title, self.spec_offset])
+		spec = spectrum.title.split(".")
+		if len(self.spectrums) == 0:
+			EncodeStringToFile(self.stream, ".".join(spec[:-3]))
+		self.spectrums.append([int(spec[-3]), int(spec[-1]), self.spec_offset])
 
 	@staticmethod
 	def get_spectrum(f, name):
 		[count, offset] = struct.unpack("=II", f.read(4 + 4))
 		f.seek(offset)
 		i = 0
-		while i < count:
-			if DecodeStringFromFile(f) == name:
-				offset = struct.unpack("=I", f.read(4))
-				f.seek(offset)
-				info = Spectrum.get_info(f)
-				info["title"] = name
-				info["offset"] = offset
-				return info
-			else:
-				f.seek(4, 1)
-			i += 1
+		name = name.split(".")
+		if DecodeStringFromFile(f) == ".".join(name[:-3]):
+			scan = int(name[-3])
+			#ignore the chage, it isn't always correct
+			while i < count:
+				if struct.unpack("=I", f.read(4))[0] == scan:
+					[charge, offset] = struct.unpack("=II", f.read(4 + 4))
+					f.seek(offset)
+					info = Spectrum.get_info(f)
+					info["title"] = name
+					info["charge"] = charge
+					info["offset"] = offset
+					return info
+				else:
+					f.seek(4 + 4, 1)
+				i += 1
 		return None
 
 	@staticmethod
 	def get_spectrum_offset(f, name):
 		[count, offset] = struct.unpack("=II", f.read(4 + 4))
-		f.seek(offset)
-		i = 0
-		while i < count:
-			if DecodeStringFromFile(f) == name:
-				return struct.unpack("=I", f.read(4))[0]
-			else:
-				f.seek(4, 1)
-			i += 1
+		name = name.split(".")
+		if DecodeStringFromFile(f) == ".".join(name[:-3]):
+			f.seek(offset)
+			i = 0
+			scan = int(name[-3])
+			while i < count:
+				if struct.unpack("=I", f.read(4))[0] == scan:
+					return struct.unpack("=II", f.read(4 + 4))[1]
+				else:
+					f.seek(4 + 4, 1)
+				i += 1
 		return -1
 
 	@staticmethod
 	def search_spectrums(f, stat):
 		[count, offset] = struct.unpack("=II", f.read(4 + 4))
 		stat.Total = count
+		spectrum = DecodeStringFromFile(f)
 		f.seek(offset)
 		i = 0
 		while i < count:
-			title = DecodeStringFromFile(f)
 			#print title
 			s = stat.copy()
+			[scan, charge, offset] = struct.unpack("=III", f.read(4 + 4 + 4))
+			title = spectrum + "." + str(scan) + "." + str(scan) + "." + str(charge)
 			s.SearchItemString("title", title)
 			if s.IsMatched():
-				stat.Results.append(Result(title, struct.unpack("=I", f.read(4))[0]))
+				stat.Results.append(Result(title, offset))
 			else:
 				f.seek(4, 1)
 			i += 1
@@ -195,8 +212,8 @@ def ToBinary(f, dst, name):
 				header.parameter(param)
 		elif spectrum != None:
 			if line.upper()[:3] == "END" and line[3:].lstrip() == "IONS":
-				spectrum.end()
 				header.end_spectrum(spectrum)
+				spectrum.end()
 				spectrum = None
 			else:
 				ion = line.split(" ")

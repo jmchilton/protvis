@@ -124,11 +124,8 @@ class DatabaseManager:
 			return
 		self.Connection = sqlite3.connect(name)
 		c = self.Connection.cursor()
-		try:
-			c.execute("SELECT 1 FROM Uploads WHERE date=0")
-		except:
-			c.execute("CREATE TABLE Uploads (file TEXT, date UNSIGNED BIG INT, expires INT, galaxy BOOLEAN, deleted BOOLEAN)")
-			self.Connection.commit()
+		c.execute("CREATE TABLE IF NOT EXISTS Uploads (file TEXT, date UNSIGNED BIG INT, expires INT, galaxy BOOLEAN, deleted BOOLEAN)")
+		self.Connection.commit()
 		c.close()
 
 	def Close(self):
@@ -803,7 +800,7 @@ def Spectrum(req):
 		raise HTTPBadRequest_Param("n")
 	if spectrum != None:
 		spec = spectrum.split(".")
-		spectrum = { "file": Literal(".".join(spec[:-3]).replace("\\", "\\\\").replace("\"", "\\\"")), "scan": spec[-3], "charge": spec[-1], "ions": parser.GetSpectrumFromOffset(fname + "_" + str(datafile), int(offset)) }
+		spectrum = { "file": Literal(".".join(spec[:-3]).replace("\\", "\\\\").replace("\"", "\\\"")), "scan": int(spec[-3]), "charge": int(spec[-1]), "ions": parser.GetSpectrumFromOffset(fname + "_" + str(datafile), int(offset)) }
 	else:
 		spectrum = { "file": None, "scan": 1, "charge": 1, "ions": parser.GetSpectrumFromOffset(fname + "_" + str(datafile), int(offset)) }
 	return render_to_response(templates + "specview.pt", { "query": req.GET, "datafile": str(datafile), "spectrum": spectrum, "peptide": peptide, "init_pep": init_pep, "score": score, "render_peptide_lorikeet": render_peptide_lorikeet }, request=req)

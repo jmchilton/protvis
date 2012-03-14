@@ -1,5 +1,5 @@
 <tal:var define="global hash python: unique_dataset()" />
-<tal:var define="global opt_charge python: max(1, int(spectrum['charge']) - 1)" />
+<tal:var define="global opt_charge python: max(1, spectrum['charge'] - 1)" />
 <div id="specview_${hash}" class="lorikeet">
 	<div style="width:100%; padding:5px; text-align:center;">
 		<tal:if condition="python: peptide != None and len(peptide['peptides']) > 0">
