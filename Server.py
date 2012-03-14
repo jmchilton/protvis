@@ -18,6 +18,12 @@ import ProtXML, PepXML, MGF, MzML
 import time
 import subprocess
 import parameters
+import time
+import sys
+try:
+	import sqlite3
+except:
+	print " * Failed to load sqlite3. Uploaded files will not be deleted automatically"
 
 templates = os.path.realpath(os.path.dirname(__file__))+ "/templates/"
 converted = os.path.realpath(os.path.dirname(__file__))+ "/ConvertedFiles/"
@@ -26,6 +32,7 @@ spectrum_regex = re.compile(parameters.SPECTRUM_REGEX)
 
 Parsers = { "mzml": MzML, "mgf": MGF, "pep": PepXML, "prot": ProtXML }
 Referencers = { "protxml": Reference.LoadChainProt, "pepxml": Reference.LoadChainPep, "mgf": Reference.LoadChainMgf, "mzml": Reference.LoadChainMzml }
+Database = None
 
 class Literal(object):
     def __init__(self, s):
@@ -108,7 +115,59 @@ class JobManager:
 		self.ThreadsLock.release()
 		return alive
 
+class DatabaseManager:
+	def __init__(self, name):
+		try:
+			sqlite3
+		except:
+			self.Connection = None
+			return
+		self.Connection = sqlite3.connect(name)
+		c = self.Connection.cursor()
+		try:
+			c.execute("SELECT 1 FROM Uploads WHERE date=0")
+		except:
+			c.execute("CREATE TABLE Uploads (file TEXT, date UNSIGNED BIG INT, expires INT, galaxy BOOLEAN, deleted BOOLEAN)")
+			self.Connection.commit()
+		c.close()
+
+	def Close(self):
+		if self.Connection:
+			self.Connection.close()
+
+	def Insert(self, name, galaxy, expires = 7 * 24 * 60 * 60):
+		if self.Connection:
+			c = self.Connection.cursor()
+			c.execute("INSERT INTO Uploads VALUES ('" + name + "'," + str(int(time.mktime(time.gmtime()))) + "," + str(expires) + "," + str(test(galaxy, 1, 0)) + ",0)")
+			self.Connection.commit()
+			c.close()
+
+	def Cleanup(self):
+		if self.Connection:
+			c = self.Connection.cursor()
+			c.execute("SELECT rowid, file FROM Uploads WHERE deleted=0 AND expires>0 AND date+expires<=" + str(int(time.mktime(time.gmtime()))))
+			removed = 0
+			for rowid, name in c:
+				print "Removing " + name
+				removed += 1
+				fname = converted + name
+				subsets = len(Reference.FileLinks(fname).Links)
+				os.remove(fname)
+				for i in xrange(subsets):
+					try:
+						os.remove(fname + "_" + str(i))
+					except:
+						if os.path.exists(fname + "_" + str(i)):
+							print "Failed to delete " + name + "_" + str(i)
+				c.execute("UPDATE Uploads SET deleted=1 WHERE rowid=" + str(rowid))
+			self.Connection.commit()
+			c.close()
+			return removed
+		else:
+			print "Could not cleanup the database because sqlite3 could not be found"
+
 Jobs = JobManager()
+Database = DatabaseManager(converted + "sets.db")
 
 def RendererGlobals(system):
 	def render_peptide(peptide):
@@ -232,6 +291,7 @@ def Upload(req):
 				t.start()
 				threads[i] = t
 		f = data.name[len(converted):]
+		Database.Insert(f, False)
 		jobid = Jobs.Add(threads, f, files, data)
 		return Response('{"file":"' + f + '","jobid":' + str(jobid) + '}\r\n')
 	#except:
@@ -264,6 +324,7 @@ def Convert(req):
 					t.start()
 					threads[i] = t
 		f = data.name[len(converted):]
+		Database.Insert(f, True)
 		jobid = Jobs.Add(threads, f, files, data)
 		return render_to_response(templates + "upload.pt", { "file": f, "jobid": str(jobid) }, request=req)
 	#except:
@@ -806,6 +867,11 @@ def IndexDatabase(db):
 
 if __name__ == "__main__":
 	#check to make sure everything is set up properly
+	if "cleanup" in sys.argv:
+		if Database.Cleanup() == 0:
+			print "Nothing to clean up"
+		Database.Close()
+		sys.exit(0);
 	if len(parameters.PROTEIN_DATABASES) > 0:
 		print " + Validating protein databases indexes"
 		for f in parameters.PROTEIN_DATABASES:

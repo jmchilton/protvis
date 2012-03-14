@@ -1,2 +1,2 @@
 #!/bin/sh
-env/bin/python Server.py
+env/bin/python Server.py $@
