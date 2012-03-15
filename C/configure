@@ -2,6 +2,7 @@
 
 config="config.mk"
 includes=""
+libs=""
 
 usage() {
 	cat <<%%%
@@ -18,7 +19,7 @@ cpptestinc() {
 #include <$i>
 int main() { return 0; }
 %%%
-		$cpp __test.cpp -o __test.o $incdirs $libdirs 2>/dev/null 1>/dev/null
+		$cpp __test.cpp -c -o __test.o $incdirs $libdirs 2>/dev/null 1>/dev/null
 		if [ $? -eq 0 ] && [ -e __test.o ]; then
 			echo "$i"
 			includes="$includes $i"
@@ -29,7 +30,30 @@ int main() { return 0; }
 	echo "(Not found)"
 	echo "Tried: $*"
 	rm __test.cpp 2>/dev/null
-	exit
+	exit 2
+}
+
+cpptestlib() {
+	echo -n "Searching for $1 library: "
+	rm -f __test.cpp 2>/dev/null
+	for i in $2; do
+		echo "#include <$i>" >> __test.cpp
+	done
+	echo "int main() { return 0; }" >> __test.cpp
+	shift 2
+	for i in $@; do
+		$cpp __test.cpp -o __test.o $incdirs $libdirs $i 2>/dev/null 1>/dev/null
+		if [ $? -eq 0 ] && [ -e __test.o ]; then
+			echo "$i"
+			libs="$libs $i"
+			rm __test.cpp __test.o 2>/dev/null
+			return
+		fi
+	done
+	echo "(Not found)"
+	echo "Tried: $*"
+	rm __test.cpp 2>/dev/null
+	exit 2
 }
 
 findtool() {
@@ -45,7 +69,7 @@ findtool() {
 	done
 	echo "(Not found)"
 	echo "Tried: $*"
-	exit
+	exit 2
 }
 
 findtool2() {
@@ -82,8 +106,12 @@ else
 	exit
 fi
 
-cpptestinc "python" "Python.h" "python`python --version 2>&1 | awk '{print $2}' | cut -b -3`/Python.h"
+cpptestinc "python" "Python.h" "python`../env/bin/python --version 2>&1 | awk '{print $2}' | cut -b -3`/Python.h"
 cpptestinc "malloc" "stdlib.h" "malloc.h" "malloc/malloc.h" "memory.h"
+cpptestinc "libpng" "png.h"
+cpptestlib "libpng" "png.h" "-lpng"
+cpptestinc "boost preprocessor" "expand.hpp" "boost/expand.hpp" "boost/preprocessor/expand.hpp"
+
 rm common/inc.h 2>/dev/null
 for i in $includes; do
 	echo "#include <$i>" >> common/inc.h
@@ -91,4 +119,4 @@ done
 
 #echo "PYTHON_LIB=-lpython`python --version 2>&1 | awk '{print $2}' | cut -b -3`" >> $config
 echo "CFLAGS=\$(CFG_CFLAGS) $incdirs" >> $config
-echo "LDFLAGS=\$(CFG_LDFLAGS) $libdirs" >> $config
+echo "LDFLAGS=\$(CFG_LDFLAGS) $libdirs $libs" >> $config
