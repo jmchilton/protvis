@@ -25,5 +25,8 @@ C/bin/*
 C/*/*.o
 C/config.mk
 C/common/inc.h
+production.ini
 C/Libraries/*
 *.so
+*.log
+*.pid

@@ -3,7 +3,8 @@ import xml.sax
 import xml.parsers.expat
 from xml.sax.saxutils import unescape
 from cStringIO import StringIO
-import sys;
+import sys
+from pyramid.httpexceptions import *
 
 #Util functions
 def TRACE(*args):
@@ -245,3 +246,25 @@ class SaxHandlerBase(xml.sax.ContentHandler):
 	def endElement(self, name):
 		stream = self.State.pop().End()
 		#State[-1].EndChild(stream) #Not used
+
+#General
+class Literal(object):
+    def __init__(self, s):
+        self.s = s
+
+    def __html__(self):
+        return self.s
+
+def test(cond, t, f):
+	if cond == True:
+		return t
+	return f
+
+#Extended HTTP Errors
+class HTTPBadRequest_Param(HTTPBadRequest):
+	def __init__(self, param, **kw):
+		HTTPBadRequest.__init__(self, explanation=Literal("The parameter <i>" + param + "</i> is required to view this page, and was not supplied or has an invalid value.<br><br>Make sure you entered the URL correctly."), **kw)
+
+class HTTPNotFound_Data(HTTPNotFound):
+	def __init__(self, param, **kw):
+		HTTPNotFound.__init__(self, explanation=Literal("The dataset <i>" + param + "</i> could not be found.<br><br>It may have been deleted from the server to free some space.<br>Make sure you entered the URL correctly, or upload your data to the server again."), **kw)

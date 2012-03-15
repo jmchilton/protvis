@@ -5,15 +5,6 @@ If you need to make any changes you should create a new file "conf.py" and set t
 You only need to specify the parameters which you change
 """
 
-
-#Listening address of server.
-#Typically "0.0.0.0"
-HOST = "0.0.0.0"
-
-#Listening port of server.
-#Typically 80
-PORT = 80
-
 #Root directory of your galaxy install.
 #Typically /var/www/galaxy
 GALAXY_ROOT = "/var/www/galaxy"

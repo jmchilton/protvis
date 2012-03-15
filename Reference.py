@@ -6,6 +6,7 @@ import parameters
 import struct
 from Common import *
 import ProtXML, PepXML, MGF, MzML
+import subprocess
 
 def EnsureWhitelistFile(fname):
 	fname = os.path.abspath(fname)

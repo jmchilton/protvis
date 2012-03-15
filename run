@@ -1,2 +1,169 @@
 #!/bin/sh
-env/bin/python Server.py $@
+
+usage() {
+	cat <<%%%
+Usage:
+  Start the server as a program:
+    $0 [--port=N] [--address=X.X.X.X] &
+  Start the server as a daemon:
+    $0 --start-daemon[=<apache|ngix>] [--port=N] [--address=X.X.X.X]
+  Stop a running server daemon:
+    $0 --stop-daemon
+
+Only a single server can be running at a time
+
+Options:
+  --daemon[=<type>]        Alias of --start-daemon
+  --start-daemon[=<type>]  Start the server as a background service
+  --stop-daemon            Stop the server background service
+  --port=[1-65535]         Start the server running on a specific port
+                           Default is $port
+  --address=X.X.X.X        Start the server listening on a specific address
+                           Default is $address (all addresses)
+  --help                   Display this help
+
+A default configuration for the server <type> is written to protvis.conf if
+<type> is specified when starting as a daemon.
+Options for <type> are:
+  none     Dont run the server as a daemon
+  apache   Apache 2.x
+  nginx    Nginx
+
+Configuration files are:
+  paster.ini     When the server is running as a paster daemon
+  conf.py        A list of variables from parameters.py to override.
+                 Affects all server types
+%%%
+}
+
+conf_nginx() {
+	if [ $address = "0.0.0.0" ]; then
+		addr="127.0.0.1"
+	else
+		addr=$address
+	fi
+	cat >protvis.conf <<%%%
+#This is a site configuration. You should still have a main nginx configuration file nginx.conf
+upstream protvis-site {
+    server $addr:$port;
+}
+
+server {
+    location / {
+        proxy_set_header        Host $host;
+        proxy_set_header        X-Real-IP $remote_addr;
+        proxy_set_header        X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header        X-Forwarded-Proto $scheme;
+
+        client_max_body_size    16m;
+        client_body_buffer_size 128k;
+        proxy_connect_timeout   60s;
+        proxy_send_timeout      90s;
+        proxy_read_timeout      90s;
+        proxy_buffering         off;
+        proxy_temp_file_write_size 64k;
+        proxy_pass http://protvis-site;
+        proxy_redirect          off;
+    }
+    location /res {
+		root                    `pwd`;
+		expires                 30d;
+		add_header              Cache-Control public;
+		access_log              off;
+	}
+}
+%%%
+cat <<%%%
+You need to FIXME
+
+Then reload or restart the server:
+	service nginx reload   OR
+	/etc/init.d/nginx reload
+
+NOTE:
+  You will probably need root (sudo) permission to make these changes
+%%%
+}
+
+conf_apache2() {
+	cat >protvis.conf <<%%%
+#This is a sample configuration file. You may need to change some settings provided
+#Verify the username and user group values for WSGIDaemonProcess
+WSGIApplicationGroup %{GLOBAL}
+WSGIPassAuthorization On
+WSGIDaemonProcess pyramid user=`id -un` group=`id -gn` processes=1 threads=4 python-path=`env/bin/python -c "from distutils.sysconfig import get_python_lib; print(get_python_lib())"`
+WSGIScriptAlias /protvis `pwd`/pyramid.wsgi
+
+<Directory `pwd`>
+  WSGIProcessGroup pyramid
+  Order allow, deny
+  Allow from all
+</Directory>
+%%%
+cat <<%%%
+You need to make sure that mod_wsgi is installed and enabled, usually with:
+  The command "a2enmod wsgi"   OR
+  adding "LoadModule wsgi modules/mod_wsgi.so" to the apache main configuration
+  
+You also need to enable this site, usually done with
+  Copy protvis.conf to /etc/apache2/avaliable-sites, then running "a2ensite protvis"   OR
+  Copy protvis.conf to /etc/apache2/conf.d
+
+Then reload or restart the server:
+	service apache2 reload   OR
+	/etc/init.d/apache2 reload
+
+NOTE:
+  apache2 is often called httpd
+  You will probably need root (sudo) permission to make these changes
+%%%
+}
+
+pass=""
+port="8000"
+address="0.0.0.0"
+daemon="none"
+
+for arg in $@; do
+	case $arg in
+		--daemon)
+			daemon=`echo $arg | cut -b 10-`
+			;;
+		--start-daemon)
+			daemon=`echo $arg | cut -b 16-`
+			;;
+		--stop-daemon)
+			env/bin/pserve --stop-daemon --pid-file=daemon.pid
+			exit 0
+			;;
+		--port=)
+			port=`echo $arg | cut -b 8-`
+			;;
+		--address=)
+			address=`echo $arg | cut -b 11-`
+			;;
+		--help)
+			usage
+			exit 0
+			;;
+		*)
+			pass="pass $arg"
+			;;
+	esac
+done
+if [ "x$daemon" = "xnone" ]; then
+	env/bin/python Server.py $pass $address $port
+else
+	env/bin/pserve --daemon --pid-file=daemon.pid production.ini http_port=$port http_address=$address $pass
+	if [ "x$daemon" != "x" ]; then
+		echo "Generating default configurations"
+		case $daemon in 
+			apache)
+				conf_apache2
+				;;
+			nginx)
+				conf_nginx
+				;;
+		esac
+	fi
+fi

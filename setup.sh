@@ -81,11 +81,15 @@ fi
 
 echo "Building the virtual environment"
 virtualenv --no-site-packages env
+echo "`pwd`" >`env/bin/python -c "from distutils.sysconfig import get_python_lib; print(get_python_lib())"`/protvis.pth
 
 echo "Installing pyramid into the virtual environment"
 echo "This could take a while"
 cd env
 bin/easy_install pyramid
+bin/easy_install PasteScript
+bin/easy_install WebError
+bin/pip install cherrypy
 
 echo "The environment has been set up"
 
