@@ -1,7 +1,6 @@
 #ifndef __ARRAY_H__
 	#define __ARRAY_H__
 	
-	#include <malloc.h>
 	#include "stdinc.h"
 	#include "inc.h"
 

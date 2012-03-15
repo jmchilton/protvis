@@ -90,17 +90,24 @@ bin/easy_install pyramid
 bin/easy_install PasteScript
 bin/easy_install WebError
 bin/pip install cherrypy
+cd ..
 
 echo "The environment has been set up"
 
-cd ../res
+cd res
 rm dojo 2>/dev/null
 ln -s dojo_mini dojo
 cd ..
 
 echo "Compiling C++ bindings"
-cd ../C
-make -s
-cd ..
-
-echo "You can now run the program by typing ./run"
+cd C
+./configure
+if [ $? -eq 0 ]; then
+	make -s
+	if [ $? -eq 0 ]; then
+		echo "You can now run protvis by typing ./run"
+		exit 0
+	fi
+echo "There was an error while compiling the C bindings."
+echo "You can still run the server without them, but mzML files will not display"
+echo "You can now run protvis by typing ./run"

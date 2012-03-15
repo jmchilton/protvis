@@ -71,7 +71,7 @@ for arg in $@; do
 	esac
 done
 
-rm $config
+rm $config 2>/dev/null
 echo -n "Searching for C++ compiler: "
 cpp=`findtool2 g++ gpp`
 if [ "x$cpp" != "x" ]; then
@@ -83,6 +83,7 @@ else
 fi
 
 cpptestinc "python" "Python.h" "python`python --version 2>&1 | awk '{print $2}' | cut -b -3`/Python.h"
+cpptestinc "malloc" "stdlib.h" "malloc.h" "malloc/malloc.h" "memory.h"
 rm common/inc.h 2>/dev/null
 for i in $includes; do
 	echo "#include <$i>" >> common/inc.h

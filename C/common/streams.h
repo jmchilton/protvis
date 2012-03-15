@@ -21,7 +21,7 @@
 
 		#define BIN_FILE_PERMISSIONS S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH
 	#endif
-	#include <malloc.h>
+	#include "inc.h"
 	#include <string.h>
 	#include <expat.h>
 	#include "array.h"
