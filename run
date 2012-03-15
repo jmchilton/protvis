@@ -136,10 +136,10 @@ for arg in $@; do
 			env/bin/pserve --stop-daemon --pid-file=daemon.pid
 			exit 0
 			;;
-		--port=)
+		--port=*)
 			port=`echo $arg | cut -b 8-`
 			;;
-		--address=)
+		--address=*)
 			address=`echo $arg | cut -b 11-`
 			;;
 		--help)
