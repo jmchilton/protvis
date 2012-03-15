@@ -1,0 +1,30 @@
+#---------- App Configuration ----------
+[app:myapp]
+use = call:protvis:main
+
+#---------- Pipeline Configuration ----------
+[filter:paste_prefix]
+use = egg:PasteDeploy#prefix
+
+[filter:weberror]
+use = egg:WebError#error_catcher
+debug = false
+error_email = support@example.com
+from_address = paster@example.com
+
+[pipeline:main]
+pipeline =
+    paste_prefix
+    weberror
+    myapp
+
+#---------- Server Configuration ----------
+[server:main]
+host = %(http_address)s
+port = %(http_port)s
+
+use = egg:PasteScript#cherrypy
+numthreads = 10
+timeout = 180
+request_queue_size = 200
+

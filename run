@@ -154,6 +154,9 @@ done
 if [ "x$daemon" = "xnone" ]; then
 	env/bin/python Server.py $pass $address $port
 else
+	if [ ! -f "production.ini" ]; then
+		cp production.ini.sample production.ini
+	fi
 	env/bin/pserve --daemon --pid-file=daemon.pid production.ini http_port=$port http_address=$address $pass
 	if [ "x$daemon" != "x" ]; then
 		echo "Generating default configurations"
