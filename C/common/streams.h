@@ -23,7 +23,6 @@
 	#endif
 	#include "inc.h"
 	#include <string.h>
-	#include <expat.h>
 	#include "array.h"
 
 	class OutputStream {

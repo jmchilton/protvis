@@ -1,7 +1,6 @@
 #ifndef __HANDLERS_H__
 	#define __HANDLERS_H__
 
-	#include <expat.h>
 	#include <string.h>
 	#include "../common/handlers.h"
 

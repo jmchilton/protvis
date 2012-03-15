@@ -18,7 +18,7 @@ try:
 	import MzML
 except:
 	MzML = None
-	print "The mzML module could not be loaded. Users will not be able to view any mzML data"
+	print " * The mzML module could not be loaded. Users will not be able to view any mzML data"
 import time
 import subprocess
 import parameters

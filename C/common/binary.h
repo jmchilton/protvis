@@ -1,7 +1,6 @@
 #ifndef __BINARY_H__
 	#define __BINARY_H__
 
-	#include <zlib.h>
 	#include "../common/streams.h"
 	
 	unsigned Base64Decode(const char *szSource, unsigned nSourceLen, BYTE *pDest); //pDest must have at least ((nSourceLen * 3) / 4) bytes of space

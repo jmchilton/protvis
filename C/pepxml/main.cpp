@@ -1,7 +1,6 @@
 #include "../common/stdinc.h"
 #include <stdio.h>
 #include <string.h>
-#include <expat.h>
 #include "handlers.h"
 
 int main(int argc, char *argv[]) {

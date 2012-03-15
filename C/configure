@@ -106,17 +106,28 @@ else
 	exit
 fi
 
-cpptestinc "python" "Python.h" "python`../env/bin/python --version 2>&1 | awk '{print $2}' | cut -b -3`/Python.h"
-cpptestinc "malloc" "stdlib.h" "malloc.h" "malloc/malloc.h" "memory.h"
 cpptestinc "libpng" "png.h"
 cpptestlib "libpng" "png.h" "-lpng"
+cpptestinc "python" "Python.h" "python`../env/bin/python --version 2>&1 | awk '{print $2}' | cut -b -3`/Python.h"
+cpptestinc "malloc" "stdlib.h" "malloc.h" "malloc/malloc.h" "memory.h"
+cpptestinc "zlib" "zlib.h"
+cpptestlib "zlib" "zlib.h" "-lz"
+cpptestinc "expat" "expat.h"
+cpptestlib "expat" "expat.h" "-lexpat"
 cpptestinc "boost preprocessor" "expand.hpp" "boost/expand.hpp" "boost/preprocessor/expand.hpp"
 
 rm common/inc.h 2>/dev/null
+echo "#ifndef __COMMON_INC_H__" >> common/inc.h
+echo "#define __COMMON_INC_H__" >> common/inc.h
 for i in $includes; do
 	echo "#include <$i>" >> common/inc.h
 done
+echo "#endif" >> common/inc.h
 
-#echo "PYTHON_LIB=-lpython`python --version 2>&1 | awk '{print $2}' | cut -b -3`" >> $config
+if [ `uname` = "Darwin" ]; then
+	echo "PYTHON_LIB=-lpython`python --version 2>&1 | awk '{print $2}' | cut -b -3`" >> $config
+else
+	echo "PYTHON_LIB=" >> $config
+fi
 echo "CFLAGS=\$(CFG_CFLAGS) $incdirs" >> $config
 echo "LDFLAGS=\$(CFG_LDFLAGS) $libdirs $libs" >> $config

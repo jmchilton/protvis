@@ -1,4 +1,3 @@
-#include <png.h>
 #include "msplot.h"
 #include <math.h>
 #include "../common/handlers.h"
