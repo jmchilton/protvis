@@ -13,7 +13,12 @@ import re
 import Reference
 import struct
 from Common import *
-import ProtXML, PepXML, MGF, MzML
+import ProtXML, PepXML, MGF
+try:
+	import MzML
+except:
+	MzML = None
+	print "The mzML module could not be loaded. Users will not be able to view any mzML data"
 import time
 import subprocess
 import parameters
@@ -458,6 +463,8 @@ def ListResults(req):
 		t = Reference.FileType.NameBasic(links.Links[ni].Type)
 		try:
 			parser = Parsers[t]
+			if parser == None:
+				return Response("The server has not been configured to understand " + t + " files")
 		except:
 			return Response("The type of the selected file could not be determined")
 		if t == "mzml" and TryGet(req.GET, "list") != "1":

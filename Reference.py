@@ -5,8 +5,12 @@ import xml.parsers.expat
 import parameters
 import struct
 from Common import *
-import ProtXML, PepXML, MGF, MzML
+import ProtXML, PepXML, MGF
 import subprocess
+try:
+	import MzML
+except:
+	MzML = None
 
 def EnsureWhitelistFile(fname):
 	fname = os.path.abspath(fname)
