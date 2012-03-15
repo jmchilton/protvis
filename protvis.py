@@ -912,6 +912,7 @@ def main(*args, **kwargs):
 	config.add_view(Spectrum, route_name="spectrum")
 	config.add_view(SpectumLC, route_name="lc")
 	config.add_view(Tooltip, route_name="tooltip")
+	config.add_static_view("/favicon.ico", "/res/favicon.ico", cache_max_age=3600*24*7)
 	config.add_static_view("res", "res", cache_max_age=3600*24*7)
 	config.add_static_view("test", "test", cache_max_age=0)
 	return config.make_wsgi_app()

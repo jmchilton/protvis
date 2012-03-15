@@ -13,7 +13,7 @@
 	}
 
 static void PngWriterWrite(png_structp png_ptr, png_bytep data, png_size_t length) {
-	((MemoryStream *)png_ptr->io_ptr)->Write(data, length);
+	((MemoryStream *)png_get_io_ptr(png_ptr))->Write(data, length);
 }
 
 static void PngWriterFlush(png_structp png_ptr) {
