@@ -483,7 +483,7 @@
 			function ListProteinPeptides(hash, index, protein, datafile, off) {
 				var elem = dojo.byId(hash).byId(index).byId("peptide");
 				var all = elem.byId("all");
-				if (all.children.length > 0) {
+				if (all.children.length > 0 && all.children[0].className != "error") {
 					dojo.fx.combine([
 						dojo.fx.wipeOut({ node: elem.byId("best") }),
 						dojo.fx.wipeIn({ node: all })
@@ -492,6 +492,9 @@
 					dojo.xhrGet({
 						url: "/select?file=${file}&type=protein&n=" + datafile + "&off=" + off,
 						load: function(results) {
+							if (results == "") {
+								return this.error();
+							}
 							all.innerHTML = results;
 							dojo.fx.combine([
 								dojo.fx.wipeOut({ node: elem.byId("best") }),
