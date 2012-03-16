@@ -1464,7 +1464,7 @@ def select_protein(BaseFile, query):
 	def FindProteinSequence(seq):
 		dbs = Reference.FileLinks(BaseFile).Databases + parameters.PROTEIN_DATABASES
 		for f in dbs:
-			p = subprocess.Popen(["bin/blastdbcmd", "-db", f, "-entry", seq, "-outfmt", "%s"], stdout=subprocess.PIPE)
+			p = subprocess.Popen([parameters.HOME + "/bin/blastdbcmd", "-db", f, "-entry", seq, "-outfmt", "%s"], stdout=subprocess.PIPE)
 			(out, err) = p.communicate()
 			p.stdout.close()
 			if p.wait() == 0:

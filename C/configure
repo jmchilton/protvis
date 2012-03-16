@@ -88,6 +88,7 @@ for arg in $@; do
 	case "$arg" in
 		--include=*) incdirs="$incdirs -I`echo "$arg" | cut -b 11-`";;
 		--lib=*) libdirs="$libdirs -L`echo "$arg" | cut -b 7-`";;
+		--help) usage;;
 		*)
 			echo "Unrecognised option '$arg'"
 			usage

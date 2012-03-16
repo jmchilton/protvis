@@ -14,11 +14,11 @@ all: $(SOURCES) $(PYMODULE)
 
 $(EXECUTABLE): $(OBJECTS)
 	$(MKDIR) ../$(BUILD_DIR)
-	$(CC) $(OBJECTS) $(LDFLAGS) -o $@ $(LIBS)
+	$(CC) $(OBJECTS) $(LIBS) $(LDFLAGS) -o $@
 	
 $(PYMODULE): $(PYOBJECTS)
 	$(MKDIR) ../$(BUILD_DIR)
-	$(CC) $(PYOBJECTS) $(LDFLAGS) -o $@ -shared $(LIBS) $(PYTHON_LIB)
+	$(CC) $(PYOBJECTS) -shared $(LIBS) $(PYTHON_LIB) $(LDFLAGS) -o $@
 	cp $@ ../../MzML.so
 
 .cpp.o:

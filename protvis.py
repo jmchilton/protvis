@@ -14,11 +14,11 @@ import Reference
 import struct
 from Common import *
 import ProtXML, PepXML, MGF
-try:
-	import MzML
-except:
-	MzML = None
-	print " * The mzML module could not be loaded. Users will not be able to view any mzML data"
+#try:
+import MzML
+#except:
+#	MzML = None
+#	print " * The mzML module could not be loaded. Users will not be able to view any mzML data"
 import time
 import subprocess
 import parameters
@@ -29,8 +29,8 @@ try:
 except:
 	print " * Failed to load sqlite3. Uploaded files will not be deleted automatically"
 
-templates = os.path.realpath(os.path.dirname(__file__)) + "/templates/"
-converted = os.path.realpath(os.path.dirname(__file__)) + "/ConvertedFiles/"
+templates = parameters.HOME + "/templates/"
+converted = parameters.HOME + "/ConvertedFiles/"
 decoy_regex = re.compile(parameters.DECOY_REGEX)
 spectrum_regex = re.compile(parameters.SPECTRUM_REGEX)
 
@@ -285,9 +285,9 @@ def Upload(req):
 			f.file.seek(0)
 		files = Reference.LoadChainGroup([[f.filename, f.file] for f in fs])
 		#Build the index file
-		if not os.path.exists("ConvertedFiles"):
-			os.makedirs("ConvertedFiles")
-		data = tempfile.NamedTemporaryFile(dir = ".", prefix = "ConvertedFiles/", delete = False)
+		if not os.path.exists(converted):
+			os.makedirs(converted)
+		data = tempfile.NamedTemporaryFile(dir = ".", prefix = converted, delete = False)
 		threads = range(len(files))
 		links = {}
 		for i in threads:
@@ -314,9 +314,9 @@ def Convert(req):
 	#try:
 		files = Referencers[req.GET["type"]](binascii.unhexlify(req.GET["file"]))
 		#Build the index file
-		if not os.path.exists("ConvertedFiles"):
-			os.makedirs("ConvertedFiles")
-		data = tempfile.NamedTemporaryFile(dir = ".", prefix = "ConvertedFiles/", delete = False)
+		if not os.path.exists(converted):
+			os.makedirs(converted)
+		data = tempfile.NamedTemporaryFile(dir = ".", prefix = converted, delete = False)
 		threads = range(len(files))
 		links = {}
 		for i in threads:
@@ -877,12 +877,12 @@ def main(*args, **kwargs):
 	if len(parameters.PROTEIN_DATABASES) > 0:
 		print " + Validating protein databases indexes"
 		for f in parameters.PROTEIN_DATABASES:
-			p = subprocess.Popen(["bin/blastdbcmd", "-db", f, "-info"], stderr=subprocess.PIPE, stdout=subprocess.PIPE)
+			p = subprocess.Popen([parameters.HOME + "/bin/blastdbcmd", "-db", f, "-info"], stderr=subprocess.PIPE, stdout=subprocess.PIPE)
 			(out, err) = p.communicate()
 			p.stderr.close()
 			p.stdout.close()
 			if p.wait() != 0:
-				subprocess.call(["bin/makeblastdb", "-in", f, "-parse_seqids"])
+				subprocess.call([parameters.HOME + "/bin/makeblastdb", "-in", f, "-parse_seqids"])
 	Threads = {}
 	JobsTotal = 0
 	Database.start()
@@ -912,7 +912,7 @@ def main(*args, **kwargs):
 	config.add_view(Spectrum, route_name="spectrum")
 	config.add_view(SpectumLC, route_name="lc")
 	config.add_view(Tooltip, route_name="tooltip")
-	config.add_static_view("/favicon.ico", "/res/favicon.ico", cache_max_age=3600*24*7)
-	config.add_static_view("res", "res", cache_max_age=3600*24*7)
-	config.add_static_view("test", "test", cache_max_age=0)
+	config.add_static_view("/favicon.ico", parameters.HOME + "/res/favicon.ico", cache_max_age=3600*24*7)
+	config.add_static_view("res", parameters.HOME + "/res", cache_max_age=3600*24*7)
+	config.add_static_view("test", parameters.HOME + "/test", cache_max_age=0)
 	return config.make_wsgi_app()

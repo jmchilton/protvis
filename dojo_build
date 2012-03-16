@@ -57,11 +57,16 @@ if [ "$1" = "release" ]; then
 elif [ "$1" = "debug" ]; then
 	build_flags="layerOptimize=falsy"
 else
-	echo "Unknown build type. Options are: debug release"
+	echo "Unknown build type."
+	echo "Usage: $0 <debug|release> [--commit]"
 	exit
 fi
-
 shift
+commit=0
+if [ "$1" = "--commit" ]; then
+	commit=1
+	shift
+fi
 common_flags="bin=$engine action=release profile=protvis releaseDir=../../../../res releaseName=dojo_compile $@"
 
 dojo_src="dojo-release-1.7.1-src"
@@ -83,3 +88,6 @@ rm build-report.txt
 cd ../
 rm dojo 2>/dev/null
 ln -s dojo_compile dojo
+if [ $commit -eq 1 ]; then
+	cp -f dojo_compile/dojo/dojo.js dojo_mini/dojo/dojo.js
+fi

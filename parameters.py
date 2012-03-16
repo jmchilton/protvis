@@ -28,6 +28,10 @@ SPECTRUM_REGEX = r"(.+?)(\.mzML)?\.[0-9]+\.[0-9]+\.[0-9]+"
 PROTEIN_DATABASES = []
 
 ### There are no options beyond this point ###
+import subprocess
+import os
+
+HOME = os.path.realpath(os.path.dirname(__file__))
 #Import user-defined settings
 try:
 	from conf import *
@@ -35,16 +39,13 @@ except:
 	print " * No user supplied options. You may want to make a conf.py file. Look at parameters.py for options"
 
 #Check settings for porential issues
-import subprocess
-import os.path
-
 if len(PROTEIN_DATABASES) == 0:
 	print " * No protein databases specified. Users will not be able to view the coverage graph."
 
 try:
 	f = open("/dev/null")
-	subprocess.call(["bin/blastdbcmd", "-h"], stderr=subprocess.STDOUT, stdout=subprocess.PIPE)
-	subprocess.call(["bin/makeblastdb", "-h"], stderr=subprocess.STDOUT, stdout=subprocess.PIPE)
+	subprocess.call([HOME + "/bin/blastdbcmd", "-h"], stderr=subprocess.STDOUT, stdout=subprocess.PIPE)
+	subprocess.call([HOME + "/bin/makeblastdb", "-h"], stderr=subprocess.STDOUT, stdout=subprocess.PIPE)
 except:
 	print " * blast+ cannot be found or is not working correctly. Users will not be able to view the coverage graph."
 

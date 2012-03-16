@@ -27,6 +27,8 @@ C/config.mk
 C/common/inc.h
 production.ini
 C/Libraries/*
+apache.wsgi
+protvis.conf
 *.so
 *.log
 *.pid

@@ -365,7 +365,7 @@ def ValidateFilename(IncludedFiles, fname, exts = None):
 
 def DbReferences(fname, IncludedFiles, Validator):
 	def TestIndex(db):
-		p = subprocess.Popen(["bin/blastdbcmd", "-db", fname, "-info"], stderr=subprocess.PIPE, stdout=subprocess.PIPE)
+		p = subprocess.Popen([parameters.HOME + "/bin/blastdbcmd", "-db", fname, "-info"], stderr=subprocess.PIPE, stdout=subprocess.PIPE)
 		(out, err) = p.communicate()
 		p.stderr.close()
 		p.stdout.close()
@@ -381,7 +381,7 @@ def DbReferences(fname, IncludedFiles, Validator):
 		IncludedFiles.GetSilent(fname).Stream = link
 		if not TestIndex(link):
 			os.symlink(fname, link)
-			subprocess.call(["bin/makeblastdb", "-in", link, "-parse_seqids"])
+			subprocess.call([parameters.HOME + "/bin/makeblastdb", "-in", link, "-parse_seqids"])
 	IncludedFiles.StepOut()
 
 def MzmlReferences(fname, IncludedFiles, Validator):

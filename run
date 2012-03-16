@@ -43,17 +43,18 @@ conf_nginx() {
 		addr=$address
 	fi
 	cat >protvis.conf <<%%%
-#This is a site configuration. You should still have a main nginx configuration file nginx.conf
+#This is a site configuration.
+#You should still have a main nginx configuration file nginx.conf which will include this file
 upstream protvis-site {
     server $addr:$port;
 }
 
 server {
     location / {
-        proxy_set_header        Host $host;
-        proxy_set_header        X-Real-IP $remote_addr;
-        proxy_set_header        X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header        X-Forwarded-Proto $scheme;
+        proxy_set_header        Host \$host;
+        proxy_set_header        X-Real-IP \$remote_addr;
+        proxy_set_header        X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header        X-Forwarded-Proto \$scheme;
 
         client_max_body_size    16m;
         client_body_buffer_size 128k;
@@ -65,7 +66,7 @@ server {
         proxy_pass http://protvis-site;
         proxy_redirect          off;
     }
-    location /res {
+    location /res/ {
 		root                    `pwd`;
 		expires                 30d;
 		add_header              Cache-Control public;
@@ -74,7 +75,8 @@ server {
 }
 %%%
 cat <<%%%
-You need to FIXME
+You need to place the generated protvis.conf into 1 of your nginx search paths
+These are usually /etc/nginx/conf.d/ (prefered) AND /etc/nginx/sites-enabled/
 
 Then reload or restart the server:
 	service nginx reload   OR
@@ -85,28 +87,36 @@ NOTE:
 %%%
 }
 
-conf_apache2() {
+conf_apache2() { #FIXME: test configuration
 	cat >protvis.conf <<%%%
 #This is a sample configuration file. You may need to change some settings provided
 #Verify the username and user group values for WSGIDaemonProcess
 WSGIApplicationGroup %{GLOBAL}
 WSGIPassAuthorization On
 WSGIDaemonProcess pyramid user=`id -un` group=`id -gn` processes=1 threads=4 python-path=`env/bin/python -c "from distutils.sysconfig import get_python_lib; print(get_python_lib())"`
-WSGIScriptAlias /protvis `pwd`/pyramid.wsgi
+WSGIScriptAlias /protvis `pwd`/apache.wsgi
 
 <Directory `pwd`>
   WSGIProcessGroup pyramid
-  Order allow, deny
+  Order allow,deny
   Allow from all
 </Directory>
 %%%
-cat <<%%%
+	cat >apache.wsgi <<%%%
+from pyramid.paster import get_app
+application = get_app('`pwd`/production.ini', 'main')
+%%%
+	chmod +x apache.wsgi
+	cat <<%%%
 You need to make sure that mod_wsgi is installed and enabled, usually with:
   The command "a2enmod wsgi"   OR
-  adding "LoadModule wsgi modules/mod_wsgi.so" to the apache main configuration
+  adding "LoadModule wsgi modules/mod_wsgi.so" to the apache2.conf
+If mod_wsgi cannot be found you can find it in the package manager, often
+under the name libapache2-mod-wsgi
   
 You also need to enable this site, usually done with
-  Copy protvis.conf to /etc/apache2/avaliable-sites, then running "a2ensite protvis"   OR
+  Copy protvis.conf to /etc/apache2/sites-available and change the name to
+    remove the .conf, then run "a2ensite protvis"   OR
   Copy protvis.conf to /etc/apache2/conf.d
 
 Then reload or restart the server:
@@ -114,7 +124,7 @@ Then reload or restart the server:
 	/etc/init.d/apache2 reload
 
 NOTE:
-  apache2 is often called httpd
+  apache2 is often called httpd.
   You will probably need root (sudo) permission to make these changes
 %%%
 }
@@ -126,10 +136,10 @@ daemon="none"
 
 for arg in $@; do
 	case $arg in
-		--daemon)
+		--daemon=*)
 			daemon=`echo $arg | cut -b 10-`
 			;;
-		--start-daemon)
+		--start-daemon=*)
 			daemon=`echo $arg | cut -b 16-`
 			;;
 		--stop-daemon)
