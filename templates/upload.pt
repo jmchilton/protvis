@@ -3,10 +3,10 @@
 	<head>
 		<meta http-equiv="content-type" content="text/html; charset=utf-8" />
 		<title>Processing File</title>
-		<link href="/res/dojo/dijit/themes/dijit.css" rel="stylesheet" />
-		<link href="/res/styles/protvis.css" type="text/css" rel="stylesheet" />
-		<link id="themeStyles" href="/res/dojo/dijit/themes/claro/claro.css" type="text/css" rel="stylesheet" />
-		<script type="text/javascript" src="/res/dojo/dojo/dojo.js" data-dojo-config="parseOnLoad: true"></script>
+		<link href="res/dojo/dijit/themes/dijit.css" rel="stylesheet" />
+		<link href="res/styles/protvis.css" type="text/css" rel="stylesheet" />
+		<link id="themeStyles" href="res/dojo/dijit/themes/claro/claro.css" type="text/css" rel="stylesheet" />
+		<script type="text/javascript" src="res/dojo/dojo/dojo.js" data-dojo-config="parseOnLoad: true"></script>
 		<script type="text/javascript">
 			dojo.require("dojo.fx");
 
@@ -15,7 +15,7 @@
 
 			function Update() {
 				dojo.xhrGet({
-					url: "/query_init?file=${file}&id=${jobid}",
+					url: "query_init?file=${file}&id=${jobid}",
 					load: function(res) {
 						var left = -1;
 						try {
@@ -25,7 +25,7 @@
 							}
 							if (left == 0) {
 								ShowMessage("done");
-								window.location = "/view?file=${file}";
+								window.location = "view?file=${file}";
 							} else {
 								ShowMessageStatus(left);
 								setTimeout("Update();", 500);
@@ -76,18 +76,18 @@
 		<noscript>
 			Your files are getting processed.<br/>
 			Javascript is required to explore your results. Please cunsoult your browsers help for details on how to enable it.
-			Click <a href="/view/?file=${file}">here</a> in a few minutes to continue to your results once Javascript is enabled.
+			Click <a href="view/?file=${file}">here</a> in a few minutes to continue to your results once Javascript is enabled.
 		</noscript>
 		<div id="processing" visible="false" style="display: none;">
 			<div class="dijitContentPaneLoading">Processing your file for the first time.</div>
 		</div>
 		<div id="done" visible="false" style="display: none;">
 			Finished.<br/>
-			Click <a href="/view/?file=${file}">here</a> if your browser doesn't automatically continue within 5 seconds.
+			Click <a href="view/?file=${file}">here</a> if your browser doesn't automatically continue within 5 seconds.
 		</div>
 		<div id="error" visible="false" style="display: none;">
 			An internal server error occured or this job has already been removed from the queue.<br/>
-			Try clicking <a href="/view/?file=${file}">here</a> to continue, or refresh this page.
+			Try clicking <a href="view/?file=${file}">here</a> to continue, or refresh this page.
 		</div>
 		<div id="error_net" visible="false" style="display: none;">
 			An error occured while contacting the server.<br />

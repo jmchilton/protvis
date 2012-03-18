@@ -78,7 +78,7 @@
 			/*var ids = [<span tal:omit-tag="" tal:repeat="row results">"peptide_${hash}_${repeat.row.index}", </span>];
 			var tt = new dijit.DynamicTooltip({
 				connectId: ids,
-				href: "/tooltip/peptide?file=${info.file}&n=${info.datafile}&peptide=",
+				href: "tooltip/peptide?file=${info.file}&n=${info.datafile}&peptide=",
 				position: ["below", "above"]
 			})
 			Tooltips.push(tt);

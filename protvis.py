@@ -279,71 +279,81 @@ def Index(req):
 
 def Upload(req):
 	#uploading from a remote server
-	#try:
-		fs = req.POST.getall("uploadedfiles[]")
-		for f in fs:
-			f.file.seek(0)
-		files = Reference.LoadChainGroup([[f.filename, f.file] for f in fs])
-		#Build the index file
-		if not os.path.exists(converted):
-			os.makedirs(converted)
-		data = tempfile.NamedTemporaryFile(dir = ".", prefix = converted, delete = False)
-		threads = range(len(files))
-		links = {}
-		for i in threads:
-			links[files[i].Name] = i
-		#Now generate all the data files
-		for i in threads:
-			f = files[i]
-			if f.Type & Reference.FileType.MISSING or f.Type == Reference.FileType.UNKNOWN:
-				threads[i] = None
-			else:
-				t = ConverterThread(Reference.GetTypeParser(f.Type), f.Stream, data.name + "_" + str(i), f.Name)
-				t.start()
-				threads[i] = t
-		f = data.name[len(converted):]
-		Database.insert(f, False)
-		jobid = Jobs.Add(threads, f, files, data)
-		return Response('{"file":"' + f + '","jobid":' + str(jobid) + '}\r\n')
-	#except:
-	#	return Response('{"error":"Internal server error"}\r\n')
+	fs = req.POST.getall("uploadedfiles[]")
+	for f in fs:
+		f.file.seek(0)
+	files = Reference.LoadChainGroup([[f.filename, f.file] for f in fs])
+	#Build the index file
+	if not os.path.exists(converted):
+		os.makedirs(converted)
+	data = tempfile.NamedTemporaryFile(dir = ".", prefix = converted, delete = False)
+	threads = range(len(files))
+	links = {}
+	for i in threads:
+		links[files[i].Name] = i
+	#Now generate all the data files
+	for i in threads:
+		f = files[i]
+		if f.Type & Reference.FileType.MISSING or f.Type == Reference.FileType.UNKNOWN:
+			threads[i] = None
+		else:
+			t = ConverterThread(Reference.GetTypeParser(f.Type), f.Stream, data.name + "_" + str(i), f.Name)
+			t.start()
+			threads[i] = t
+	f = data.name[len(converted):]
+	Database.insert(f, False)
+	jobid = Jobs.Add(threads, f, files, data)
+	return Response('{"file":"' + f + '","jobid":' + str(jobid) + '}\r\n')
 
 def Convert(req):
 	#for when this is running on the same server as galaxy
 	#just use the local files directly
-	#try:
-		files = Referencers[req.GET["type"]](binascii.unhexlify(req.GET["file"]))
-		#Build the index file
-		if not os.path.exists(converted):
-			os.makedirs(converted)
-		data = tempfile.NamedTemporaryFile(dir = ".", prefix = converted, delete = False)
-		threads = range(len(files))
-		links = {}
-		for i in threads:
-			links[files[i].Name] = i
-		#Now generate all the data files
-		for i in threads:
-			f = files[i]
-			if f.Type & Reference.FileType.MISSING:
+	try:
+		f = binascii.unhexlify(req.GET["file"])
+	except:
+		return HTTPBadRequest_Param("file")
+	try:
+		ref = Referencers[req.GET["type"]]
+	except:
+		return HTTPBadRequest_Param("type")
+	files = ref(f)
+	#Build the index file
+	if not os.path.exists(converted):
+		os.makedirs(converted)
+	data = tempfile.NamedTemporaryFile(dir = ".", prefix = converted, delete = False)
+	threads = range(len(files))
+	links = {}
+	for i in threads:
+		links[files[i].Name] = i
+	#Now generate all the data files
+	for i in threads:
+		f = files[i]
+		if f.Type & Reference.FileType.MISSING:
+			threads[i] = None
+		else:
+			p = Reference.GetTypeParser(f.Type)
+			if p == None:
 				threads[i] = None
 			else:
-				p = Reference.GetTypeParser(f.Type)
-				if p == None:
-					threads[i] = None
-				else:
-					t = ConverterThread(p, f.Name, data.name + "_" + str(i), f.Name)
-					t.start()
-					threads[i] = t
-		f = data.name[len(converted):]
-		Database.insert(f, True)
-		jobid = Jobs.Add(threads, f, files, data)
-		return render_to_response(templates + "upload.pt", { "file": f, "jobid": str(jobid) }, request=req)
-	#except:
-	#	return HTTPBadRequest()
+				t = ConverterThread(p, f.Name, data.name + "_" + str(i), f.Name)
+				t.start()
+				threads[i] = t
+	f = data.name[len(converted):]
+	Database.insert(f, True)
+	jobid = Jobs.Add(threads, f, files, data)
+	return render_to_response(templates + "upload.pt", { "file": f, "jobid": str(jobid) }, request=req)
 
 def QueryInitStatus(req):
 	try:
-		alive = Jobs.QueryStatus(req.GET["file"], int(req.GET["id"]))
+		f = req.GET["file"]
+	except:
+		return HTTPBadRequest_Param("file")
+	try:
+		i = int(req.GET["id"])
+	except:
+		return HTTPBadRequest_Param("id")
+	try:
+		alive = Jobs.QueryStatus(f, i)
 		return Response(str(alive) + "\r\n", request=req)
 	except HTTPException:
 		raise

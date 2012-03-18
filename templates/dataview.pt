@@ -3,14 +3,14 @@
 	<head>
 		<meta http-equiv="content-type" content="text/html; charset=utf-8" />
 		<title>Results</title>
-		<link href="/res/styles/protvis.css" type="text/css" rel="stylesheet" />
-		<link href="/res/dojo/dijit/themes/dijit.css" rel="stylesheet" />
-		<link id="themeStyles" href="/res/dojo/dijit/themes/claro/claro.css" type="text/css" rel="stylesheet" />
-		<link id="themeStyles" href="/res/dojo/dojox/html/resources/ellipsis.css" type="text/css" rel="stylesheet" />
-		<script type="text/javascript" src="/res/dojo/dojo/dojo.js" data-dojo-config="parseOnLoad: true"></script>
-		<script type="text/javascript" src="/res/scripts/flowchart.js"></script>
-		<script type="text/javascript" src="/res/scripts/specview.js"></script>
-		<script type="text/javascript" src="/res/scripts/graph.js"></script>
+		<link href="res/styles/protvis.css" type="text/css" rel="stylesheet" />
+		<link href="res/dojo/dijit/themes/dijit.css" rel="stylesheet" />
+		<link id="themeStyles" href="res/dojo/dijit/themes/claro/claro.css" type="text/css" rel="stylesheet" />
+		<link id="themeStyles" href="res/dojo/dojox/html/resources/ellipsis.css" type="text/css" rel="stylesheet" />
+		<script type="text/javascript" src="res/dojo/dojo/dojo.js" data-dojo-config="parseOnLoad: true"></script>
+		<script type="text/javascript" src="res/scripts/flowchart.js"></script>
+		<script type="text/javascript" src="res/scripts/specview.js"></script>
+		<script type="text/javascript" src="res/scripts/graph.js"></script>
 		<script type="text/javascript">
 			dojo.require("dojo.fx");
 			dojo.require("dojo.query");
@@ -29,7 +29,7 @@
 				function NavigateToResults(index) {
 						SwitchDataset(index);
 						if (dojo.byId("data_" + index).children.length == 0) {
-							LoadContents(index, "/results?file=${file}&n=" + index + "&q=&max=50");
+							LoadContents(index, "results?file=${file}&n=" + index + "&q=&max=50");
 						}
 						Flowchart.Select(index);
 				}
@@ -43,7 +43,7 @@
 					params[0] = params[0].substr(1);
 					switch (section) {
 						case 'P': //PepXML peptide
-							LoadContents("peptides", "/peptide?file=${file}&n=" + params[0] + "&peptide=" + params[1]);
+							LoadContents("peptides", "peptide?file=${file}&n=" + params[0] + "&peptide=" + params[1]);
 							break;
 							
 						case 'R': //Generic results
@@ -440,21 +440,21 @@
 			}
 			
 			function ShowSpectrum(dataset, type, offset, spectrum) {
-				LoadContents("spectrum", "/spectrum?file=${file}&n=" + dataset + "&off=" + offset + (spectrum ? "&spectrum=" + encodeURIComponent(spectrum) : ""));
+				LoadContents("spectrum", "spectrum?file=${file}&n=" + dataset + "&off=" + offset + (spectrum ? "&spectrum=" + encodeURIComponent(spectrum) : ""));
 			}
 			
 			function ShowSpectrumFromPeptide(pepn, spectrum, pep_qoff, pep_hoff) {
-				LoadContents("spectrum", "/spectrum?file=${file}&spectrum=" + encodeURIComponent(spectrum) + "&pn=" + pepn + "&pqoff=" + pep_qoff + "&phoff=" + pep_hoff);
+				LoadContents("spectrum", "spectrum?file=${file}&spectrum=" + encodeURIComponent(spectrum) + "&pn=" + pepn + "&pqoff=" + pep_qoff + "&phoff=" + pep_hoff);
 			}
 
 			function ShowSpectrumFromQuery(datafile, off, spectrum, peptide) {
-				LoadContents("spectrum", "/spectrum?file=${file}&spectrum=" + encodeURIComponent(spectrum) + "&pn=" + datafile + "&pqoff=" + off + "&pep=" + peptide);
+				LoadContents("spectrum", "spectrum?file=${file}&spectrum=" + encodeURIComponent(spectrum) + "&pn=" + datafile + "&pqoff=" + off + "&pep=" + peptide);
 			}
 
 			function SelectInfo(title, type, params) {
 				var width = params["width"] ? params["width"] : 500;
 				dojo.xhrGet({
-					url: "/select?file=${file}&type=" + type + (params["datafile"] == undefined ? "" : "&n=" + params["datafile"]) + (params["params"] ? "&" + params["params"] : ''),
+					url: "select?file=${file}&type=" + type + (params["datafile"] == undefined ? "" : "&n=" + params["datafile"]) + (params["params"] ? "&" + params["params"] : ''),
 					load: function(results) {
 						DetailsDialog.attr("content", '<div style="overflow:auto; width:' + (width - 16) + 'px;max-height:400px;">' + results + '</div>');
 					},
@@ -490,7 +490,7 @@
 					]).play();
 				} else {
 					dojo.xhrGet({
-						url: "/select?file=${file}&type=protein&n=" + datafile + "&off=" + off,
+						url: "select?file=${file}&type=protein&n=" + datafile + "&off=" + off,
 						load: function(results) {
 							if (results == "") {
 								return this.error();
@@ -572,12 +572,12 @@
 					NavigateHash(window.location.hash.substr(1));
 				} else {
 					CurrentPage = "${index}";
-					LoadContents(CurrentPage, "/results?file=${file}&n=${index}&q=&max=50");
+					LoadContents(CurrentPage, "results?file=${file}&n=${index}&q=&max=50");
 				}
 				DetailsDialog = new dijit.Dialog({ style: "width: 400px" });
 			});
 		</script>
-		<script type="text/javascript" src="/res/scripts/main.js"></script>
+		<script type="text/javascript" src="res/scripts/main.js"></script>
 	</head>
 	<body class="claro">
 		<div id="selectBtn"></div>

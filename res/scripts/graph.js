@@ -438,11 +438,11 @@ LcPlot = function(container, opts) {
 		var range = "&x1=" + this.ViewRange.x.min + "&x2=" + this.ViewRange.x.max + "&y1=" + this.ViewRange.y.min + "&y2=" + this.ViewRange.y.max;
 		if (this.Options.show.ms1smooth) {
 			this.MS1SmoothGroup.remove(this.MS1Smooth);
-			this.MS1Smooth = this.MS1SmoothGroup.createImage({ x:this.Padding[0], y:this.Padding[1], width:this.Width, height:this.Height, src:"/lc?file=" + this.Options.file + "&n=" + this.Options.datafile + "&level=1s&contrast=" + value + range + "&w=" + this.Width + "&h=" + this.Height });
+			this.MS1Smooth = this.MS1SmoothGroup.createImage({ x:this.Padding[0], y:this.Padding[1], width:this.Width, height:this.Height, src:"lc?file=" + this.Options.file + "&n=" + this.Options.datafile + "&level=1s&contrast=" + value + range + "&w=" + this.Width + "&h=" + this.Height });
 		}
 		if (this.Options.show.ms1points) {
 			this.MS1PointsGroup.remove(this.MS1Points);
-			this.MS1Points = this.MS1PointsGroup.createImage({ x:this.Padding[0], y:this.Padding[1], width:this.Width, height:this.Height, src:"/lc?file=" + this.Options.file + "&n=" + this.Options.datafile + "&level=1p&contrast=" + value + range + "&w=" + this.Width + "&h=" + this.Height });
+			this.MS1Points = this.MS1PointsGroup.createImage({ x:this.Padding[0], y:this.Padding[1], width:this.Width, height:this.Height, src:"lc?file=" + this.Options.file + "&n=" + this.Options.datafile + "&level=1p&contrast=" + value + range + "&w=" + this.Width + "&h=" + this.Height });
 		}
 		this.Options.contrast = value;
 	}
@@ -451,7 +451,7 @@ LcPlot = function(container, opts) {
 		var range = "&x1=" + this.ViewRange.x.min + "&x2=" + this.ViewRange.x.max + "&y1=" + this.ViewRange.y.min + "&y2=" + this.ViewRange.y.max;
 		if (show.ms1smooth != this.Options.show.ms1smooth) {
 			if (show.ms1smooth) {
-				this.MS1Smooth = this.MS1SmoothGroup.createImage({ x:this.Padding[0], y:this.Padding[1], width:this.Width, height:this.Height, src:"/lc?file=" + this.Options.file + "&n=" + this.Options.datafile + "&level=1s&contrast=" + this.Options.contrast + range + "&w=" + this.Width + "&h=" + this.Height });
+				this.MS1Smooth = this.MS1SmoothGroup.createImage({ x:this.Padding[0], y:this.Padding[1], width:this.Width, height:this.Height, src:"lc?file=" + this.Options.file + "&n=" + this.Options.datafile + "&level=1s&contrast=" + this.Options.contrast + range + "&w=" + this.Width + "&h=" + this.Height });
 			} else if (this.MS1Smooth != null) {
 				this.MS1SmoothGroup.remove(this.MS1Smooth);
 				this.MS1Smooth = null;
@@ -460,7 +460,7 @@ LcPlot = function(container, opts) {
 		}
 		if (show.ms1points != this.Options.show.ms1points) {
 			if (show.ms1points) {
-				this.MS1Points = this.MS1PointsGroup.createImage({ x:this.Padding[0], y:this.Padding[1], width:this.Width, height:this.Height, src:"/lc?file=" + this.Options.file + "&n=" + this.Options.datafile + "&level=1p&contrast=" + this.Options.contrast + range + "&w=" + this.Width + "&h=" + this.Height });
+				this.MS1Points = this.MS1PointsGroup.createImage({ x:this.Padding[0], y:this.Padding[1], width:this.Width, height:this.Height, src:"lc?file=" + this.Options.file + "&n=" + this.Options.datafile + "&level=1p&contrast=" + this.Options.contrast + range + "&w=" + this.Width + "&h=" + this.Height });
 			} else if (this.MS1Points != null) {
 				this.MS1PointsGroup.remove(this.MS1Points);
 				this.MS1Points = null;
@@ -469,7 +469,7 @@ LcPlot = function(container, opts) {
 		}
 		if (show.ms2 != this.Options.show.ms2) {
 			if (show.ms2) {
-				this.MS2 = this.MS2Group.createImage({ x:this.Padding[0], y:this.Padding[1], width:this.Width, height:this.Height, src:"/lc?file=" + this.Options.file + "&n=" + this.Options.datafile + "&level=2" + range + "&w=" + this.Width + "&h=" + this.Height });
+				this.MS2 = this.MS2Group.createImage({ x:this.Padding[0], y:this.Padding[1], width:this.Width, height:this.Height, src:"lc?file=" + this.Options.file + "&n=" + this.Options.datafile + "&level=2" + range + "&w=" + this.Width + "&h=" + this.Height });
 			} else if (this.MS2 != null) {
 				this.MS2Group.remove(this.MS2);
 				this.MS2 = null;
@@ -496,15 +496,15 @@ LcPlot = function(container, opts) {
 		range = range ? "&x1=" + range.x.min + "&x2=" + range.x.max + "&y1=" + range.y.min + "&y2=" + range.y.max : "";
 		if (this.Options.show.ms1smooth) {
 			this.MS1SmoothGroup.remove(this.MS1Smooth);
-			this.MS1Smooth = this.MS1SmoothGroup.createImage({ x:this.Padding[0], y:this.Padding[1], width:this.Width, height:this.Height, src:"/lc?file=" + this.Options.file + "&n=" + this.Options.datafile + "&level=1s&contrast=" + this.Options.contrast + range + "&w=" + this.Width + "&h=" + this.Height });
+			this.MS1Smooth = this.MS1SmoothGroup.createImage({ x:this.Padding[0], y:this.Padding[1], width:this.Width, height:this.Height, src:"lc?file=" + this.Options.file + "&n=" + this.Options.datafile + "&level=1s&contrast=" + this.Options.contrast + range + "&w=" + this.Width + "&h=" + this.Height });
 		}
 		if (this.Options.show.ms1points) {
 			this.MS1PointsGroup.remove(this.MS1Points);
-			this.MS1Points = this.MS1PointsGroup.createImage({ x:this.Padding[0], y:this.Padding[1], width:this.Width, height:this.Height, src:"/lc?file=" + this.Options.file + "&n=" + this.Options.datafile + "&level=1p&contrast=" + this.Options.contrast + range + "&w=" + this.Width + "&h=" + this.Height });
+			this.MS1Points = this.MS1PointsGroup.createImage({ x:this.Padding[0], y:this.Padding[1], width:this.Width, height:this.Height, src:"lc?file=" + this.Options.file + "&n=" + this.Options.datafile + "&level=1p&contrast=" + this.Options.contrast + range + "&w=" + this.Width + "&h=" + this.Height });
 		}
 		if (this.Options.show.ms2) {
 			this.MS2Group.remove(this.MS2);
-			this.MS2 = this.MS2Group.createImage({ x:this.Padding[0], y:this.Padding[1], width:this.Width, height:this.Height, src:"/lc?file=" + this.Options.file + "&n=" + this.Options.datafile + "&level=2" + range + "&w=" + this.Width + "&h=" + this.Height });
+			this.MS2 = this.MS2Group.createImage({ x:this.Padding[0], y:this.Padding[1], width:this.Width, height:this.Height, src:"lc?file=" + this.Options.file + "&n=" + this.Options.datafile + "&level=2" + range + "&w=" + this.Width + "&h=" + this.Height });
 		}
 		return true;
 	}
@@ -518,17 +518,17 @@ LcPlot = function(container, opts) {
 		this.MS1PointsGroup = this.Surface.createGroup();
 		this.MS2Group = this.Surface.createGroup();
 		if (this.Options.show.ms1smooth) {
-			this.MS1Smooth = this.MS1SmoothGroup.createImage({ x:this.Padding[0], y:this.Padding[1], width:this.Width, height:this.Height, src:"/lc?file=" + this.Options.file + "&n=" + this.Options.datafile + "&level=1s&contrast=0.5&w=" + this.Width + "&h=" + this.Height });
+			this.MS1Smooth = this.MS1SmoothGroup.createImage({ x:this.Padding[0], y:this.Padding[1], width:this.Width, height:this.Height, src:"lc?file=" + this.Options.file + "&n=" + this.Options.datafile + "&level=1s&contrast=0.5&w=" + this.Width + "&h=" + this.Height });
 		} else {
 			this.MS1Smooth = null;
 		}
 		if (this.Options.show.ms1points) {
-			this.MS1Points = this.MS1PointsGroup.createImage({ x:this.Padding[0], y:this.Padding[1], width:this.Width, height:this.Height, src:"/lc?file=" + this.Options.file + "&n=" + this.Options.datafile + "&level=1p&contrast=0.5&w=" + this.Width + "&h=" + this.Height });
+			this.MS1Points = this.MS1PointsGroup.createImage({ x:this.Padding[0], y:this.Padding[1], width:this.Width, height:this.Height, src:"lc?file=" + this.Options.file + "&n=" + this.Options.datafile + "&level=1p&contrast=0.5&w=" + this.Width + "&h=" + this.Height });
 		} else {
 			this.MS1Points = null;
 		}
 		if (this.Options.show.ms2) {
-			this.MS2 = this.MS2Group.createImage({ x:this.Padding[0], y:this.Padding[1], width:this.Width, height:this.Height, src:"/lc?file=" + this.Options.file + "&n=" + this.Options.datafile + "&level=2&w=" + this.Width + "&h=" + this.Height });
+			this.MS2 = this.MS2Group.createImage({ x:this.Padding[0], y:this.Padding[1], width:this.Width, height:this.Height, src:"lc?file=" + this.Options.file + "&n=" + this.Options.datafile + "&level=2&w=" + this.Width + "&h=" + this.Height });
 		} else {
 			this.MS2 = null;
 		}

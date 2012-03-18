@@ -1,6 +1,6 @@
 This file could not be found while initializing your results.<br/>
 If you have a copy of the file you can upload it with the form below.<br/>
-<form id="missing_form_${query.n}" action="/add?file=${query.file}&n=${query.n}" onsubmit="return false;" enctype="multipart/form-data">
+<form id="missing_form_${query.n}" action="add?file=${query.file}&n=${query.n}" onsubmit="return false;" enctype="multipart/form-data">
 	File: <input id="selectBtn${query.n}" type="file" /> <span id="fileToUpload${query.n}"></span><br/>
 	Type: 
 	<select name="type" id="missing_type_${query.n}">
@@ -38,7 +38,7 @@ if (type >= 10) {
 uploader${query.n} = new dojox.form.Uploader({
 	name:"data",
 	label:"Select File",
-	uploadUrl:"/add?file=${query.file}&n=${query.n}",
+	uploadUrl:"add?file=${query.file}&n=${query.n}",
 }, "selectBtn${query.n}");
 uploader${query.n}.startup();
 
