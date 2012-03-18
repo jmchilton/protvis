@@ -2,15 +2,18 @@
 
   Quick installation is only avaliable for unix systems. Windows users must follow the manual installation instructions in Section 2
   For easy installation there you can use the script
-  ./setup.sh
+  > ./setup.sh
   This will attempt to install python, setuptools and virtualenv through your distributions package manager if they are not present.
+  other pakages are also downloaded into a local working copy, and will not affect the system configuration
   blast+ is downloaded and installed into bin/ if they are not present on your system
 
   The system is installed into a virtual environment in the current working directory.
   This will also install pyramid and a number of other dependancies into the virtual environment. No permissions are required for installing these packages
 
   Once installed you can run the server with
-  ./run
+  > ./run --daemon
+  And stop it with
+  > ./run --stop-daemon
 
 2. Manual Installation
 
@@ -29,31 +32,78 @@
   blast+                            ftp://ftp.ncbi.nlm.nih.gov/blast/executables/blast+/LATEST
 
   2.1 Setting up with a virtual environment
-    Install virtualenv with either your package manager, or the easy_install script, then from the root directory of protvis run
-    virtualenv --no-site-packages env
-    cd env
-    bin/easy_install pyramid
-    #now run the server
-    cd ..
-    ./run
+    Install virtualenv with either your package manager, or the easy_install script, then from the root directory of ProtVis run
+    > virtualenv --no-site-packages env
+    > cd env
+    > bin/easy_install pyramid
+    > #now run the server
+    > cd ..
+    > ./run
 
   2.2 Installing into your system python
-    easy_install pyramid
-    #now run the server
-    ./Server.py
+    > easy_install pyramid
+    > #now run the server
+    > ./Server.py
 
   2.3 Installing blast+ (Optional)
-    blast+ allows protvis to generate coverage graphs for peptides in a protein
+    blast+ allows ProtVis to generate coverage graphs for peptides in a protein
 
     If blast+ is already installed on your system you need to make links to it in the bin/ directory
-    ln -s `which makeblastdb` bin/makeblastdb
-    ln -s `which blastdbcmd` bin/blastdbcmd
+    > ln -s `which makeblastdb` bin/makeblastdb
+    > ln -s `which blastdbcmd` bin/blastdbcmd
 
     If you don't have blast+ and do not wish to install it into your system, you can download the latest version from
     ftp://ftp.ncbi.nlm.nih.gov/blast/executables/blast+/LATEST and extract makeblastdb and blastdbcmd into bin/
 
     Restart the HTTP server once installed for changes to take effect
 
-3. Development
+3. Working with other web servers
+  ProtVis can be configured to run underneath either Apache or nginx.
+  Other web servers are also possible, however no configuration files are generated
+  
+  3.1 Apache 2.X
+    Note: apache2 is often called httpd. If you cannot find any of the directories or commands with the name apache2, try looking for httpd
+    ProtVis runs as a plugin module of Apache via mod_wsgi.
+  
+    Generate a base configuration file:
+      > ./wsgi.sh
+    
+    OPTIONAL: If you would like the server to run as someone other than your current user:
+      Find the line starting with "WSGIDaemonProcess" in ProtVis.conf and change "user=" and "group=" acordingly
+      
+    Copy the configuration file into your Apache sites or configuration directory:
+      Installing as an avaliable site (recomended) (root user may be required):
+        Copy the file ProtVis.conf into your Apache sites-avaliable directory, usually /etc/apache2/sites-avaliable and remove the .conf file extension
+          > cp ProtVis.conf /etc/apache2/sites-available/ProtVis
+        Enable the site
+          > a2enmod ProtVis
+    
+      Installing as a configuration (easy) (root user may be required):
+        Copy the file ProtVis.conf into your Apache configuration directory, usually /etc/apache2/conf.d
+          > cp ProtVis.conf /etc/apache2/conf.d/
+    
+    Reload the Apache web server (root user may be required):
+      > service apache2 reload
+      OR
+      > /etc/init.d/apache2 restart
+  
+  3.2 nginx
+    nginx is simply used as a proxy to the ProtVis server.
+    You must have the ProtVis server running, although it does not need to be externally accessible.
+    
+    Start the server daemon and generate a default configuration:
+      > ./run --daemon=nginx
+      This will generate ProtVis.conf
+      
+    Copy ProtVis.conf into 1 of your include directories (root user may be required):
+      The default include directories are usually /etc/nginx/conf.d/ (prefered) AND /etc/nginx/sites-enabled/
+      > cp ProtVis.conf /etc/nginx/conf.d/ 
+
+    Reload the nginx web server (root user may be required):
+      > service nginx reload
+      OR
+      > /etc/init.d/nginx reload
+
+4. Development
   The script ./dojo_build is for recompiling the dojo library if you add additional dojo dependencies.
-  This script requires either java or node. If neither is installed you will be given the option to install one of them in the script
+  This script requires either java or node. If neither is installed you will be given the option to install one of when running the script
