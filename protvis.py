@@ -885,14 +885,15 @@ def main(*args, **kwargs):
 	if not os.path.exists(converted):
 		os.makedirs(converted)
 	if len(parameters.PROTEIN_DATABASES) > 0:
-		print " + Validating protein databases indexes"
-		for f in parameters.PROTEIN_DATABASES:
-			p = subprocess.Popen([parameters.HOME + "/bin/blastdbcmd", "-db", f, "-info"], stderr=subprocess.PIPE, stdout=subprocess.PIPE)
-			(out, err) = p.communicate()
-			p.stderr.close()
-			p.stdout.close()
-			if p.wait() != 0:
-				subprocess.call([parameters.HOME + "/bin/makeblastdb", "-in", f, "-parse_seqids"])
+		if os.path.exists(parameters.HOME + "/bin/blastdbcmd") and os.path.exists(parameters.HOME + "/bin/makeblastdb"):
+			print " + Validating protein databases indexes"
+			for f in parameters.PROTEIN_DATABASES:
+				p = subprocess.Popen([parameters.HOME + "/bin/blastdbcmd", "-db", f, "-info"], stderr=subprocess.PIPE, stdout=subprocess.PIPE)
+				(out, err) = p.communicate()
+				p.stderr.close()
+				p.stdout.close()
+				if p.wait() != 0:
+					subprocess.call([parameters.HOME + "/bin/makeblastdb", "-in", f, "-parse_seqids"])
 	Threads = {}
 	JobsTotal = 0
 	Database.start()

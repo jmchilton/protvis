@@ -93,7 +93,7 @@ dl() {
 	elif [ "x`which wget 2>/dev/null`" != "x" ]; then
 		wget $1 -O-
 	else
-		python -c "import urllib; s=urllib.urlopen('$1').read(); f=open('$2', 'wb'); f.write(s); f.close(); exit(len(s) == 0)"
+		python -c "import urllib, sys; s=urllib.urlopen('$1').read(); sys.stdout.write(s); exit(len(s) == 0)"
 	fi
 }
 

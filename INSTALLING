@@ -4,7 +4,7 @@
   For easy installation you can use the setup script.
   This script will download missing/new packages from the internet and install them into a local directory, without affecting your system
   To install missing packages which will affect the system, such as compiler, supply the option --install-missing
-    > ./setup.sh --install-missing
+    > ./setup.sh --auto-install
     OR
     > ./setup.sh
   This will attempt to install python, setuptools and virtualenv through your distributions package manager if they are not present.
