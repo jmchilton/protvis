@@ -1,127 +1,301 @@
 #!/bin/sh
 
 config="config.mk"
+log="config.log"
 includes=""
 libs=""
+allow_install=0
 
 usage() {
 	cat <<%%%
---include=<dir>   add include directory to search path
---lib=<dir>       add library directory ro search path
+Usage: ./setup.sh [OPTIONS]
+
+Where [OPTIONS] can be any combination of:
+  --include=<dir>   add include directory to search path
+  --lib=<dir>       add library directory ro search path
+  --auto-install    Automatically download and compile any libraries that are
+                    missing.
+                    This will not do anything that affects the system, such as
+                    download compilers.
+                    It is recomended to install the dev/devel version of any
+                    missing packages through your package manager
 %%%
 }
 
 cpptestinc() {
 	echo -n "Searching for $1 headers: "
-	shift
-	for i in $@; do
+	echo "Searching for $1 headers: " >> $log
+	_get=$2
+	shift 2
+	for _i in $@; do
 		cat > __test.cpp <<%%%
-#include <$i>
+#include <$_i>
 int main() { return 0; }
 %%%
-		$cpp __test.cpp -c -o __test.o $incdirs $libdirs 2>/dev/null 1>/dev/null
+		_cmd="$cpp __test.cpp -c -o __test.o $incdirs $libdirs"
+		echo $_cmd >> $log
+		cat __test.cpp >> $log
+		$_cmd 2>>$log 1>>$log
 		if [ $? -eq 0 ] && [ -e __test.o ]; then
-			echo "$i"
-			includes="$includes $i"
+			echo "$_i"
+			echo "Found with $_i" >> $log
+			includes="$includes $_i"
 			rm __test.cpp __test.o 2>/dev/null
 			return
 		fi
 	done
-	echo "(Not found)"
-	echo "Tried: $*"
+	echo "(Not found)" | tee -a $log
+	echo "Tried: $*" | tee -a $log
 	rm __test.cpp 2>/dev/null
-	exit 2
+	if [ $allow_install -eq 0 ]; then
+		echo "Use the --auto-install option to automatically download and compile missing libraries"
+		exit 2
+	else
+		$_get
+	fi
 }
 
 cpptestlib() {
 	echo -n "Searching for $1 library: "
+	echo "Searching for $1 library: " >> $log
+	_get=$2
 	rm -f __test.cpp 2>/dev/null
-	for i in $2; do
-		echo "#include <$i>" >> __test.cpp
+	for _i in $3; do
+		echo "#include <$_i>" >> __test.cpp
 	done
 	echo "int main() { return 0; }" >> __test.cpp
-	shift 2
-	for i in $@; do
-		$cpp __test.cpp -o __test.o $incdirs $libdirs $i 2>/dev/null 1>/dev/null
+	shift 3
+	for _i in $@; do
+		_cmd="$cpp __test.cpp -o __test.o $incdirs $libdirs $_i"
+		echo $_cmd >> $log
+		cat __test.cpp >> $log
+		$_cmd 2>>$log 1>>$log
 		if [ $? -eq 0 ] && [ -e __test.o ]; then
-			echo "$i"
-			libs="$libs $i"
+			echo "$_i"
+			echo "Found with $_i" >> $log
+			libs="$libs $_i"
 			rm __test.cpp __test.o 2>/dev/null
 			return
 		fi
 	done
-	echo "(Not found)"
-	echo "Tried: $*"
+	echo "(Not found)" | tee -a $log
+	echo "Tried: $*" | tee -a $log
 	rm __test.cpp 2>/dev/null
-	exit 2
+	if [ $allow_install -eq 0 ]; then
+		echo "Use the --auto-install option to automatically download and compile missing libraries"
+		exit 2
+	else
+		$_get
+	fi
 }
 
 findtool() {
-	var=$1
+	_var=$1
 	echo -n "Searching for $2: "
+	echo "Searching for $2: " >> $log
 	shift 2
-	for i in $@; do
-		if [ "`which $i`" != "" ]; then
-			echo $i
-			echo "$var=$i" >> $config
+	for _i in $@; do
+		echo "Trying $_i" >> $log
+		if [ "`which $_i`" != "" ]; then
+			echo $_i
+			echo "Found at $_i" >> $log
+			echo "$_var=$_i" >> $config
 			return
 		fi
 	done
-	echo "(Not found)"
-	echo "Tried: $*"
+	echo "(Not found)" | tee -a $log
+	echo "Tried: $*" | tee -a $log
 	exit 2
 }
 
 findtool2() {
-	for i in $@; do
-		if [ "`which $i`" != "" ]; then
-			echo $i
+	for _i in $@; do
+		if [ "`which $_i`" != "" ]; then
+			echo $_i
 			return
 		fi
 	done
 }
 
+dl() {
+	echo "Downloading file $1 to $2" >> $log
+	if [ `which curl 2>/dev/null` ]; then
+		curl "$1" -o "$2" 2>$log
+	elif [ `which wget 2>/dev/null` ]; then
+		wget "$1" -O "$2" 2>$log
+	else
+		python -c "import urllib; s=urllib.urlopen('$1').read(); f=open('$2', 'wb'); f.write(s); f.close(); exit(len(s) == 0)" 2>$log
+	fi
+}
+
+fail() {
+	echo "Critical error" | tee -a $log
+	exit 1
+}
+
+getlib() { #name url filename incdir libdir configure_opts
+	echo -n "Auto installing $1:"
+	echo "Auto installing $1" >>$log
+	_cwd=`pwd`
+	mkdir Libraries 2>/dev/null
+	cd Libraries
+	for _i in $4; do
+		incdirs="$incdirs -I`pwd`/$3$_i"
+	done
+	if [ "x$5" != "x__no_lib__" ]; then
+		for _i in $5; do
+			libdirs="$libdirs -L`pwd`/$3$_i"
+		done
+	fi
+	_do_config=0
+	if [ ! -e "$3/" ]; then
+		echo -n " Downloading..."
+		echo "Downloading $1" >>$log
+		if [ ! -e $3.tar.gz ]; then
+			dl $2 $3.tar.gz
+			if [ $? -ne 0 ]; then
+				echo ""
+				echo "Failed to get $1" | tee -a $log
+				exit 1
+			fi
+		else
+			echo "$3 has already been downloaded, but extracted" >>$log
+		fi
+		tar xf $3.tar.gz
+		rm $3.tar.gz 2>/dev/null
+		_do_config=1
+	else
+		echo "$3 has already been downloaded and extracted" >>$log
+	fi
+	if [ "x$6" != "x__no_compile__" ]; then
+		if [ $_do_config -ne 0 ] || [ ! -e $3/Makefile ]; then
+			cd $3
+			echo -n " Configuring..."
+			echo "Configuring $1" >>$log
+			echo "./configure $6" >>$log
+			./configure $6 2>>$log 1>>$log
+			if [ $? -ne 0 ]; then
+				echo ""
+				echo "Error occured while configuring $1" | tee -a $log
+				echo "You will need to configure and compile the code in C/Libraries/$3 or install $1 development files to your system then re-run this script"
+				exit 1
+			fi
+			cd ..
+		fi
+		cd $3
+		echo -n " Compiling..."
+		echo "Compiling $1" >>$log
+		make -s 2>>$log 1>>$log
+		if [ $? -ne 0 ]; then
+			echo ""
+			echo "Error occured while compiling $1" | tee -a $log
+			echo "You will need to compile the code in C/Libraries/$3 or install $1 development files to your system"
+			exit 1
+		fi
+	else
+		echo "Skipping compile step due to no_compile flag" >>$log
+	fi
+	echo " Done"
+	cd $_cwd
+}
+
+getzlib() { 
+	_file="zlib-1.2.6"
+	echo "Auto-install zlib $_file" >> $log
+	zlib="`pwd`/Libraries/$_file"
+	getlib "zlib" "http://zlib.net/$_file.tar.gz" "$_file" "/" "/"
+	includes="$includes zlib.h"
+}
+
+getlibpng() {
+	_file="libpng-1.5.9"
+	echo "Auto-install libpng $_file" >> $log
+	if [ "$zlib" ]; then
+		oldld=$LDFLAGS
+		oldcpp=$CPPFLAGS
+		export LDFLAGS="-L$zlib"
+		export CPPFLAGS="-I$zlib -fPIC"
+	fi
+	getlib "libpng" "http://aarnet.dl.sourceforge.net/project/libpng/libpng15/1.5.9/$_file.tar.gz" "$_file" "/" "/.libs" "-q"
+	if [ ! -e "Libraries/$_file/.libs/libpng.a" ]; then
+		ln -s libpng15.a Libraries/$_file/.libs/libpng.a
+	fi
+	if [ "$zlib" ]; then
+		export LDFLAGS=$oldld
+		export LDFLAGS=$oldcpp
+	fi
+	includes="$includes png.h"
+}
+
+getexpat() {
+	_file="expat-2.1.0-beta3"
+	echo "Auto-install expat $_file" >> $log
+	getlib "expat" "http://aarnet.dl.sourceforge.net/project/expat/expat/2.1.0/$_file.tar.gz" "expat-2012-03-11" "/lib" "/.libs" "-q"
+	includes="$includes expat.h"
+}
+
+getboost() {
+	_file="boost_1_49_0"
+	echo "Auto-install boost $_file" >> $log
+	getlib "boost" "http://aarnet.dl.sourceforge.net/project/boost/boost/1.49.0/$_file.tar.gz" "$_file" "/" __no_lib__ __no_compile__
+
+}
+
+getpython() {
+	_file="Python-2.7.2"
+	echo "Auto-install python $_file" >> $log
+	getlib "python" "http://www.python.org/ftp/python/2.7.2/$_file.tgz" "$_file" "/ /Include" "/" "-q"
+	includes="$includes Python.h"
+}
+
+
 incdirs=""
 libdirs=""
 
-for arg in $@; do
-	case "$arg" in
-		--include=*) incdirs="$incdirs -I`echo "$arg" | cut -b 11-`";;
-		--lib=*) libdirs="$libdirs -L`echo "$arg" | cut -b 7-`";;
+rm $config 2>/dev/null
+rm $log 2>/dev/null
+
+echo "Got options $@" >> $log
+
+for _arg in $@; do
+	case "$_arg" in
+		--include=*) incdirs="$incdirs -I `echo "$_arg" | cut -b 11-`";;
+		--lib=*) libdirs="$libdirs -Xlinker \"-L`echo "$_arg" | cut -b 7-`\"";;
+		--auto-install) allow_install=1;;
 		--help) usage;;
 		*)
-			echo "Unrecognised option '$arg'"
+			echo "Unrecognised option '$_arg'"
 			usage
-			exit 1;;
+			exit 1
+			;;
 	esac
 done
 
-rm $config 2>/dev/null
-echo -n "Searching for C++ compiler: "
+echo -n "Searching for C++ compiler: " | tee -a $log
 cpp=`findtool2 g++ gpp`
-if [ "x$cpp" != "x" ]; then
-	echo $cpp
+if [ "$cpp" ]; then
+	echo $cpp | tee -a $log
 	echo "CC=$cpp" >> $config
 else
-	echo "(Not found)"
-	exit
+	echo "(Not found)" | tee -a $log
+	exit 1
 fi
 
-cpptestinc "libpng" "png.h"
-cpptestlib "libpng" "png.h" "-lpng"
-cpptestinc "python" "Python.h" "python`../env/bin/python --version 2>&1 | awk '{print $2}' | cut -b -3`/Python.h"
-cpptestinc "malloc" "stdlib.h" "malloc.h" "malloc/malloc.h" "memory.h"
-cpptestinc "zlib" "zlib.h"
-cpptestlib "zlib" "zlib.h" "-lz"
-cpptestinc "expat" "expat.h"
-cpptestlib "expat" "expat.h" "-lexpat"
-cpptestinc "boost preprocessor" "expand.hpp" "boost/expand.hpp" "boost/preprocessor/expand.hpp"
+cpptestinc "malloc" "fail" "stdlib.h" "malloc.h" "malloc/malloc.h" "memory.h"
+cpptestinc "zlib" "getzlib" "zlib.h"
+cpptestlib "zlib" "getzlib" "zlib.h" "-lz"
+cpptestinc "libpng" "getlibpng" "png.h"
+cpptestlib "libpng" "getlibpng" "png.h" "-lpng"
+cpptestinc "expat" "getexpat" "expat.h"
+cpptestlib "expat" "getexpat" "expat.h" "-lexpat"
+cpptestinc "python" "getpython" "Python.h" "python`../env/bin/python --version 2>&1 | awk '{print $2}' | cut -b -3`/Python.h"
+cpptestinc "boost preprocessor" "getboost" "boost/preprocessor/expand.hpp"
 
 rm common/inc.h 2>/dev/null
 echo "#ifndef __COMMON_INC_H__" >> common/inc.h
 echo "#define __COMMON_INC_H__" >> common/inc.h
-for i in $includes; do
-	echo "#include <$i>" >> common/inc.h
+for _i in $includes; do
+	echo "#include <$_i>" >> common/inc.h
 done
 echo "#endif" >> common/inc.h
 
@@ -132,3 +306,4 @@ else
 fi
 echo "CFLAGS=\$(CFG_CFLAGS) $incdirs" >> $config
 echo "LDFLAGS=\$(CFG_LDFLAGS) $libdirs $libs" >> $config
+exit 0

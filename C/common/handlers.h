@@ -1,6 +1,7 @@
 #ifndef __TAGHANDLERS_H__
 	#define __TAGHANDLERS_H__
 
+	#include "inc.h"
 	#include "streams.h"
 	#include <boost/preprocessor/punctuation/comma_if.hpp>
 	#include <boost/preprocessor/list/for_each.hpp>

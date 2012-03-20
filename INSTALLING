@@ -1,8 +1,12 @@
 1. Quick Installation
 
   Quick installation is only avaliable for unix systems. Windows users must follow the manual installation instructions in Section 2
-  For easy installation there you can use the script
-  > ./setup.sh
+  For easy installation you can use the setup script.
+  This script will download missing/new packages from the internet and install them into a local directory, without affecting your system
+  To install missing packages which will affect the system, such as compiler, supply the option --install-missing
+    > ./setup.sh --install-missing
+    OR
+    > ./setup.sh
   This will attempt to install python, setuptools and virtualenv through your distributions package manager if they are not present.
   other pakages are also downloaded into a local working copy, and will not affect the system configuration
   blast+ is downloaded and installed into bin/ if they are not present on your system
@@ -11,9 +15,9 @@
   This will also install pyramid and a number of other dependancies into the virtual environment. No permissions are required for installing these packages
 
   Once installed you can run the server with
-  > ./run --daemon
+    > ./run --daemon
   And stop it with
-  > ./run --stop-daemon
+    > ./run --stop-daemon
 
 2. Manual Installation
 
@@ -30,15 +34,22 @@
   PACKAGE    PACKAGE MANAGER NAME   ALTERNATE INSTALLATION
   virtualenv python-virtualenv      easy_install "virtualenv"
   blast+                            ftp://ftp.ncbi.nlm.nih.gov/blast/executables/blast+/LATEST
+  make       make
+  g++        g++
+  zlib       zlibc                  http://zlib.net/zlib-1.2.6.tar.gz
+  libpng     libpng-dev             http://prdownloads.sourceforge.net/libpng/libpng-1.5.9.tar.gz
+  expat      libexpat1-dev          http://prdownloads.sourceforge.net/expat/expat-2.1.0-beta3.tar.gz
+  boost      libboost-dev           http://prdownloads.sourceforge.net/boost/boost_1_49_0.tar.gz
+  python dev python-dev             http://www.python.org/ftp/python/2.7.2/Python-2.7.2.tgz
 
   2.1 Setting up with a virtual environment
     Install virtualenv with either your package manager, or the easy_install script, then from the root directory of ProtVis run
-    > virtualenv --no-site-packages env
-    > cd env
-    > bin/easy_install pyramid
-    > #now run the server
-    > cd ..
-    > ./run
+      > virtualenv --no-site-packages env
+      > cd env
+      > bin/easy_install pyramid
+      > #now run the server
+      > cd ..
+      > ./run
 
   2.2 Installing into your system python
     > easy_install pyramid
@@ -49,8 +60,8 @@
     blast+ allows ProtVis to generate coverage graphs for peptides in a protein
 
     If blast+ is already installed on your system you need to make links to it in the bin/ directory
-    > ln -s `which makeblastdb` bin/makeblastdb
-    > ln -s `which blastdbcmd` bin/blastdbcmd
+      > ln -s `which makeblastdb` bin/makeblastdb
+      > ln -s `which blastdbcmd` bin/blastdbcmd
 
     If you don't have blast+ and do not wish to install it into your system, you can download the latest version from
     ftp://ftp.ncbi.nlm.nih.gov/blast/executables/blast+/LATEST and extract makeblastdb and blastdbcmd into bin/

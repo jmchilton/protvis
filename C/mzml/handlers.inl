@@ -1,5 +1,5 @@
 inline bool DecodeSpectrum(const char *szName, DWORD &nStartScan, DWORD &nEndScan, DWORD &nCharge, const char *szValidateName = NULL) {
-	const char *szStartPtr = NULL, *szEndPtr = NULL, *szChargePtr = NULL, *szPtr;
+	const char *szStartPtr = NULL, *szEndPtr = NULL, *szChargePtr = NULL, *szPtr = szName;
 	for (;;) {
 		szPtr = strchr(szPtr, '.');
 		if (szPtr == NULL) {

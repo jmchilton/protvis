@@ -1,36 +1,76 @@
 #!/bin/bash
 
+allow_install=0
+
+usage() {
+	cat <<%%%
+Usage: ./setup.sh [OPTIONS]
+
+Where [OPTIONS] can be any combination of:
+  --auto-install   Automatically download and install missing packages into
+                   your package manager.
+                   This option only affects system packages. Some packages
+                   will still be downloaded and installed into the local
+                   directory
+%%%
+}
+
+for arg in $@; do
+	case $arg in
+		--auto-install)
+			allow_install=1
+			;;
+		--help)
+			usage
+			exit 0
+			;;
+		*)
+			echo "Unrecognised argument $arg"
+			usage
+			exit 0
+			;;
+	esac
+done
+
 super() {
-	if [ "`which sudo` 2>/dev/null" != "" ]; then
-		sudo $@
-	elif [ "`which su` 2>/dev/null" != "" ]; then
+	if [ "x`which sudo 2>/dev/null`" != "x" ]; then
+		sudo -E $@
+	elif [ "x`which su 2>/dev/null`" != "x" ]; then
 		su -c "$@" `whoami`
+	elif [ "x`which pfexec 2>/dev/null`" != "x" ]; then
+		pfexec $@
 	else
 		$@
 	fi
 }
 
 get() {
-	if [ "`which apt-get` 2>/dev/null" != "" ]; then
-		super "apt-get install $1"
-	elif [ "`which yum` 2>/dev/null" != "" ]; then
-		super "yum install $1"
-	else
-		if [ "$2" = "" ]; then 
-			echo "Failed to install $1."
-			echo "The following packages are required before running: make python python-setuptools python-virtualenv"
-			echo "Exiting."
-			exit
+	if [ $allow_install -ne 0 ]; then
+		echo "$1 is not installed. Installing it now."
+		if [ "x`which apt-get 2>/dev/null`" != "x" ]; then
+			super apt-get install --yes $1
+		elif [ "x`which yum 2>/dev/null`" != "x" ]; then
+			super yum install $1
 		else
-			super "$2"
+			if [ "x$2" = "x" ]; then 
+				echo "Failed to install $1."
+				echo "The following packages are required before running: make python python-setuptools python-virtualenv make gcc g++"
+				exit
+			else
+				super "$2"
+			fi
 		fi
+	else
+		echo "$1 could not be located"
+		echo "The following packages are required before running: make python python-setuptools python-virtualenv make gcc g++"
+		echo "You can run this script with --auto-install to automatically install packages into your system"
+		exit
 	fi
 }
 
 bin_need() {
 	echo "Checking for $1"
-	if [ "`which $1` 2>/dev/null" = "" ]; then
-		echo "$1 is not installed. Installing it now."
+	if [ "`which $1 2>/dev/null`" = "" ]; then
 		get $1
 	else
 		echo "$1 is already installed"
@@ -39,20 +79,29 @@ bin_need() {
 
 py_need() {
 	echo "Checking for $1 package"
-	python 2>&1 1>/dev/null <<%%%
-import $1
-%%%
-	if [ $? -eq 1 ]; then
-		echo "$1 is not installed. Installing it now."
-		get "$1" "$2"
+	python -c "import $1" 2>/dev/null >/dev/null
+	if [ $? -ne 0 ]; then
+		get "python-$1" "$2"
 	else
 		echo "$1 is already installed"
 	fi
 }
 
+dl() {
+	if [ "x`which curl 2>/dev/null`" != "x" ]; then
+		curl $1
+	elif [ "x`which wget 2>/dev/null`" != "x" ]; then
+		wget $1 -O-
+	else
+		python -c "import urllib; s=urllib.urlopen('$1').read(); f=open('$2', 'wb'); f.write(s); f.close(); exit(len(s) == 0)"
+	fi
+}
+
 bin_need python
 bin_need make
-py_need "setuptools" "wget http://peak.telecommunity.com/dist/ez_setup.py -O- | super python"
+bin_need gcc
+bin_need g++
+py_need "setuptools" "dl http://peak.telecommunity.com/dist/ez_setup.py | super python"
 py_need "virtualenv" "easy_install virtualenv"
 
 echo "Checking for blast+"
@@ -65,13 +114,20 @@ if [ "`which makeblastdb 2>/dev/null`" == "" ] || [ "`which blastdbcmd 2>/dev/nu
 		else
 			arch="ia32"
 		fi
-		wget ftp://ftp.ncbi.nlm.nih.gov/blast/executables/blast+/2.2.25/ncbi-blast-2.2.25+-$arch-linux.tar.gz
-		tar xf ncbi-blast-2.2.25+-$arch-linux.tar.gz
-		rm ncbi-blast-2.2.25+-$arch-linux.tar.gz
-		mv ncbi-blast-2.2.25+/bin/makeblastdb ncbi-blast-2.2.25+/bin/blastdbcmd bin/
-		rm -rf ncbi-blast-2.2.25+
+		ver=2.2.25
+		dl ftp://ftp.ncbi.nlm.nih.gov/blast/executables/blast+/$ver/ncbi-blast-$ver+-$arch-linux.tar.gz > ncbi-blast-$ver+-$arch-linux.tar.gz
+		if [ $? -eq 0 ]; then
+			tar xf ncbi-blast-$ver+-$arch-linux.tar.gz
+			rm ncbi-blast-$ver+-$arch-linux.tar.gz 2>/dev/null
+			mv ncbi-blast-$ver+/bin/makeblastdb ncbi-blast-$ver+/bin/blastdbcmd bin/
+			rm -rf ncbi-blast-$ver+ 2>/dev/null
+		else
+			echo "Could not locate or get blast+. Please visit ftp://ftp.ncbi.nlm.nih.gov/blast/executables/blast+/LATEST to download and install blast+ either into `pwd`/bin or a location in PATH"
+			echo "This is an OPTIONAL feature"
+		fi
 	else
 		echo "Unrecognised OS. Please visit ftp://ftp.ncbi.nlm.nih.gov/blast/executables/blast+/LATEST to download and install blast+ either into `pwd`/bin or a location in PATH"
+		echo "This is an OPTIONAL feature"
 	fi
 else
 	ln -s `which makeblastdb` bin/makeblastdb
@@ -101,7 +157,7 @@ cd ..
 
 echo "Compiling C++ bindings"
 cd C
-./configure
+./configure --auto-install
 if [ $? -eq 0 ]; then
 	make -s
 	if [ $? -eq 0 ]; then
