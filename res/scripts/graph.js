@@ -73,6 +73,16 @@ BaseGraph = function(container, opts) {
 		x: { min:opts.axis.x.min, max:opts.axis.x.max },
 		y: { min:opts.axis.y.min, max:opts.axis.y.max }
 	};
+	if (this.ViewRange.x.max - this.ViewRange.x.min < 0.00001) {
+		var mid = (this.ViewRange.x.max + this.ViewRange.x.min) / 2;
+		this.ViewRange.x.min = mid - 0.000005;
+		this.ViewRange.x.max = mid + 0.000005;
+	}
+	if (this.ViewRange.y.max - this.ViewRange.y.min < 0.00001) {
+		var mid = (this.ViewRange.y.max + this.ViewRange.y.min) / 2;
+		this.ViewRange.y.min = mid - 0.000005;
+		this.ViewRange.y.max = mid + 0.000005;
+	}
 	
 	this.MixInOptions = function(opts) {
 		MixIn(this.Options, opts);
