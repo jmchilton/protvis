@@ -451,11 +451,16 @@ FlowChart = function(parent, files, OnSelect) {
 		}
 	}
 	//layout each column
-	var height = GetBoxHeight(columns, files, 0, columns[0][0]);
-	height = CalcGroupHeight(height);
-	OffsetChain(files, columns, columns[0][0], 0, height / 2);
-
-	this.Surface = dojox.gfx.createSurface(parent, 10 + BoxHSpacing * (columns.length - 1) + BoxWidth * columns.length + 10, height + 6 + BoxSlots * BoxSlotSpacing);
+	var col = columns[0];
+	var offset = 0;
+	for (var i in col) {
+		var height = GetBoxHeight(columns, files, 0, col[i]);
+		height = CalcGroupHeight(height);
+		OffsetChain(files, columns, col[i], 0, offset + height / 2);
+		offset += height + 20;
+	}
+	offset -= 20;
+	this.Surface = dojox.gfx.createSurface(parent, 10 + BoxHSpacing * (columns.length - 1) + BoxWidth * columns.length + 10, offset + 6 + BoxSlots * BoxSlotSpacing);
 	var filter = document.createElementNS("http://www.w3.org/2000/svg", "filter");
 	filter.id = "text_shadow_filter";
 	filter.setAttribute("x", "0");

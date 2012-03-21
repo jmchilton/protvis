@@ -12,7 +12,44 @@ ProtVis works as a standalone tool where files can be uploaded, or integrated di
 
 ***
 
-## Installation
+## Quick installation
+
+Firstly make sure you have Mercurial installed to be able to download the code.
+On Debian/Ubuntu:
+
+    sudo apt-get install mercurial
+
+On Red Hat/CentOS: You may need to append your platform on the end of the name
+
+    sudo yum install mercurial  #Possibly  mercurial.i386  OR  mercurial.x86_64
+
+Once you have mercurial, you can clone the repositories and run them.
+Copy and paste one of the following script into the shell on a unix/linux or OSX computer in a directory where you have write permission.
+
+Running without galaxy:
+
+    hg clone https://bitbucket.org/Andrew_Brock/proteomics-visualise
+    cd proteomics-visualise
+    ./setup.sh --auto-install
+    ./run --daemon --port=8500
+    
+Running with galaxy:
+
+    hg clone https://bitbucket.org/iracooke/galaxy-proteomics
+    galaxy-proteomics/run.sh --daemon
+    hg clone https://bitbucket.org/Andrew_Brock/proteomics-visualise
+    cat >proteomics-visualise/conf.py <<%%%
+    GALAXY_ROOT = "`pwd`/galaxy-proteomics"
+    PATH_WHITELIST = [GALAXY_ROOT + "/database/files/"]
+    %%%
+    proteomics-visualise/setup.sh --auto-install
+    proteomics-visualise/run --daemon --port=8500
+
+You can now connect to the ProtVis server on [http://127.0.0.1:8500](http://127.0.0.1:8500) and the Galaxy server (if installed) on [http://127.0.0.1:8080](http://127.0.0.1:8080)
+
+***
+
+## Full installation
 
 See INSTALLING for a more detailed set of instructions.
 
@@ -67,10 +104,10 @@ To stop the running daemon server use
 
 ## Using the web interface
 
-To connect to a default configuration navigate to [http://127.0.0.1:8000](http://127.0.0.1:8000)
+To connect to a default configuration of ProtVis navigate to [http://127.0.0.1:8000](http://127.0.0.1:8000) in your web browser.
 
 If you started the server with `--address=A.B.C.D --port=E` you can navigate to `http://A.B.C.D:E`, or if `--port=80` you only need the address `http://A.B.C.D`.
-_Note: You may need root (sudo) permission to run the server on port 1024 or lower._
+__Note: You may need root (sudo) permission to run the server on a ports 1-1024.__
 
 Once you have connected you can upload files for viewing with the form on the right.
 
@@ -95,40 +132,3 @@ The server URL for the galaxy integration is presently hard-coded to port 8500 i
     ./run --daemon --port=8500
 
 Now when you upload or process proteomics data with galaxy a link should appear in the green history boxes for viewing the data with ProtVis
-
-***
-
-## Complete installation in a script
-
-Copy and paste the following script into the shell on a unix/linux or OSX computer in a directory where you have write permission
-
-Make sure you have Mercurial installed
-On Debian/Ubuntu:
-
-    sudo apt-get install mercurial
-
-On Red Hat/CentOS: You may need to append your platform on the end of the name
-
-    sudo yum install mercurial  #Possibly  mercurial.i386  OR  mercurial.x86_64
-
-Once you have mercurial, you can clone the repositories and run them.
-Running without galaxy:
-
-    hg clone https://bitbucket.org/Andrew_Brock/proteomics-visualise
-    cd proteomics-visualise
-    ./setup.sh
-    ./run --daemon --port=8500
-    
-Running with galaxy:
-
-    hg clone https://bitbucket.org/iracooke/galaxy-proteomics
-    galaxy-proteomics/run.sh --daemon
-    hg clone https://bitbucket.org/Andrew_Brock/proteomics-visualise
-    cat >proteomics-visualise/conf.py <<%%%
-    GALAXY_ROOT = "`pwd`/galaxy-proteomics"
-    PATH_WHITELIST = [GALAXY_ROOT + "/database/files/"]
-    %%%
-    proteomics-visualise/setup.sh
-    proteomics-visualise/run --daemon --port=8500
-
-You can now connect to the ProtVis server on [http://127.0.0.1:8500](http://127.0.0.1:8500) and the Galaxy server (if installed) on [http://127.0.0.1:8080](http://127.0.0.1:8080)
