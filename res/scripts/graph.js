@@ -32,14 +32,14 @@ BaseGraph = function(container, opts) {
 	this.Options = {
 		axis: {
 			x: {
-				format: FormatPrecision,//(value, precision)
+				format: FormatPrecision,//function(value, precision)
 				scale: 1,/*,
 				min: number,
 				max: number,
 				label: string [optional]*/
 			},
 			y: {
-				format: FormatPrecision,//(value, precision)
+				format: FormatPrecision,//function(value, precision)
 				scale: 1/*,
 				min: number,
 				max: number,

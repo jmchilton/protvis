@@ -55,11 +55,11 @@ static PyObject *GetOffsetFromSpectrum(PyObject *self, PyObject *args) {
 	}
 	FILE *pFile = fopen(szFileName, "r");
 	if (pFile != NULL) {
-		unsigned long nOffset = MzML::GetSpectrumOffset(pFile, szSpectrumName);
+		long nOffset = MzML::GetSpectrumOffset(pFile, szSpectrumName);
 		fclose(pFile);
-		return Py_BuildValue("k", nOffset);
+		return Py_BuildValue("i", nOffset);
 	}
-	return Py_BuildValue("");
+	return Py_BuildValue("i", -1);
 }
 
 static PyObject *Search(PyObject *self, PyObject *args) {
