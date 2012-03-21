@@ -78,7 +78,7 @@ SpecViewer = function(container, opts) {
 					var vr = dojo.clone(range);
 					var datasets = obj.getDatasets();
 					if (obj.PlotOptions.selection.axis.indexOf("y") < 0) {
-						var maxInt = 0;
+						var maxInt = Number.NEGATIVE_INFINITY;
 						for (var i in datasets) {
 							var d = datasets[i].data;
 							for (var j in d) {
@@ -88,7 +88,9 @@ SpecViewer = function(container, opts) {
 								}
 							}
 						}
-						range.y.max = maxInt * 1.1;
+						if (maxInt > 0) {
+							range.y.max = maxInt * 1.1;
+						}
 					}
 					if (obj.ZoomRange == null || range.x.min != obj.ZoomRange.x.min || range.x.max != obj.ZoomRange.x.max || range.y.max != obj.ZoomRange.y.min || range.y.min != obj.ZoomRange.y.max) {
 						ZoomHistory.push(obj.ZoomRange);
