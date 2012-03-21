@@ -55,6 +55,10 @@ BaseGraph = function(container, opts) {
 					this.Tooltip = null;
 				}
 			}
+		},
+		grid: {
+			color: "#abd6ff",//standard css color
+			axis: "" //any combination of 'x', 'y'
 		}/*,
 		selection: {
 			callback: function(isRange, range),
@@ -143,6 +147,7 @@ BaseGraph = function(container, opts) {
 			return {ticks:ticks, precision:scaleMag};
 		}
 
+		this.FrameGroup.clear();
 		this.FrameGroup.createRect({x:this.Padding[0] - 1, y:this.Padding[1] - 1, width:this.Width + 2, height:this.Height + 2}).setFill("white").setStroke({color:"black", width:1});
 		//x-axis
 		var ticks = Ticks(this.Width, 100, {min: this.ViewRange.x.min * this.Options.axis.x.scale, max: this.ViewRange.x.max * this.Options.axis.x.scale});
@@ -150,6 +155,9 @@ BaseGraph = function(container, opts) {
 			var x = (ticks.ticks[i] - this.ViewRange.x.min * this.Options.axis.x.scale) * this.ScaleX / this.Options.axis.x.scale + this.Padding[0];
 			this.FrameGroup.createLine({x1:x, y1:this.GraphBottom + 1, x2:x, y2:this.GraphBottom + 4}).setStroke({color:"black", width:1});
 			this.FrameGroup.createText({x:x, y:this.GraphBottom + 16, text:this.Options.axis.x.format(ticks.ticks[i], ticks.precision), align:"middle"}).setFont({family:"Arial", size:"10px"}).setFill("black");
+			if (this.Options.grid.axis.indexOf("x") >= 0) {
+				this.FrameGroup.createLine({x1:x, y1:this.Padding[1], x2:x, y2:this.GraphBottom}).setStroke({color:this.Options.grid.color, width:1, style:"Dash"});
+			}
 		}
 		if (this.Options.axis.x.label) {
 			this.FrameGroup.createText({x:this.Padding[0] + this.Width / 2, y:this.GraphBottom + 35, text:this.Options.axis.x.label, align:"middle"}).setFont({family:"Arial", size:"14px", weight:"bold"}).setFill("black");
@@ -160,6 +168,9 @@ BaseGraph = function(container, opts) {
 			var y = this.GraphBottom - (ticks.ticks[i] - this.ViewRange.y.min * this.Options.axis.y.scale) * this.ScaleY / this.Options.axis.y.scale;
 			this.FrameGroup.createLine({x1:this.Padding[0] - 1, y1:y, x2:this.Padding[0] - 4, y2:y}).setStroke({color:"black", width:1});
 			this.FrameGroup.createText({x:this.Padding[0] - 6, y:y + 4, text:this.Options.axis.y.format(ticks.ticks[i], ticks.precision), align:"end"}).setFont({family:"Arial", size:"10px"}).setFill("black");
+			if (this.Options.grid.axis.indexOf("y") >= 0) {
+				this.FrameGroup.createLine({x1:this.Padding[0], y1:y, x2:this.Padding[0] + this.Width, y2:y}).setStroke({color:this.Options.grid.color, width:1, style:"Dash"});
+			}
 		}
 		if (this.Options.axis.y.label) {
 			var y = this.Padding[1] + this.Height / 2;
@@ -191,6 +202,21 @@ BaseGraph = function(container, opts) {
 				this.ToolTipMove = null;
 				this.ToolTipOut = null;
 			}
+		}
+	}
+	
+	this.SetGrid = function(axis, color) {
+		var changed = false;
+		if (axis != undefined && axis != this.Options.grid.axis) {
+			this.Options.grid.axis = axis;
+			changed = true;
+		}
+		if (color != undefined && color != this.Options.grid.color) {
+			this.Options.grid.color = color;
+			changed = true;
+		}
+		if (changed) {
+			this.RenderFrame();
 		}
 	}
 
@@ -429,6 +455,9 @@ LcPlot = function(container, opts) {
 					this.HoverPoint = null;
 				}*/
 			}
+		},
+		grid: {
+			axis: "xy"
 		}
 	};
 	MixIn(defaults, opts);

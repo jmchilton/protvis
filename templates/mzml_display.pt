@@ -10,6 +10,7 @@
 		<div class="group">
 			<div class="head">Show:</div>
 			<div id="visible_${hash}">
+				<input style="margin-left:0" name="grid" type="checkbox" checked="checked"/>Grid Lines<br/>
 				<input style="margin-left:0" name="ms1smooth" type="checkbox"/>MS1 Smoothed<br/>
 				<input style="margin-left:0" name="ms1points" type="checkbox" checked="checked"/>MS1 Data Points<br/>
 				<input id="ms2_${hash}" style="margin-left:0" name="ms2" type="checkbox" checked="checked"/>MS2
@@ -159,9 +160,15 @@
 	dojo.query("#visible_${hash} input").forEach(function(node, index, arr) {
 		dojo.connect(node, "onclick", null, function(evt) {
 			var visible = {ms1smooth:false, ms1points:false, ms2: false};
+			var grid = "";
 			dojo.query("#visible_${hash} input:checked").forEach(function(node, index, arr) {
-				visible[node.name] = true;
+				if (node.name == "grid") {
+					grid = "xy";
+				} else {
+					visible[node.name] = true;
+				}
 			});
+			lc.SetGrid(grid);
 			lc.SetVisible(visible);
 			lc.SetTooltip(visible.ms2);
 		});

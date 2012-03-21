@@ -19,6 +19,7 @@
 						<nobr><button id="zoomundo_${hash}">Undo</button><button id="zoomout_${hash}">Show All</button></nobr>
 						<div class="head2">Misc:</div>
 						<nobr><input id="enableTooltip_${hash}" type="checkbox" checked="checked" style="margin-left:0">Enable tooltip</nobr><br/>
+						<nobr><input id="grid_${hash}" style="margin-left:0" type="checkbox" checked="checked"/>Grid Lines</nobr><br/>
 						<!--<input id="print_${hash}" type="button" value="Print" />-->
 					</div>
 					<div class="group">
@@ -245,6 +246,9 @@
 	});
 	dojo.connect(dojo.byId("enableTooltip_${hash}"), "onclick", null, function(evt) {
 		SpecView.SetTooltip(dojo.byId("enableTooltip_${hash}").checked);
+	});
+	dojo.connect(dojo.byId("grid_${hash}"), "onclick", null, function(evt) {
+		SpecView.SetGrid(dojo.byId("grid_${hash}").checked ? "xy" : "");
 	});
 	/*function printPlot() {
 		dojo.query("#print_${hash}", container).click(function() {

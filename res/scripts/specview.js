@@ -100,6 +100,9 @@ SpecViewer = function(container, opts) {
 					console.log(range.x, range.y);
 				}
 			}
+		},
+		grid: {
+			axis: "xy",
 		}
 	};
 
@@ -584,6 +587,18 @@ SpecViewer = function(container, opts) {
 		this.PlotOptions.tooltip.enable = show;
 		if (this.plot) {
 			this.plot.SetTooltip(show);
+		}
+	}
+
+	this.SetGrid = function(axis, color) {
+		if (axis != undefined) {
+			this.PlotOptions.grid.axis = axis;
+		}
+		if (color != undefined) {
+			this.PlotOptions.grid.color = color;
+		}
+		if (this.plot) {
+			this.plot.SetGrid(axis, color);
 		}
 	}
 
