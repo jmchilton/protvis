@@ -35,11 +35,11 @@ SpecViewer = function(container, opts) {
 		editable: false
 	};
 	if (Math.max(1, opts.charge - 1) >= 2) {
-		this.Options.selectedIons.append(["b", 2]);
-		this.Options.selectedIons.append(["y", 2]);
+		this.Options.selectedIons.push(["b", 2]);
+		this.Options.selectedIons.push(["y", 2]);
 		if (Math.max(1, opts.charge - 1) >= 3) {
-			this.Options.selectedIons.append(["b", 3]);
-			this.Options.selectedIons.append(["y", 3]);
+			this.Options.selectedIons.push(["b", 3]);
+			this.Options.selectedIons.push(["y", 3]);
 		}
 	}
 	dojo.mixin(this.Options, opts);
