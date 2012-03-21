@@ -818,7 +818,6 @@ def Spectrum(req):
 			r["style"] = DecodeDecoy(r["protein"])
 		except:
 			r["style"] = "row"
-	print filetype
 	parser = Parsers[Reference.FileType.NameBasic(filetype)]
 	if offset == None and datafile != None:
 		offset = parser.GetOffsetFromSpectrum(fname + "_" + str(datafile), spectrum)
