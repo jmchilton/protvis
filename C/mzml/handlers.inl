@@ -30,6 +30,7 @@ inline bool DecodeSpectrum(const char *szName, DWORD &nStartScan, DWORD &nEndSca
 		szStartPtr = szEndPtr;
 		szEndPtr = szChargePtr;
 		szChargePtr = szPtr;
+		++szPtr;
 	}
 }
 
