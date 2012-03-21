@@ -7,7 +7,7 @@ var BoxSlots = 3;
 var BoxWidth = 140;
 var BoxHeight = 45;
 var BoxHSpacing = 50, BoxVSpacing = (BoxSlots * 2 + 1) * BoxSlotSpacing, BoxVSize = BoxVSpacing + BoxHeight;
-var Colors = [ "#ff5900", "#0d56ff", "#4dde00", "#a600a6", "#ff9700", "#2618b1", "#1049a9", "#009999", "#e9003a" ];
+var Colors = [ "#BBBBBB", "#e9003a", "#a600a6", "#1049a9", "#0d56ff", "#009999", "#2618b1", "#ff7800", "#ff5900", "#ff9700", "#4dde00", "#4dde00" ];
 var ruler = null;
 
 FlowChart = function(parent, files, OnSelect) {
@@ -46,7 +46,7 @@ FlowChart = function(parent, files, OnSelect) {
 
 	function MakeBox(file) {
 		var missing = file.type & 0x80;
-		var color = missing ? "#808080" : Colors[file.index % Colors.length];
+		var color = missing ? "#808080" : Colors[file.type];
 		var mat = obj.Matrix.translate(file.x, file.y);
 		var g = obj.Surface.createGroup().setTransform(mat);
 		var name = StringClip(file.name, BoxWidth - 6);
@@ -64,7 +64,7 @@ FlowChart = function(parent, files, OnSelect) {
 			g.connect("onmousedown", this, function(evt) { OnSelect(evt, file); });
 		}
 		g.rawNode.setAttribute("cursor", "pointer");
-		return { box:box, title:title, type:type, g:g, mat:mat, slots_top:[], slots_bot:[], x:file.x, y:file.y, title_shaddow:title_shaddow, type_shaddow:type_shaddow, title_shaddow_g:title_shaddow_g, type_shaddow_g:type_shaddow_g, missing:missing, type_color:missing ? "red" : "black" };
+		return { box:box, t:file.type, title:title, type:type, g:g, mat:mat, slots_top:[], slots_bot:[], x:file.x, y:file.y, title_shaddow:title_shaddow, type_shaddow:type_shaddow, title_shaddow_g:title_shaddow_g, type_shaddow_g:type_shaddow_g, missing:missing, type_color:missing ? "red" : "black" };
 	}
 	
 	function BoxFromPosition(col, y) {
@@ -220,7 +220,7 @@ FlowChart = function(parent, files, OnSelect) {
 		}
 		
 		function MakeConnection(file1, file2) {
-			var stroke = {color:Colors[file1.index % Colors.length], width:2};
+			var stroke = {color:Colors[file1.type & ~0x80], width:2};
 			if (file2.col == file1.col + 1) {
 				if (file2.y == file1.y) {
 					obj.Surface.createLine({x1:file1.x + BoxWidth/2, y1:file1.y, x2:file2.x - BoxWidth/2, y2:file2.y}).setStroke(stroke);
@@ -366,7 +366,7 @@ FlowChart = function(parent, files, OnSelect) {
 		if (index >= 0) {
 			var col = new dojo._base.Color("black");
 			var n = this.Nodes[index];
-			n.box.setStroke({color:n.missing ? "grey" : Shade(Colors[index % Colors.length], 0.65), width:2});
+			n.box.setStroke({color:n.missing ? "grey" : Shade(Colors[n.t], 0.65), width:2});
 			n.title_shaddow.setFill(col).setStroke({color:col, width:1.25});
 			n.title_shaddow_g.rawNode.setAttribute("filter", "url(#text_shadow_filter)");
 			if (n.type_color == "black") {
