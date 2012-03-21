@@ -368,6 +368,7 @@
 						PendingAnimations = new Array();
 						QueueAnimation(dojo.fx.wipeOut({ node: dojo.byId("searching") }));
 						QueueAnimation(dojo.fx.wipeIn({ node: cont }));
+						SwitchDataset(container);
 					}
 				});
 			}
