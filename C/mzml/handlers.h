@@ -203,6 +203,7 @@
 		static void SearchAll(FILE *f, SearchStatus &stat, DWORD nCount);
 		static PyObject *GetInfo(FILE *pFile); //Assumes the file is pointing to the correct place
 		static PyObject *PointsMS2All(FILE *pFile, DWORD nCount);
+		static PyObject *PointsMS2ChunksAll(FILE *pFile, DWORD nChunks, float nMinTime, float nMaxTime, float nMinMz, float nMaxMz, DWORD nCount);
 		
 		private:
 			off_t m_offStartPos;
@@ -247,6 +248,7 @@
 		static PyObject *GetSpectrum(FILE *pFile, DWORD nScan);
 		static DWORD GetSpectrumOffset(FILE *pFile, DWORD nScan);
 		static PyObject *PointsMS2(FILE *pFile);
+		static PyObject *PointsMS2Chunks(FILE *pFile, DWORD nChunks, float nMinTime, float nMaxTime, float nMinMz, float nMaxMz);
 
 		private:
 			typedef struct _Index {
@@ -300,6 +302,7 @@
 		static void SearchSpectrums(FILE *pFile, SearchStatus &stat);
 		static void Info(FILE *pFile, float &nMinTime, float &nMaxTime, float &nMinMz, float &nMaxMz, float &nMaxIntensity, char *&szName); //MUST call free() on szName
 		static PyObject *PointsMS2(FILE *pFile);
+		static PyObject *PointsMS2Chunks(FILE *pFile, DWORD nChunks);
 		static void SkipHeaders(FILE *pFile);
 
 		private:

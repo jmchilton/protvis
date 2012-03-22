@@ -429,41 +429,6 @@ LcPlot = function(container, opts) {
 		},
 		tooltip: {
 			show: function(evt, pt, obj) {
-				var x = (pt.x - obj.Padding[0]) / obj.ScaleX + obj.ViewRange.x.min;
-				var y = (obj.Height + obj.Padding[1] - pt.y) / obj.ScaleY + obj.ViewRange.y.min;
-				/*var closest = {i:-1, j:-1, dist:Number.POSITIVE_INFINITY};
-				var m = { x: pt.x - this.Padding[0], y: pt.y };
-				for (var i in data) {
-					for (var j in data[i].data) {
-						var d = data[i].data[j];
-						if (d[0] >= this.ViewRange.x.min && d[0] <= this.ViewRange.x.max && d[1] > this.ViewRange.y.min) {
-							var a = { x: (d[0] - this.ViewRange.x.min) * this.ScaleX, y: this.GraphBottom - (d[1] - this.ViewRange.y.min) * this.ScaleY };
-							if (a.y < m.y + 8) {
-								var b = { x: a.x, y: this.GraphBottom };
-								var dist = Math.sqrt(Math.pow((b.y - a.y) * (m.x - a.x) + (b.x - a.x) * (m.y - a.y), 2) / (Math.pow(b.x - a.x, 2) + Math.pow(b.y - a.y, 2)));
-								if (dist <= closest.dist) {
-									closest = {i:i, j:j, dist:dist};
-								}
-							}
-						}
-					}
-				}
-				if (closest.i >= 0 && closest.dist < 10) {
-					var d = data[closest.i].data[closest.j];
-					var elem = dojo.position(container, false);
-					if (this.Tooltip && this.Tooltip.i == closest.i && this.Tooltip.j == closest.j) {
-						this.Tooltip.node.style.left = Math.round((d[0] - this.ViewRange.x.min) * this.ScaleX + this.Padding[0] + elem.x - 5) + "px";
-						this.Tooltip.node.style.top = (evt.pageY - this.Tooltip.node.offsetHeight / 2) + "px";
-					} else {
-						this.Tooltip = {i:closest.i, j:closest.j, pos:{x: Math.round((d[0] - this.ViewRange.x.min) * this.ScaleX + this.Padding[0] + elem.x - 5), y: evt.pageY, w: 1, h: 1}};
-						dijit.Tooltip.show('<div style="white-space:nowrap;">m/z: ' + d[0].toFixed(3) + "<br/>Intensity: " + d[1].toFixed(3) + "</div>", this.Tooltip.pos, ["after", "before"], false, "ltr");
-						this.Tooltip.node = dijit.Tooltip._masterTT.domNode;
-						this.Tooltip.node.setAttribute("style", "pointer-events:none;" + this.Tooltip.node.getAttribute("style"));
-					}
-				} else if (this.HoverPoint) {
-					dijit.Tooltip.hide(this.Tooltip.pos);
-					this.HoverPoint = null;
-				}*/
 			}
 		},
 		grid: {
@@ -472,6 +437,9 @@ LcPlot = function(container, opts) {
 	};
 	MixIn(defaults, opts);
 	dojo.mixin(this, new BaseGraph(container, defaults));
+	this.DataRange = dojo.clone(opts.axis);
+	this.DataRange.x.range = this.DataRange.x.max - this.DataRange.x.min;
+	this.DataRange.y.range = this.DataRange.y.max - this.DataRange.y.min;
 	
 	this.SetContrast = function(value) {
 		var range = "&x1=" + this.ViewRange.x.min + "&x2=" + this.ViewRange.x.max + "&y1=" + this.ViewRange.y.min + "&y2=" + this.ViewRange.y.max;

@@ -479,7 +479,7 @@ def ListResults(req):
 			return Response("The type of the selected file could not be determined")
 		if t == "mzml" and TryGet(req.GET, "list") != "1":
 			results = parser.Display(fname + "_" + n, req.GET)
-			points = parser.points_ms2(fname + "_" + n)
+			points = parser.points_ms2_chunks(fname + "_" + n, 16)
 			info = { "type": t, "file": req.GET["file"], "datafile": n, "query": q, "datas": links.Types() }
 			return render_to_response(templates + t + "_display.pt", { "info": info, "results": results, "points": points, "url": Literal(req.path_qs) }, request = req)
 		else:

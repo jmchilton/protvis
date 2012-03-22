@@ -157,6 +157,12 @@
 			PyObject *m_pResults;
 	};
 	
+	inline void EatStringFromFile(FILE *pFile) {
+		WORD nLength;
+		fread(&nLength, sizeof(WORD), 1, pFile);
+		fseek(pFile, nLength, SEEK_CUR);
+	}
+	
 	inline char *DecodeStringFromFile(FILE *pFile) {
 		WORD nLength;
 		fread(&nLength, sizeof(WORD), 1, pFile);

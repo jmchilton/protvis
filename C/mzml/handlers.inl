@@ -88,7 +88,7 @@ inline PyObject *Spectrum::PointsMS2All(FILE *pFile, DWORD nCount) {
 	if (pList == NULL) {
 		return NULL;
 	}
-	for (uint32_t i = 0; i < nCount; ++i) {
+	for (DWORD i = 0; i < nCount; ++i) {
 		off_t offPos = ftell(pFile);
 		READ_STRUCTURE(pFile, spectrum, 5, (DWORD, DWORD, DWORD, float, float));
 		PyObject *pValue = Py_BuildValue("[f,f,k,k]", spectrum._3, spectrum._4, spectrum._2, offPos);
@@ -98,6 +98,51 @@ inline PyObject *Spectrum::PointsMS2All(FILE *pFile, DWORD nCount) {
 		}
 		fseek(pFile, spectrum._0 * (2 * sizeof(float)) + spectrum._1 * sizeof(float), SEEK_CUR);
 		PyList_SET_ITEM(pList, i, pValue);
+	}
+	return pList;
+}
+
+inline PyObject *Spectrum::PointsMS2ChunksAll(FILE *pFile, DWORD nChunks, float nMinTime, float nMaxTime, float nMinMz, float nMaxMz, DWORD nCount) {
+	PyObject *pLstY, *pLstX, *pList = PyList_New(nChunks);
+	if (pList == NULL) {
+		return NULL;
+	}
+	for (DWORD i = 0; i < nChunks; ++i) {
+		pLstY = PyList_New(nChunks);
+		if (pLstY == NULL) {
+			Py_DECREF(pList);
+			return NULL;
+		}
+		for (DWORD j = 0; j < nChunks; ++j) {
+			pLstX = PyList_New(0);
+			if (pLstX == NULL) {
+				Py_DECREF(pList);
+				return NULL;
+			}
+			PyList_SET_ITEM(pLstY, j, pLstX);
+		}
+		PyList_SET_ITEM(pList, i, pLstY);
+	}
+	for (DWORD i = 0; i < nCount; ++i) {
+		off_t offPos = ftell(pFile);
+		READ_STRUCTURE(pFile, spectrum, 5, (DWORD, DWORD, DWORD, float, float));
+		PyObject *pValue = Py_BuildValue("[f,f,k,k]", spectrum._3, spectrum._4, spectrum._2, offPos);
+		if (!pValue) {
+			Py_DECREF(pList);
+			return NULL;
+		}
+		fseek(pFile, spectrum._0 * (2 * sizeof(float)) + spectrum._1 * sizeof(float), SEEK_CUR);
+		if (spectrum._3 >= nMinTime && spectrum._3 <= nMaxTime && spectrum._4 >= nMinMz && spectrum._4 <= nMaxMz) {
+			DWORD x = (DWORD)((spectrum._3 - nMinTime) / (nMaxTime - nMinTime) * nChunks);
+			DWORD y = (DWORD)((spectrum._4 - nMinMz) / (nMaxMz - nMinMz) * nChunks);
+			if (x >= nChunks) {
+				x = nChunks - 1;
+			}
+			if (y >= nChunks) {
+				y = nChunks - 1;
+			}
+			PyList_Append(PyList_GET_ITEM(PyList_GET_ITEM(pList, y), x), pValue);
+		}
 	}
 	return pList;
 }
@@ -143,6 +188,11 @@ inline DWORD Run::GetSpectrumOffset(FILE *pFile, DWORD nScan) {
 inline PyObject *Run::PointsMS2(FILE *pFile) {
 	READ_STRUCTURE(pFile, header, 2, (DWORD, DWORD));
 	return Spectrum::PointsMS2All(pFile, header._0);
+}
+
+inline PyObject *Run::PointsMS2Chunks(FILE *pFile, DWORD nChunks, float nMinTime, float nMaxTime, float nMinMz, float nMaxMz) {
+	READ_STRUCTURE(pFile, header, 2, (DWORD, DWORD));
+	return Spectrum::PointsMS2ChunksAll(pFile, nChunks, nMinTime, nMaxTime, nMinMz, nMaxMz, header._0);
 }
 
 inline PyObject *MzML::GetSpectrum(FILE *pFile, const char *szSpectrumName) {
@@ -203,6 +253,13 @@ inline void MzML::Info(FILE *pFile, float &nMinTime, float &nMaxTime, float &nMi
 inline PyObject *MzML::PointsMS2(FILE *pFile) {
 	SkipHeaders(pFile);
 	return Run::PointsMS2(pFile);
+}
+
+inline PyObject *MzML::PointsMS2Chunks(FILE *pFile, DWORD nChunks) {
+	fseek(pFile, 4 * sizeof(DWORD) + sizeof(float), SEEK_SET);
+	READ_STRUCTURE(pFile, info, 4, (float, float, float, float));
+	EatStringFromFile(pFile);
+	return Run::PointsMS2Chunks(pFile, nChunks, info._0, info._1, info._2, info._3);
 }
 
 inline void MzML::SkipHeaders(FILE *pFile) {

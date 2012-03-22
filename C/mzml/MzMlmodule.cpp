@@ -156,6 +156,21 @@ static PyObject *PointsMS2(PyObject *self, PyObject *args) {
 	return pList;
 }
 
+static PyObject *PointsMS2Chunks(PyObject *self, PyObject *args) {
+	const char *szFileName;
+	DWORD nChunks;
+	if (!PyArg_ParseTuple(args, "sk", &szFileName, &nChunks)) {
+		return NULL;
+	}
+	FILE *pFile = fopen(szFileName, "r");
+	if (pFile == NULL) {
+		return Py_BuildValue("");
+	}
+	PyObject *pList = MzML::PointsMS2Chunks(pFile, nChunks);
+	fclose(pFile);
+	return pList;
+}
+
 static PyMethodDef Methods[] = {
     {"ToBinary", ToBinary, METH_VARARGS, ""},
     {"GetSpectrum", GetSpectrum, METH_VARARGS, ""},
@@ -168,6 +183,7 @@ static PyMethodDef Methods[] = {
     {"spectrum_ms1_points", SpectrumMS1Points, METH_VARARGS, ""},
     {"spectrum_ms2", SpectrumMS2, METH_VARARGS, ""},
     {"points_ms2", PointsMS2, METH_VARARGS, ""},
+    {"points_ms2_chunks", PointsMS2Chunks, METH_VARARGS, ""},
     {NULL, NULL, 0, NULL}
 };
 
