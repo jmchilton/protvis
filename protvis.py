@@ -825,9 +825,9 @@ def Spectrum(req):
 		raise HTTPBadRequest_Param("n")
 	if spectrum != None:
 		spec = spectrum.split(".")
-		spectrum = { "file": Literal(".".join(spec[:-3]).replace("\\", "\\\\").replace("\"", "\\\"")), "scan": int(spec[-3]), "charge": int(spec[-1]), "ions": parser.GetSpectrumFromOffset(fname + "_" + str(datafile), int(offset)) }
+		spectrum = { "file": Literal(".".join(spec[:-3]).replace("\\", "\\\\").replace("\"", "\\\"")), "scan": int(spec[-3]), "charge": int(spec[-1]), "offset":str(offset), "ions": parser.GetSpectrumFromOffset(fname + "_" + str(datafile), int(offset)) }
 	else:
-		spectrum = { "file": None, "scan": 1, "charge": 1, "ions": parser.GetSpectrumFromOffset(fname + "_" + str(datafile), int(offset)) }
+		spectrum = { "file": None, "scan": 1, "charge": 1, "offset":str(offset), "ions": parser.GetSpectrumFromOffset(fname + "_" + str(datafile), int(offset)) }
 	return render_to_response(templates + "specview.pt", { "query": req.GET, "datafile": str(datafile), "spectrum": spectrum, "peptide": peptide, "init_pep": init_pep, "score": score, "render_peptide_lorikeet": render_peptide_lorikeet }, request=req)
 
 def Tooltip(req):

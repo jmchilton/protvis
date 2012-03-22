@@ -25,35 +25,50 @@
 				connect.subscribe("/dojo/hashchange", null, NavigateHash);
 			});
 			
-			function NavigateHash(hash) {
-				function NavigateToResults(index) {
+			var IgnoreNextHashChange = false;
+			function NavigateTo(hash, ignore) {
+				if (ignore) {
+					IgnoreNextHashChange = true;
+				}
+				window.location.hash = hash;
+				if (ignore) {
+					IgnoreNextHashChange = false;
+				}
+			}
+			function NavigateHash(hash, ignore) {
+				if (!IgnoreNextHashChange) {
+					function NavigateToResults(index, filter, start, max) {
 						SwitchDataset(index);
-						if (dojo.byId("data_" + index).children.length == 0) {
-							LoadContents(index, "results?file=${file}&n=" + index + "&q=&max=50");
+						var url = "results?file=${file}&n=" + index + "&q=" + (filter ? filter : "") + "&max=" + (max ? max : 50) + "&start=" + (start ? start : 0)
+						if (!CurrentContents[index] || CurrentContents[index].url != url) {
+							LoadContents(index, url);
 						}
 						Flowchart.Select(index);
-				}
-
-				if (hash.length == 0) {
-					NavigateToResults("${index}");
-				} else {
-					hash = decodeURIComponent(hash);
-					var params = hash.split(";");
-					var section = params[0][0];
-					params[0] = params[0].substr(1);
-					switch (section) {
-						case 'P': //PepXML peptide
-							LoadContents("peptides", "peptide?file=${file}&n=" + params[0] + "&peptide=" + params[1]);
-							break;
-							
-						case 'R': //Generic results
-							NavigateToResults(params[0]);
-							break;
-							
-						case 'S': //Spectrum view
-							ShowSpectrum(params[0], GetTypeName(Files[index].type, false), params[1], params[2]);
-							break;
 					}
+
+					if (hash.length == 0) {
+						NavigateToResults("${index}");
+					} else {
+						hash = decodeURIComponent(hash);
+						var params = hash.split(";");
+						var section = params[0][0];
+						params[0] = params[0].substr(1);
+						switch (section) {
+							case 'P': //PepXML peptide
+								LoadContents("peptides", "peptide?file=${file}&n=" + params[0] + "&peptide=" + params[1]);
+								break;
+							
+							case 'R': //Generic results
+								NavigateToResults(params[0], params[1], params[2], params[3]);
+								break;
+							
+							case 'S': //Spectrum view
+								//Ignored
+								break;
+						}
+					}
+				} else {
+					IgnoreNextHashChange = false;
 				}
 			}
 			
@@ -408,21 +423,50 @@
 				return newurl + left.join("&");
 			}
 			
+			function DecodeUrlLocation(url) {
+				var newurl = url;
+				var srch = url.indexOf("?");
+				if (srch >= 0) {
+					params = {}
+					ps = url.substr(srch + 1).split("&");
+					var i = newurl.length - 1;
+					for (var i in ps) {
+						var p = ps[i].split("=");
+						params[p[0]] = p[1];
+					}
+					return params;
+				} else {
+					return {};
+				}
+			}
+			
 			function FilterCurrent(filter) {
 				if (CurrentContents[CurrentPage] != null) {
-					LoadContents(CurrentContents[CurrentPage]["container"], OverrideParams(CurrentContents[CurrentPage]["url"], {q:encodeURIComponent(filter), start:0}));
+					var n = CurrentContents[CurrentPage].container;
+					var url = CurrentContents[CurrentPage].url;
+					LoadContents(n, OverrideParams(url, {q:encodeURIComponent(filter), start:0}));
+					var loc = DecodeUrlLocation(url);
+					NavigateTo("R" + n + ";" + encodeURIComponent(filter) + ";0;" + (loc.max || ""), true);
 				}
 			}
 			
 			function CurrentNewPage(start) {
 				if (CurrentContents[CurrentPage] != null) {
-					LoadContents(CurrentContents[CurrentPage]["container"], OverrideParams(CurrentContents[CurrentPage]["url"], {start:start}));
+					var n = CurrentContents[CurrentPage].container;
+					var url = CurrentContents[CurrentPage].url;
+					LoadContents(n, OverrideParams(url, {start:start}));
+					var loc = DecodeUrlLocation(url);
+					NavigateTo("R" + n + ";" + (loc.q || "") + ";" + start + ";" + (loc.max || ""), true);
 				}
 			}
 			
 			function CurrentResultsSize(max) {
 				if (CurrentContents[CurrentPage] != null) {
-					LoadContents(CurrentContents[CurrentPage]["container"], OverrideParams(CurrentContents[CurrentPage]["url"], {max:max}));
+					var n = CurrentContents[CurrentPage].container;
+					var url = CurrentContents[CurrentPage].url;
+					LoadContents(n, OverrideParams(url, {max:max}));
+					var loc = DecodeUrlLocation(url);
+					NavigateTo("R" + n + ";" + (loc.q || "") + ";" + (loc.start || "") + ";" + (max || ""), true);
 				}
 			}
 			
@@ -440,8 +484,8 @@
 				}
 			}
 			
-			function ShowSpectrum(dataset, type, offset, spectrum) {
-				LoadContents("spectrum", "spectrum?file=${file}&n=" + dataset + "&off=" + offset + (spectrum ? "&spectrum=" + encodeURIComponent(spectrum) : ""));
+			function ShowSpectrum(dataset, offset, spectrum) {
+				LoadContents("spectrum", "spectrum?file=${file}&n=" + dataset + "&off=" + offset + (spectrum ? "&spectrum=" + spectrum : ""));
 			}
 			
 			function ShowSpectrumFromPeptide(pepn, spectrum, pep_qoff, pep_hoff) {

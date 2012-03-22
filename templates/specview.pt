@@ -95,6 +95,7 @@
 	</table>
 </tal:if>
 <script>
+	NavigateTo("S${datafile};${spectrum.offset};" + encodeURIComponent("${spectrum.file}.${spectrum.scan}.${spectrum.scan}.${spectrum.charge}"), true);
 	SwitchDataset(${datafile}, "data_spectrum");
 	function UpdateTitle() {
 		var container = dojo.byId("specview_${hash}");

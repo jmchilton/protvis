@@ -47,7 +47,7 @@
 	<tr><tal:for repeat="col columns"><th id="results_${info.datafile}_column_${col.name}" onclick="TableManager.Sort('results_${info.datafile}','${col.name}');" tal:attributes="class python: 'sort' + test(sortcol==col.name, test(sortdsc, ' sort_dsc', ' sort_asc'), '')">${col.title}</th></tal:for></tr>
 	<tal:for repeat="row results">
 		<tr tal:attributes="class string:info ${row.style}${repeat.row.odd}">
-			<td><span class="link" onclick="ShowSpectrum(${info.datafile}, '${info.type}', ${row.HitInfo.offset}, '${row.HitInfo.spectrum}');">${row.HitInfo.spectrum}</span></td>
+			<td><span class="link" onclick="ShowSpectrum(${info.datafile}, ${row.HitInfo.offset}, '${row.HitInfo.spectrum}');">${row.HitInfo.spectrum}</span></td>
 		</tr>
 	</tal:for>
 	</table>

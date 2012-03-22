@@ -62,7 +62,7 @@
 				} else if (dojo.byId("ms2_${hash}").checked) {
 					if (lc.Closest && lc.Closest.i >= 0 && lc.Closest.dist < 100) {
 						var p = points[lc.Closest.i];
-						ShowSpectrum(${info.datafile}, "mzml", p[3], "<tal:echo content="python: results[5]"/>." + p[2] + "." + p[2] + ".0");
+						ShowSpectrum(${info.datafile}, p[3], "<tal:echo content="python: results[5]"/>." + p[2] + "." + p[2] + ".0");
 					}
 				}
 			}
