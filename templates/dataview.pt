@@ -27,13 +27,8 @@
 			
 			var IgnoreNextHashChange = false;
 			function NavigateTo(hash, ignore) {
-				if (ignore) {
-					IgnoreNextHashChange = true;
-				}
+				IgnoreNextHashChange = ignore;
 				window.location.hash = hash;
-				if (ignore) {
-					IgnoreNextHashChange = false;
-				}
 			}
 			function NavigateHash(hash, ignore) {
 				if (!IgnoreNextHashChange) {
@@ -63,7 +58,7 @@
 								break;
 							
 							case 'S': //Spectrum view
-								//Ignored
+								LoadContents("spectrum", "spectrum?file=${file}&n=" + params[0] + "&off=" + params[1] + (params[2] ? "&spectrum=" + params[2] : ""));
 								break;
 						}
 					}
