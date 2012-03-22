@@ -350,20 +350,6 @@ SpecViewer = function(container, opts) {
 			  }
 		   }
 		});
-
-	}
-
-	function showTooltip(x, y, contents) {
-	   $('<div id="msmstooltip">' + contents + '</div>').css( {
-		  position: 'absolute',
-		  display: 'none',
-		  top: y + 5,
-		  left: x + 5,
-		  border: '1px solid #fdd',
-		  padding: '2px',
-		  'background-color': '#F0E68C',
-		  opacity: 0.80
-	   }).appendTo("body").fadeIn(200);
 	}*/
 
 	this.plotAccordingToChoices = function() {
@@ -1369,10 +1355,11 @@ MsPlot = function(container, data, opts) {
 					var d = data[closest.i].data[closest.j];
 					var elem = dojo.position(container, false);
 					if (this.Tooltip && this.Tooltip.i == closest.i && this.Tooltip.j == closest.j) {
-						this.Tooltip.node.style.left = Math.round((d[0] - obj.ViewRange.x.min) * obj.ScaleX + obj.Padding[0] + elem.x - 5) + "px";
+						_t = this.Tooltip;
+						//this.Tooltip.node.style.left = Math.round((d[0] - obj.ViewRange.x.min) * obj.ScaleX + obj.Padding[0] + elem.x - 5) + "px";
 						this.Tooltip.node.style.top = (evt.pageY - this.Tooltip.node.offsetHeight / 2) + "px";
 					} else {
-						this.Tooltip = {i:closest.i, j:closest.j, pos:{x: Math.round((d[0] - obj.ViewRange.x.min) * obj.ScaleX + obj.Padding[0] + elem.x - 5), y: evt.pageY, w: 1, h: 1}};
+						this.Tooltip = {i:closest.i, j:closest.j, pos:{x: Math.round((d[0] - obj.ViewRange.x.min) * obj.ScaleX + obj.Padding[0] + elem.x + 5), y: evt.pageY, w: -10, h: 1}};
 						dijit.Tooltip.show('<div style="white-space:nowrap;">m/z: ' + d[0].toFixed(3) + "<br/>Intensity: " + d[1].toFixed(3) + "</div>", this.Tooltip.pos, ["after", "before"], false, "ltr");
 						this.Tooltip.node = dijit.Tooltip._masterTT.domNode;
 						this.Tooltip.node.setAttribute("style", "pointer-events:none;" + this.Tooltip.node.getAttribute("style"));
