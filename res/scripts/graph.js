@@ -257,10 +257,13 @@ BaseGraph = function(container, opts) {
 	
 	this.Initialise = function() {
 		this.Container = container;
-		this.Surface = dojox.gfx.createSurface(container, container.clientWidth, container.clientHeight);
+		var cs = window.getComputedStyle(container, null);
+		var wc = container.clientWidth - parseInt(cs.getPropertyValue('padding-left')) - parseInt(cs.getPropertyValue('padding-right')) - 3;
+		var hc = container.clientHeight - parseInt(cs.getPropertyValue('padding-top')) - parseInt(cs.getPropertyValue('padding-bottom'));
+		this.Surface = dojox.gfx.createSurface(container, wc, hc);
 		this.FrameGroup = this.Surface.createGroup();
-		this.Width = container.clientWidth - this.Padding[0] - this.Padding[2];
-		this.Height = container.clientHeight - this.Padding[1] - this.Padding[3];
+		this.Width = wc - this.Padding[0] - this.Padding[2];
+		this.Height = hc - this.Padding[1] - this.Padding[3];
 		this.GraphBottom = container.clientHeight - this.Padding[3];
 		this.ScaleX = this.Width / (this.ViewRange.x.max - this.ViewRange.x.min);
 		this.ScaleY = this.Height / (this.ViewRange.y.max - this.ViewRange.y.min);
@@ -271,7 +274,7 @@ BaseGraph = function(container, opts) {
 		this.DragPoint = null;
 		this.Overlays = this.Surface.createGroup();
 		this.Interact = this.Surface.createGroup();
-		this.Interact.createRect({x:0, y:0, width:container.clientWidth, height:container.clientHeight}).setFill("rgba(0,0,0,0)").setStroke(null);
+		this.Interact.createRect({x:0, y:0, width:wc, height:hc}).setFill("rgba(0,0,0,0)").setStroke(null);
 		this.Interact.connect("onmousedown", this, function(evt) {
 			dojo._base.event.stop(evt);
 
@@ -382,15 +385,18 @@ BaseGraph = function(container, opts) {
 			clearTimeout(resizeTimeout);
 			var obj = this;
 			resizeTimeout = setTimeout(function() {
-				var w = container.clientWidth - obj.Padding[0] - obj.Padding[2];
-				var h = container.clientHeight - obj.Padding[1] - obj.Padding[3];
+				var cs = window.getComputedStyle(container, null);
+				var wc = container.clientWidth - parseInt(cs.getPropertyValue('padding-left')) - parseInt(cs.getPropertyValue('padding-right')) - 3;
+				var hc = container.clientHeight - parseInt(cs.getPropertyValue('padding-top')) - parseInt(cs.getPropertyValue('padding-bottom'));
+				var w = wc - obj.Padding[0] - obj.Padding[2];
+				var h = hc - obj.Padding[1] - obj.Padding[3];
 				if (w != obj.Width || h != obj.Height) {
 					obj.Width = w;
 					obj.Height = h;
-					obj.Surface.setDimensions(container.clientWidth, container.clientHeight);
+					obj.Surface.setDimensions(wc, hc);
 					obj.RecalcLayout();
 					obj.Interact.clear();
-					obj.Interact.createRect({x:0, y:0, width:container.clientWidth, height:container.clientHeight}).setFill("rgba(0,0,0,0)").setStroke(null);
+					obj.Interact.createRect({x:0, y:0, width:wc, height:hc}).setFill("rgba(0,0,0,0)").setStroke(null);
 				}
 			}, 250);
 		});
