@@ -10,7 +10,7 @@ It supports Protein Prophet, Interprophet, Peptide Prophet, Search Engines (test
 
 ProtVis works as a standalone tool where files can be uploaded, or integrated directly into galaxy with the galaxy-proteomics.
 
-![Screenshor of ProtVis](/docs/coverage.jpg "ProtVis protein and coverage view")
+![Screenshor of ProtVis](https://bitbucket.org/Andrew_Brock/proteomics-visualise/raw/97b43cab8533/docs/coverage.jpg "ProtVis protein and coverage view")
 
 ***
 
@@ -139,5 +139,5 @@ Now when you upload or process proteomics data with galaxy a link should appear 
 
 ##Using ProtVis
 A graph of all files used in the analysis can be found at the top of the page.
-![Data flow graph](/docs/files.jpg "Data flow graph")
+![Data flow graph](https://bitbucket.org/Andrew_Brock/proteomics-visualise/raw/97b43cab8533/docs/files.jpg "Data flow graph")
 You can quickly navigate between each of the stages in your data analysis by clicking on any of the blocks in this graph.
