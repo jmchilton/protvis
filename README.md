@@ -10,6 +10,8 @@ It supports Protein Prophet, Interprophet, Peptide Prophet, Search Engines (test
 
 ProtVis works as a standalone tool where files can be uploaded, or integrated directly into galaxy with the galaxy-proteomics.
 
+![Screenshor of ProtVis](/docs/coverage.jpg "ProtVis protein and coverage view")
+
 ***
 
 ## Quick installation
@@ -102,7 +104,7 @@ To stop the running daemon server use
 
 ***
 
-## Using the web interface
+## Accessing the web interface
 
 To connect to a default configuration of ProtVis navigate to [http://127.0.0.1:8000](http://127.0.0.1:8000) in your web browser.
 
@@ -132,3 +134,10 @@ The server URL for the galaxy integration is presently hard-coded to port 8500 i
     ./run --daemon --port=8500
 
 Now when you upload or process proteomics data with galaxy a link should appear in the green history boxes for viewing the data with ProtVis
+
+***
+
+##Using ProtVis
+A graph of all files used in the analysis can be found at the top of the page.
+![Data flow graph](/docs/files.jpg "Data flow graph")
+You can quickly navigate between each of the stages in your data analysis by clicking on any of the blocks in this graph.

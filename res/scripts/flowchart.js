@@ -37,7 +37,7 @@ FlowChart = function(parent, files, OnSelect) {
 		if (ruler.clientWidth <= width) {
 			return str;
 		}
-		i = str.length;
+		var i = str.length;
 		do {
 			ruler.innerHTML = str.substr(0, --i) + "…";
 		} while (ruler.clientWidth > width && i > 0);
@@ -77,7 +77,7 @@ FlowChart = function(parent, files, OnSelect) {
 		return null;
 	}
 
-	function ConnectBoxes(files) {
+	function ConnectBoxes(files, all) {
 		var deffered = new Array();
 		
 		function Lerp(a, b, f) {
@@ -258,12 +258,29 @@ FlowChart = function(parent, files, OnSelect) {
 				}
 			}
 		}
+		
+		function DirectChild(parent, child) {
+			var deps = parent.deps
+			for (var d in deps) {
+				if (deps[d] >= 0 && deps[d] < files.length) {
+					var dep = files[deps[d]].deps;
+					for (var i in dep) {
+						if (dep[i] == child) {
+							return false;
+						}
+					}
+				}
+			}
+			return true;
+		}
 
 		for (var f in files) {
 			var deps = files[f].deps
 			for (var d in deps) {
 				if (deps[d] >= 0 && deps[d] < files.length) {
-					c = MakeConnection(files[f], files[deps[d]]);
+					if (all || DirectChild(files[f], deps[d])) {
+						c = MakeConnection(files[f], files[deps[d]]);
+					}
 				}
 			}
 		}

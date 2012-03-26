@@ -109,8 +109,8 @@
 	</head>
 	<body class="claro">
 		<h1><center>Welcome to ProtVis</center></h1>
-		<div style="float:right; width:550px;">
-			<fieldset>
+		<div style="float:right; min-width:550px;">
+			<fieldset style="border-radius:10px">
 				<legend>Upload files</legend>
 				<div id="uploader">
 					<noscript>
