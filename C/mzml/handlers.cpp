@@ -1,6 +1,6 @@
+#include "handlers.h"
 #include "../common/stdinc.h"
 #include "../common/binary.h"
-#include "handlers.h"
 
 bool CVParam::Begin(State *pState, const XML_Char **pszAttrs) {
 	TRACEPOS(m_pStream, "CVParam::Begin(): ");

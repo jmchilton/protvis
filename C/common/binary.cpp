@@ -1,5 +1,5 @@
-#include "../common/stdinc.h"
 #include "binary.h"
+#include "stdinc.h"
 
 inline BYTE GetCharValue(char ch) {
 	if (ch >= 'A' && ch <= 'Z') {

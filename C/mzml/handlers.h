@@ -1,10 +1,9 @@
 #ifndef __HANDLERS_H__
 	#define __HANDLERS_H__
 
-	#include <string.h>
 	#include "../common/handlers.h"
-	#include "../common/inc.h"
 	#include "../common/search.h"
+	#include <string.h>
 	#include "msplot.h"
 	
 	struct _State;

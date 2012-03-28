@@ -1,6 +1,7 @@
 #ifndef __STREAMS_H__
 	#define __STREAMS_H__
 
+	#include "inc.h"
 	#include <sys/types.h>
 	#include <stdio.h>
 	#include <sys/stat.h>
@@ -21,7 +22,6 @@
 
 		#define BIN_FILE_PERMISSIONS S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH
 	#endif
-	#include "inc.h"
 	#include <string.h>
 	#include "array.h"
 

@@ -1,8 +1,8 @@
 #ifndef __ARRAY_H__
 	#define __ARRAY_H__
 	
-	#include "stdinc.h"
 	#include "inc.h"
+	#include "stdinc.h"
 
 	//A very crude but fast vector
 	//This doesn't use constants, so the state or elements can be changed quickly

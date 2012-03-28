@@ -1,7 +1,5 @@
-#include "stdinc.h"
 #include "handlers.h"
-
-#include "../mzml/handlers.h"
+#include "stdinc.h"
 
 #define BUFFER_SIZE 16384 //16KB read buffer
 
