@@ -33,31 +33,36 @@ for arg in $@; do
 done
 
 super() {
-	if [ "x`which sudo 2>/dev/null`" != "x" ]; then
+	if [ "`which sudo 2>/dev/null`" ]; then
 		sudo -E $@
-	elif [ "x`which su 2>/dev/null`" != "x" ]; then
+	elif [ "`which su 2>/dev/null`" ]; then
 		su -c "$@" `whoami`
-	elif [ "x`which pfexec 2>/dev/null`" != "x" ]; then
+	elif [ "`which pfexec 2>/dev/null`" ]; then
 		pfexec $@
 	else
 		$@
 	fi
+	return $?
 }
 
 get() {
 	if [ $allow_install -ne 0 ]; then
 		echo "$1 is not installed. Installing it now."
-		if [ "x`which apt-get 2>/dev/null`" != "x" ]; then
+		if [ "`which apt-get 2>/dev/null`" ]; then
 			super apt-get install --yes $1
-		elif [ "x`which yum 2>/dev/null`" != "x" ]; then
-			super yum install $1
+		elif [ "`which yum 2>/dev/null`" ]; then
+			super yum -y install $1
+		fi
+		if [ $? -eq 0 ]; then
+			return 0
 		else
-			if [ "x$2" = "x" ]; then 
+			if [ "$2" ]; then
+				super "$2"
+				return $?
+			else
 				echo "Failed to install $1."
 				echo "The following packages are required before running: make python python-setuptools python-virtualenv make gcc g++"
 				exit
-			else
-				super "$2"
 			fi
 		fi
 	else
@@ -68,13 +73,36 @@ get() {
 	fi
 }
 
+has() {
+	if [ $allow_install -ne 0 ]; then
+		if [ "`which apt-get 2>/dev/null`" ]; then
+			if [ "`apt-cache search $1 | grep "^$1[ \t]"`" ]; then
+				echo $1
+			fi
+		elif [ "`which yum 2>/dev/null`" ]; then
+			if [ "`yum list | grep "^$1[ \t]"`" ]; then
+				echo "$1"
+			fi
+		fi
+	fi
+}
+
 bin_need() {
 	echo "Checking for $1"
-	if [ "`which $1 2>/dev/null`" = "" ]; then
-		get $1
-	else
-		echo "$1 is already installed"
-	fi
+	for b in $@; do
+		if [ ! "`which $b 2>/dev/null`" ]; then
+			echo "$b is already installed"
+			return 0
+		fi
+	done
+	for b in $@; do
+		if [ "`has $b`" ]; then
+			get $b
+			return $?
+		fi
+	done
+	echo 
+	return 1
 }
 
 py_need() {
@@ -82,15 +110,17 @@ py_need() {
 	python -c "import $1" 2>/dev/null >/dev/null
 	if [ $? -ne 0 ]; then
 		get "python-$1" "$2"
+		return $?
 	else
 		echo "$1 is already installed"
+		return 0
 	fi
 }
 
 dl() {
-	if [ "x`which curl 2>/dev/null`" != "x" ]; then
+	if [ "`which curl 2>/dev/null`" ]; then
 		curl $1
-	elif [ "x`which wget 2>/dev/null`" != "x" ]; then
+	elif [ "`which wget 2>/dev/null`" ]; then
 		wget $1 -O-
 	else
 		python -c "import urllib, sys; s=urllib.urlopen('$1').read(); sys.stdout.write(s); exit(len(s) == 0)"
@@ -100,7 +130,7 @@ dl() {
 bin_need python
 bin_need make
 bin_need gcc
-bin_need g++
+bin_need g++ gpp gcc-c++.`uname -i`
 py_need "setuptools" "dl http://peak.telecommunity.com/dist/ez_setup.py | super python"
 py_need "virtualenv" "easy_install virtualenv"
 
@@ -130,8 +160,8 @@ if [ "`which makeblastdb 2>/dev/null`" == "" ] || [ "`which blastdbcmd 2>/dev/nu
 		echo "This is an OPTIONAL feature"
 	fi
 else
-	ln -s `which makeblastdb` bin/makeblastdb
-	ln -s `which blastdbcmd` bin/blastdbcmd
+	ln -s `which makeblastdb` bin/makeblastdb 2>/dev/null
+	ln -s `which blastdbcmd` bin/blastdbcmd 2>/dev/null
 	echo "blast+ is already installed"
 fi
 

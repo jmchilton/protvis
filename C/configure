@@ -228,9 +228,9 @@ getlibpng() {
 }
 
 getexpat() {
-	_file="expat-2.1.0-beta3"
+	_file="expat-2.1.0"
 	echo "Auto-install expat $_file" >> $log
-	getlib "expat" "http://aarnet.dl.sourceforge.net/project/expat/expat/2.1.0/$_file.tar.gz" "expat-2012-03-11" "/lib" "/.libs" "-q"
+	getlib "expat" "http://aarnet.dl.sourceforge.net/project/expat/expat/2.1.0/$_file.tar.gz" "$_file" "/lib" "/.libs" "-q"
 	includes="$includes expat.h"
 }
 

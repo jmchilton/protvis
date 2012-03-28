@@ -282,7 +282,10 @@ class FileLinks:
 					isdep = True
 			return isdep
 
-		nodes = {i: set(self.Links[i].Depends) for i in xrange(len(self.Links))}
+		#nodes = {i: set(self.Links[i].Depends) for i in xrange(len(self.Links))}  #Python 2.7 only
+		nodes = {}
+		for i in xrange(len(self.Links)):
+			nodes[i] = set(self.Links[i].Depends)
 		deps = []
 		for i in nodes:
 			if ExpandDepends(nodes, i):
