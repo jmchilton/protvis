@@ -1,4 +1,6 @@
 This file could not be found while initializing your results.<br/>
+<fieldset style="border-radius:10px; float:left;">
+<legend>Upload File</legend>
 If you have a copy of the file you can upload it with the form below.<br/>
 <form id="missing_form_${query.n}" action="add?file=${query.file}&n=${query.n}" onsubmit="return false;" enctype="multipart/form-data">
 	File: <input id="selectBtn${query.n}" type="file" /> <span id="fileToUpload${query.n}"></span><br/>
@@ -21,6 +23,20 @@ If you have a copy of the file you can upload it with the form below.<br/>
 	</tal:if>
 	<input type="submit" value="Upload" onclick="Flowchart.UpdateStatus(${query.n}, 'Uploading (0%)', 'green'); return true;" />
 </form>
+</fieldset>
+<fieldset style="border-radius:10px; float:left;">
+<legend>Merge With Existing</legend>
+If this is the same as a file which already has data, you can merge them together.<br/>
+<form id="merge_form_${query.n}" action="merge?file=${query.file}&n=${query.n}&o=" onsubmit="var n=dojo.byId('merge_idx_${query.n}'); dojo.xhrGet({ url: this.action + n.options[n.selectedIndex].value, load: function(r) { r.length ? UpdateNavigation(dojo.fromJson(r)) : this.error(); }, error: function() { Flowchart.UpdateStatus(${query.n}, 'Merge Failed', 'red'); } }); return false;">
+	File: 
+	<select id="merge_idx_${query.n}">
+		<tal:for repeat="l python: sorted([{'i':i, 'Type':links[i].Type, 'Name':links[i].Name} for i in xrange(len(links))], key=lambda key:key.Name)"><tal:if condition="python: (l.Type & 0x80) == 0"><option value="${l.i}"><tal:echo content="python: os.path.split(l.Name)[1]"/></option></tal:if></tal:for>
+	</select>
+	<br/>
+	<input type="submit" value="Merge" onclick="Flowchart.UpdateStatus(${query.n}, 'Merging', 'green'); return true;" />
+</form>
+</fieldset>
+
 <div id="missing_status_${query.n}" style="display:none;"></div>
 <script>
 var type = Files[${query.n}].type & 0x7F;
@@ -42,6 +58,44 @@ uploader${query.n} = new dojox.form.Uploader({
 }, "selectBtn${query.n}");
 uploader${query.n}.startup();
 
+UpdateNavigation = function(data) {
+	console.log(data);
+	Files = data.files;
+	ForceReloadCurrent();
+	Flowchart.Reload(Files);
+	var conts = dojo.byId("files_containers");
+	if (data.added && data.added.length > 0) {
+		added = "";
+		for (var i in data.added) {
+			added += '<div id="data_' + data.added[i] + '" style="width:100%;height:0;display:none"></div>';
+		}
+		conts.innerHTML += added;
+	}
+	if (data.removed && data.removed.length > 0) {
+		for (var i in data.removed) {
+			conts.removeChild(dojo.byId("data_" + data.removed[i]));
+			for (var j = 0; j < conts.childElementCount; ++j) {
+				var c = conts.children[j];
+				if (c.id.indexOf("data_") == 0 && parseInt(c.id.substr(5)) > data.removed[i]) {
+					c.id = "data_" + (c.id.substr(5) - 1);
+				}
+			}
+		}
+	}
+	for (var i in Files) {
+		if (Files[i].type & 0x80) {
+			var e = dijit.byId("selectBtn" + Files[i].index)
+			if (e) {
+				e.destroy();
+			}
+			dojo.byId("data_" + Files[i].index).innerHTML = "";
+		}
+	}
+	if (data.select) {
+		NavigateTo("R" + data.select)
+	}
+}
+
 dojo.connect(uploader${query.n}, "onChange", function(data) {
 	dojo.forEach(data, function(d) {
 		var size = d.size;
@@ -62,8 +116,7 @@ dojo.connect(uploader${query.n}, "onProgress", function(data) {
 });
 
 dojo.connect(uploader${query.n}, "onComplete", function(data) {
-	dojo.forEach(data, function(d) {
-	});
+	UpdateNavigation(data);
 });
 
 dojo.connect(uploader${query.n}, "onError", function(data) {

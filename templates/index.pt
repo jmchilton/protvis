@@ -29,7 +29,7 @@
 					}
 				});
 				if (require.has('file-multiple')){
-					if (uploader.addDropTarget && uploader.uploadType=='html5'){
+					if (uploader.addDropTarget && uploader.uploadType == 'html5'){
 						dojo.byId("dragdrop").innerHTML = "or Drag and Drop files, then ";
 						uploader.addDropTarget(uploader.domNode.parentNode);
 						//override functions so that we append to the list of files
@@ -111,7 +111,7 @@
 		<h1><center>Welcome to ProtVis</center></h1>
 		<div style="float:right; min-width:550px;">
 			<fieldset style="border-radius:10px">
-				<legend>Upload files</legend>
+				<legend>Upload Files</legend>
 				<div id="uploader">
 					<noscript>
 						You need javascript enabled in to be able to use this tool.

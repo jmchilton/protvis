@@ -82,7 +82,6 @@ class IncludedFile:
 				self.Depends = deps
 				self.Stream = stream
 
-		#files = [[f, fi] for f, fi in self.Files.items()]
 		files = []
 		dbs = []
 		for f, fi in self.Files.items():
@@ -229,10 +228,18 @@ class FileLinks:
 	}
 	"""
 	class Link:
-		def __init__(self, f):
-			[self.Type, deps] = struct.unpack("=BH", f.read(1 + 2))
-			self.Depends = [struct.unpack("=H", f.read(2))[0] for i in xrange(deps)]
-			self.Name = DecodeStringFromFile(f)
+		def __init__(self, f = None):
+			if f:
+				[self.Type, deps] = struct.unpack("=BH", f.read(1 + 2))
+				self.Depends = [struct.unpack("=H", f.read(2))[0] for i in xrange(deps)]
+				self.Name = DecodeStringFromFile(f)
+
+		def write(self, f):
+			f.write(struct.pack("=BH", self.Type, len(self.Depends)))
+			for d in self.Depends:
+				f.write(struct.pack("=H", d))
+			EncodeStringToFile(f, self.Name)
+			
 
 	def __init__(self, IndexFile):
 		try:
@@ -243,6 +250,7 @@ class FileLinks:
 		self.Index = IndexFile
 		self.Links = [FileLinks.Link(f) for i in xrange(files)]
 		self.Databases = [DecodeStringFromFile(f) for i in xrange(dbs)]
+		f.close()
 
 	def __getitem__(self, i):
 		if i == 0xFFFF:
@@ -312,6 +320,25 @@ class FileLinks:
 			elif l.Type == FileType.MZML:
 				flags |= 1
 		return flags
+	
+	def Add(self, name, t, deps):
+		new = FileLinks.Link()
+		new.Name = name
+		new.Type = t
+		new.Depends = deps
+		self.Links.append(new)
+	
+	def AddDB(self, name):
+		self.Databases.append(name)
+
+	def Write(self, fname):
+		f = open(fname, 'w')
+		f.write(struct.pack("=II", len(self.Links), len(self.Databases)))
+		for l in self.Links:
+			l.write(f)
+		for db in self.Databases:
+			EncodeStringToFile(f, db)
+		f.close()
 		
 
 def GetTypeParser(datatype):
@@ -487,17 +514,17 @@ def PepReferences(fname, IncludedFiles, Validator):
 			try:
 				IncludedFiles.GetSilent(f[0])
 			except:
-				exts = f[0].split(".")
-				ext = []
-				j = len(exts) - 1
-				while j >= 0:
-					if exts[j] in valid:
-						ext.append(exts[j])
-						j -= 1
-					else:
-						break
 				t = f[1]
 				if t == FileType.UNKNOWN:
+					exts = f[0].split(".")
+					ext = []
+					j = len(exts) - 1
+					while j >= 0:
+						if exts[j] in valid:
+							ext.append(exts[j])
+							j -= 1
+						else:
+							break
 					t = FileType.FromExtensions(ext)
 				IncludedFiles.Add(f[0], t | FileType.MISSING)
 				print("Can't open referenced file: " + f[0])
@@ -564,6 +591,13 @@ def _References(t, fname, IncludedFiles, Validator):
 		return
 	return func(fname, IncludedFiles, Validator)
 
+def LoadChainT(fname, t):
+	if not EnsureWhitelistFile(fname):
+		raise ValueError(fname)
+	IncludedFiles = IncludedFile(fname, t)
+	_References(t, fname, IncludedFiles, ValidateFilename)
+	return IncludedFiles.Items()
+
 def LoadChainProt(fname):
 	if not EnsureWhitelistFile(fname):
 		raise ValueError(fname)
@@ -592,7 +626,7 @@ def LoadChainMzml(fname):
 	MzmlReferences(fname, IncludedFiles, ValidateFilename)
 	return IncludedFiles.Items()
 
-def LoadChainGroup(files):
+def LoadChainGroup(files, force_t = FileType.UNKNOWN):
 	class OpenFile:
 		def __init__(self, f, s):
 			self.Name = f
@@ -652,7 +686,10 @@ def LoadChainGroup(files):
 	for f in files:
 		if f.NeedsProcessing:
 			f.Stream.seek(0)
-			t = GuessType(f.Stream)
+			if force_t == FileType.UNKNOWN:
+				t = GuessType(f.Stream)
+			else:
+				t = force_t
 			IncludedFiles.Add(f.Name, t, f.Stream)
 			if t != FileType.UNKNOWN:
 				_References(t, f, IncludedFiles, NameValidator)

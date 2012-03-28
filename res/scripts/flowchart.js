@@ -11,13 +11,8 @@ var Colors = [ "#BBBBBB", "#e9003a", "#a600a6", "#1049a9", "#0d56ff", "#009999",
 var ruler = null;
 
 FlowChart = function(parent, files, OnSelect) {
-	this.Surface = null;
-	this.Matrix = dojox.gfx.matrix;
-	this.Nodes = new Array();
-	this.Selected = -1;
-	
-	var columns = new Array();
 	var obj = this;
+
 	if (!ruler) {
 		ruler = document.createElement('div');
 		ruler.setAttribute("style", "position:absolute; visibility:hidden; height:auto; width:auto; font:bold 14px Arial; white-space:nowrap;");
@@ -65,16 +60,6 @@ FlowChart = function(parent, files, OnSelect) {
 		}
 		g.rawNode.setAttribute("cursor", "pointer");
 		return { box:box, t:file.type, title:title, type:type, g:g, mat:mat, slots_top:[], slots_bot:[], x:file.x, y:file.y, title_shaddow:title_shaddow, type_shaddow:type_shaddow, title_shaddow_g:title_shaddow_g, type_shaddow_g:type_shaddow_g, missing:missing, type_color:missing ? "red" : "black" };
-	}
-	
-	function BoxFromPosition(col, y) {
-		col = columns[col]
-		for (var b in col) {
-			if (files[col[b]].y == file1.y) {
-				return files[col[b]];
-			}
-		}
-		return null;
 	}
 
 	function ConnectBoxes(files, all) {
@@ -311,10 +296,6 @@ FlowChart = function(parent, files, OnSelect) {
 		}
 		return ret;
 	}
-
-	function ReverseSort(a, b) {
-		return b - a;
-	}
 	
 	function OffsetChain(files, columns, file, col, y) {
 		if (InArray(columns[col], file)) {
@@ -422,76 +403,89 @@ FlowChart = function(parent, files, OnSelect) {
 		}
 	}
 	
-	var x = BoxWidth / 2 + 10;
-	//seperate into columns of dependencies
-	var can_depend = new Array();
-	var remaining = files.slice(0);
-	var indices = new Array();
-	for (var i in files) {
-		indices.push(i);
-		files[i]["index"] = i;
-		files[i]["y"] = 10;
-		files[i]["parent"] = -1;
-	}
-	indices.sort(ReverseSort);
-	while (indices.length > 0) {
-		var is = indices.slice(0);
-		for (var ri in remaining) {
-			r = remaining[ri];
-			if (r) {
-				is = SubtractArray(is, SubtractArray(r.deps, can_depend));
+	var columns = null;
+	
+	this.Reload = function(files) {
+		this.Surface = null;
+		this.Matrix = dojox.gfx.matrix;
+		this.Nodes = new Array();
+		this.Selected = -1;
+		
+		columns = new Array();
+		var x = BoxWidth / 2 + 10;
+		//seperate into columns of dependencies
+		var can_depend = new Array();
+		var remaining = files.slice(0);
+		var indices = new Array();
+		for (var i in files) {
+			indices.push(i);
+			files[i].index = i;
+			files[i].y = 10;
+			files[i].parent = -1;
+		}
+		indices.sort(function(a, b) { return b - a; });
+		while (indices.length > 0) {
+			var is = indices.slice(0);
+			for (var ri in remaining) {
+				r = remaining[ri];
+				if (r) {
+					is = SubtractArray(is, SubtractArray(r.deps, can_depend));
+				}
 			}
+			var col = columns.length;
+			columns.push(new Array());
+			for (var ii in is) {
+				columns[col].push(is[ii]);
+				remaining[is[ii]].col = col;
+				remaining[is[ii]] = null;
+				can_depend.push(is[ii]);
+				files[is[ii]].x = x;
+			}
+			indices = SubtractArray(indices, is);
+			x += BoxWidth + BoxHSpacing;
 		}
-		var col = columns.length;
-		columns.push(new Array());
-		for (var ii in is) {
-			columns[col].push(is[ii]);
-			remaining[is[ii]].col = col;
-			remaining[is[ii]] = null;
-			can_depend.push(is[ii]);
-			files[is[ii]]["x"] = x;
-		}
-		indices = SubtractArray(indices, is);
-		x += BoxWidth + BoxHSpacing;
-	}
-	//find closest parent nodes
-	for (var col = columns.length - 2; col >= 0; --col) {
-		for (var c in columns[col]) {
-			var b = columns[col][c];
-			var deps = files[b].deps;
-			for (var dep in deps) {
-				var d = deps[dep];
-				if (d < files.length && files[d].parent < 0) {
-					files[d].parent = b;
+		//find closest parent nodes
+		for (var col = columns.length - 2; col >= 0; --col) {
+			for (var c in columns[col]) {
+				var b = columns[col][c];
+				var deps = files[b].deps;
+				for (var dep in deps) {
+					var d = deps[dep];
+					if (d < files.length && files[d].parent < 0) {
+						files[d].parent = b;
+					}
 				}
 			}
 		}
+		//layout each column
+		var col = columns[0];
+		var offset = 0;
+		for (var i in col) {
+			var height = GetBoxHeight(columns, files, 0, col[i]);
+			height = CalcGroupHeight(height);
+			OffsetChain(files, columns, col[i], 0, offset + height / 2);
+			offset += height + 20;
+		}
+		offset -= 20;
+		parent.innerHTML = "";
+		this.Surface = dojox.gfx.createSurface(parent, 10 + BoxHSpacing * (columns.length - 1) + BoxWidth * columns.length + 10, offset + 6 + BoxSlots * BoxSlotSpacing);
+		var filter = document.createElementNS("http://www.w3.org/2000/svg", "filter");
+		filter.id = "text_shadow_filter";
+		filter.setAttribute("x", "0");
+		filter.setAttribute("y", "0");
+		var blur = document.createElementNS("http://www.w3.org/2000/svg", "feGaussianBlur");
+		blur.setAttribute("in", "SourceGraphic");
+		blur.setAttribute("stdDeviation", "2.5");
+		filter.appendChild(blur);
+		this.Surface.defNode.appendChild(filter);
+		for (var f in files) {
+			this.Nodes.push(MakeBox(files[f]));
+		}
+		ConnectBoxes(files);
+		if (dojo.isWebKit) {
+			setTimeout(function() { obj.FixChrome(); }, 50);
+		}
 	}
-	//layout each column
-	var col = columns[0];
-	var offset = 0;
-	for (var i in col) {
-		var height = GetBoxHeight(columns, files, 0, col[i]);
-		height = CalcGroupHeight(height);
-		OffsetChain(files, columns, col[i], 0, offset + height / 2);
-		offset += height + 20;
-	}
-	offset -= 20;
-	this.Surface = dojox.gfx.createSurface(parent, 10 + BoxHSpacing * (columns.length - 1) + BoxWidth * columns.length + 10, offset + 6 + BoxSlots * BoxSlotSpacing);
-	var filter = document.createElementNS("http://www.w3.org/2000/svg", "filter");
-	filter.id = "text_shadow_filter";
-	filter.setAttribute("x", "0");
-	filter.setAttribute("y", "0");
-	var blur = document.createElementNS("http://www.w3.org/2000/svg", "feGaussianBlur");
-	blur.setAttribute("in", "SourceGraphic");
-	blur.setAttribute("stdDeviation", "2.5");
-	filter.appendChild(blur);
-	this.Surface.defNode.appendChild(filter);
-	for (var f in files) {
-		this.Nodes.push(MakeBox(files[f]));
-	}
-	ConnectBoxes(files);
-	if (dojo.isWebKit) {
-		setTimeout(function() { obj.FixChrome(); }, 50);
-	}
+	
+	this.Reload(files);
 }

@@ -171,6 +171,10 @@ static PyObject *PointsMS2Chunks(PyObject *self, PyObject *args) {
 	return pList;
 }
 
+static PyObject *Version(PyObject *self, PyObject *args) {
+	return Py_BuildValue("f", 0.8);
+}
+
 static PyMethodDef Methods[] = {
     {"ToBinary", ToBinary, METH_VARARGS, ""},
     {"GetSpectrum", GetSpectrum, METH_VARARGS, ""},
@@ -184,6 +188,7 @@ static PyMethodDef Methods[] = {
     {"spectrum_ms2", SpectrumMS2, METH_VARARGS, ""},
     {"points_ms2", PointsMS2, METH_VARARGS, ""},
     {"points_ms2_chunks", PointsMS2Chunks, METH_VARARGS, ""},
+    {"version", Version, METH_VARARGS, ""},
     {NULL, NULL, 0, NULL}
 };
 

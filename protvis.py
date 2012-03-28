@@ -13,12 +13,7 @@ import re
 import Reference
 import struct
 from Common import *
-import ProtXML, PepXML, MGF
-#try:
-import MzML
-#except:
-#	MzML = None
-#	print " * The mzML module could not be loaded. Users will not be able to view any mzML data"
+from FileTypes import *
 import time
 import subprocess
 import parameters
@@ -361,6 +356,11 @@ def QueryInitStatus(req):
 		return Response("-\r\n", request=req)
 
 def AddFile(req):
+	def DecreaseLarger(arr, n):
+		for i in xrange(len(arr)):
+			if arr[i] > n:
+				arr[i] -= 1
+
 	fname = GetQueryFileName(req.GET)
 	links = Reference.FileLinks(fname)
 	try:
@@ -379,29 +379,101 @@ def AddFile(req):
 				s = req.POST["data"]
 			except:
 				return HTTPBadRequest_Param("data")
-	s = s.file
-	s.seek(0)
+	sf = s.file
+	sf.seek(0)
 	t = l.Type & 0x7F
 	if t == Reference.FileType.UNKNOWN:
 		t = TryGet(req.POST, "type")
 		if t != None and int(t) != 0:
 			t = int(t)
 		else:
-			t = Reference.GuessType(s)
+			t = Reference.GuessType(sf)
 			if t == Reference.FileType.UNKNOWN:
 				return HTTPUnsupportedMediaType("File type could not be determined")
-			s.seek(0)
-	s.seek(0)
-	t2 = Reference.GetTypeParser(t).ToBinary(s, fname + "_" + n)
+			sf.seek(0)
+	sf.seek(0)
+	t2 = Reference.GetTypeParser(t).ToBinary(sf, fname + "_" + n, s.filename)
+	l.Name = s.filename
 	if t2 > t:
 		t = t2
 	l.Type = t
 	same = TryGet(req.POST, "similar")
+	removed = []
 	if same != None:
-		same = same.split(",")
-		#FIXME: merge
-	links.Write(req.GET["file"])
-	return Response("test\r\n", request=req)
+		same = [int(m) for m in set(same.split(","))]
+		for idx in xrange(len(same)):
+			i = same[idx]
+			for j in links:
+				if i in j.Depends:
+					removed.append(str(i))
+					j.Depends.remove(i)
+					if not ni in j.Depends:
+						j.Depends = list(set(j.Depends + [ni]))
+				DecreaseLarger(j.Depends, i)
+			if ni > i:
+				ni -= 1
+				n = str(ni)
+			del links.Links[i]
+			DecreaseLarger(same, i)
+			for i in xrange(i, len(links) - 1):
+				f = fname + "_" + str(i + 1)
+				if os.path.exists(f):
+					os.rename(f, fname + "_" + str(i))
+	new = Reference.LoadChainGroup([[s.filename, sf]], t)
+	deps_start = len(links)
+	deps_exists = []
+	added = []
+	for f in new:
+		if f.Stream != sf:
+			found = False
+			i = 0
+			for link in links:
+				if link.Name == f.Name:
+					found = True
+					deps_exists.append(i)
+					break
+				i += 1
+			if not found:
+				if (f.Type & ~Reference.FileType.MISSING) == Reference.FileType.DATABASE:
+					links.AddDB(f.Name)
+				else:
+					added.append(str(len(links)))
+					links.Add(f.Name, f.Type, [])
+	l.Depends = deps_exists + range(deps_start, len(links))
+	links.Write(fname)
+	return Response('{"added":[' + ",".join(added) + '],"removed":[' + ",".join(removed) + '],"select":' + n + ',"files":[' + ",".join(['{"name":"' + os.path.split(l.Name)[1] + '","type":' + str(l.Type) + ',"deps":[' + ",".join([test(d < 65535, str(d), "-1") for d in l.Depends]) + ']}' for l in links]) + ']}\r\n', request=req)
+
+def MergeFile(req):
+	def DecreaseLarger(arr, n):
+		for i in xrange(len(arr)):
+			if arr[i] > n:
+				arr[i] -= 1
+
+	fname = GetQueryFileName(req.GET)
+	links = Reference.FileLinks(fname)
+	try:
+		n = int(req.GET["n"])
+	except:
+		return HTTPBadRequest_Param("n")
+	try:
+		o = int(req.GET["o"])
+	except:
+		return HTTPBadRequest_Param("o")
+	for j in links:
+		if n in j.Depends:
+			j.Depends.remove(n)
+			if not o in j.Depends:
+				j.Depends = sorted(j.Depends + [o])
+		DecreaseLarger(j.Depends, n)
+	for i in xrange(n, len(links) - 1):
+		f = fname + "_" + str(i + 1)
+		if os.path.exists(f):
+			os.rename(f, fname + "_" + str(i))
+	if o > n:
+		o -= 1
+	del links.Links[n]
+	links.Write(fname)
+	return Response('{"removed":[' + str(n) + '],"select":' + str(o) + ',"files":[' + ",".join(['{"name":"' + os.path.split(l.Name)[1] + '","type":' + str(l.Type) + ',"deps":[' + ",".join([test(d < 65535, str(d), "-1") for d in l.Depends]) + ']}' for l in links]) + ']}\r\n', request=req)
 
 def View(req):
 	try:
@@ -439,7 +511,7 @@ def ListResults(req):
 	else:
 		q = urllib.unquote(q)
 	if links.Links[ni].Type & Reference.FileType.MISSING:
-		exts = ["mzml", "mzxml", "mgf", "pepxml", "pep", "protxml", "prot", "xml"]
+		exts = ["mzml", "mzxml", "mgf", "pepxml", "pep", "protxml", "prot", "xml", "dat"]
 		mypath = os.path.split(links.Links[ni].Name)
 		myname = mypath[1].split(".")
 		j = len(myname) - 1
@@ -453,7 +525,7 @@ def ListResults(req):
 		similar = []
 		i = 0
 		for l in links.Links:
-			if l.Type == Reference.FileType.MISSING and i != ni:
+			if (l.Type & Reference.FileType.MISSING) == Reference.FileType.MISSING and i != ni:
 				name = os.path.split(l.Name)
 				if name[0] == mypath[0]:
 					name = name[1].split(".")
@@ -464,11 +536,11 @@ def ListResults(req):
 						else:
 							break
 						j -= 1
-					name = ".".join(name)	
+					name = ".".join(name)
 					if name == myname:
 						similar.append({"index":i, "name":os.path.basename(l.Name)})
 			i += 1
-		return render_to_response(templates + "missing_results.pt", { "links": links, "query": req.GET, "similar": similar }, request = req)
+		return render_to_response(templates + "missing_results.pt", { "links": links, "query": req.GET, "similar": similar, "os": os }, request = req)
 	else:
 		t = Reference.FileType.NameBasic(links.Links[ni].Type)
 		try:
@@ -902,6 +974,7 @@ def main(*args, **kwargs):
 	config.add_route("convert", "/init_local")
 	config.add_route("query_init", "/query_init")
 	config.add_route("add", "/add")
+	config.add_route("merge", "/merge")
 	config.add_route("view", "/view")
 	config.add_route("results", "/results")
 	config.add_route("peptide", "/peptide")
@@ -915,6 +988,7 @@ def main(*args, **kwargs):
 	config.add_view(Convert, route_name="convert")
 	config.add_view(QueryInitStatus, route_name="query_init")
 	config.add_view(AddFile, route_name="add")
+	config.add_view(MergeFile, route_name="merge")
 	config.add_view(View, route_name="view")
 	config.add_view(ListResults, route_name="results")
 	config.add_view(ListPeptide, route_name="peptide")

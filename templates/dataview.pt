@@ -35,7 +35,7 @@
 					function NavigateToResults(index, filter, start, max) {
 						SwitchDataset(index);
 						var url = "results?file=${file}&n=" + index + "&q=" + (filter ? filter : "") + "&max=" + (max ? max : 50) + "&start=" + (start ? start : 0)
-						if (!CurrentContents[index] || CurrentContents[index].url != url) {
+						if (!CurrentContents[index] || CurrentContents[index].url != url || dojo.byId("data_" + CurrentContents[index].container).innerHTML == "") {
 							LoadContents(index, url);
 						}
 						Flowchart.Select(index);
@@ -259,17 +259,22 @@
 				var set = (dataset instanceof Location) ? dataset : new Location(dataset, table);
 				if (set.Table != CurrentDataset.Table) {
 					var cur = CurrentDataset.Table;
-					dojo.fx.combine([
-						dojo.fx.wipeOut({
-							node: dojo.byId(CurrentDataset.Table),
-							onEnd: function(node) {
-								if (cur == "data_spectrum") {
-									node.innerHTML = "";
+					var node = dojo.byId(CurrentDataset.Table);
+					if (node) {
+						dojo.fx.combine([
+							dojo.fx.wipeOut({
+								node: node,
+								onEnd: function(node) {
+									if (cur == "data_spectrum") {
+										node.innerHTML = "";
+									}
 								}
-							}
-						}),
-						dojo.fx.wipeIn({ node: dojo.byId(set.Table) })
-					]).play();
+							}),
+							dojo.fx.wipeIn({ node: dojo.byId(set.Table) })
+						]).play();
+					} else {
+						dojo.fx.wipeIn({ node: dojo.byId(set.Table) }).play();
+					}
 					CurrentDataset = set;
 				}
 				if (Flowchart) {
@@ -433,6 +438,12 @@
 				} else {
 					return {};
 				}
+			}
+			
+			function ForceReloadCurrent() {
+				var cont = CurrentContents[CurrentPage].container;
+				dojo.byId("data_" + cont).innerHTML = "";
+				LoadContents(cont, CurrentContents[CurrentPage].url);
 			}
 			
 			function FilterCurrent(filter) {
@@ -629,8 +640,12 @@
 			</div>
 		</tal:if>
 		<div id="searching" style="width: 100%;" class="dijitContentPaneLoading">Searching... Please wait</div>
-		<tal:for repeat="n python:range(nfiles)"><div id="data_${n}" tal:attributes="style python: test(n==index,'width:100%','width:100'+chr(59)+'%height:0'+chr(59)+'display:none')"></div></tal:for>
-		<div id="data_peptides" visible="false" style="width: 100%; display: none"></div>
-		<div id="data_spectrum" visible="false" style="width: 100%; display: none"></div>
+		<div id="containers">
+			<div id="files_containers">
+				<tal:for repeat="n python:range(nfiles)"><div id="data_${n}" tal:attributes="style python: test(n==index,'width:100%','width:100%'+chr(59)+'height:0'+chr(59)+'display:none')"></div></tal:for>
+			</div>
+			<div id="data_peptides" visible="false" style="width: 100%; display: none"></div>
+			<div id="data_spectrum" visible="false" style="width: 100%; display: none"></div>
+		</div>
 	</body>
 </html>
