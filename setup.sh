@@ -90,7 +90,7 @@ has() {
 bin_need() {
 	echo "Checking for $1"
 	for b in $@; do
-		if [ ! "`which $b 2>/dev/null`" ]; then
+		if [ "`which $b 2>/dev/null`" ]; then
 			echo "$b is already installed"
 			return 0
 		fi
