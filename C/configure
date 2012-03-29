@@ -272,7 +272,7 @@ for _arg in $@; do
 done
 
 echo -n "Searching for C++ compiler: " | tee -a $log
-cpp=`findtool2 g++ gpp`
+cpp=`findtool2 g++ gxx`
 if [ "$cpp" ]; then
 	echo $cpp | tee -a $log
 	echo "CC=$cpp" >> $config

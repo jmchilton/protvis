@@ -34,7 +34,9 @@ for arg in $@; do
 done
 
 super() {
-	if [ "`which sudo 2>/dev/null`" ]; then
+	if [ `id -u` -eq 0 ]; then
+		$@
+	elif [ "`which sudo 2>/dev/null`" ]; then
 		sudo -E $@
 	elif [ "`which su 2>/dev/null`" ]; then
 		su -c "$@" `whoami`
@@ -53,6 +55,8 @@ get() {
 			super apt-get install --yes $1 >>$log
 		elif [ "`which yum 2>/dev/null`" ]; then
 			super yum -y install $1 >>$log
+		elif [ "`which zypper 2>/dev/null`" ]; then
+			super zypper -n install $1 >>$log
 		fi
 		if [ $? -eq 0 ]; then
 			echo "done" | tee -a $log
@@ -89,6 +93,10 @@ has() {
 		elif [ "`which yum 2>/dev/null`" ]; then
 			yum list $1 2>/dev/null 1>/dev/null
 			if [ $? -eq 0 ]; then
+				echo "$1"
+			fi
+		elif [ "`which zypper 2>/dev/null`" ]; then
+			if [ ! "`zypper info pythonz | grep "package '[^']*' not found"`" ]; then
 				echo "$1"
 			fi
 		fi
@@ -154,7 +162,7 @@ rm $log 2>/dev/null
 bin_need python python27.`uname -i` python26.`uname -i`
 bin_need make make.`uname -i`
 bin_need gcc | tee -a $log
-bin_need g++ gpp gcc-c++.`uname -i`
+bin_need g++ gxx gcc-c++ gcc-c++.`uname -i`
 py_need "setuptools" "dl http://peak.telecommunity.com/dist/ez_setup.py | super python"
 py_need "virtualenv" "easy_install virtualenv"
 
