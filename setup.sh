@@ -55,24 +55,27 @@ get() {
 			super yum -y install $1
 		fi
 		if [ $? -eq 0 ]; then
+			echo "done"
 			return 0
 		else
 			if [ "$2" ]; then
 				super "$2"
-				return $?
-			else
-				echo "failed"
-				echo ""
-				echo "The following packages are required before running: make python python-setuptools python-virtualenv make gcc g++"
-				exit
+				if [ $? -eq 0 ]; then
+					echo "done"
+					return 0
+				fi
 			fi
+			echo "failed"
+			echo ""
+			echo "The following packages are required before running: make python python-setuptools python-virtualenv make gcc g++"
+			return 1
 		fi
 	else
-		echo ""
 		echo "can't find a suitable package"
+		echo ""
 		echo "The following packages are required before running: make python python-setuptools python-virtualenv make gcc g++"
 		echo "You can run this script with --auto-install to automatically install packages into your system"
-		exit
+		return 1
 	fi
 }
 
@@ -106,12 +109,12 @@ bin_need() {
 			return $?
 		fi
 	done
-	echo ""
 	echo "can't find a suitable package"
+	echo ""
 	if [ $allow_install -eq 0 ]; then
 		echo "You can run this script with --auto-install to automatically install packages into your system"
 	fi
-	exit 1
+	return 1
 }
 
 py_need() {
@@ -122,12 +125,12 @@ py_need() {
 		if [ $? -eq 0 ]; then
 			return 0
 		fi
-		echo ""
 		echo "can't find a suitable package"
+		echo ""
 		if [ $allow_install -eq 0 ]; then
 			echo "You can run this script with --auto-install to automatically install packages into your system"
 		fi
-		exit 1
+		return 1
 	else
 		echo "already installed"
 		return 0
@@ -147,11 +150,29 @@ dl() {
 rm $log 2>/dev/null
 
 bin_need python python27.`uname -i` python26.`uname -i` | tee -a $log
+if [ $? -ne 0 ]; then
+	exit 1
+fi
 bin_need make make.`uname -i` | tee -a $log
+if [ $? -ne 0 ]; then
+	exit 1
+fi
 bin_need gcc | tee -a $log
+if [ $? -ne 0 ]; then
+	exit 1
+fi
 bin_need g++ gpp gcc-c++.`uname -i` | tee -a $log
+if [ $? -ne 0 ]; then
+	exit 1
+fi
 py_need "setuptools" "dl http://peak.telecommunity.com/dist/ez_setup.py | super python" | tee -a $log
+if [ $? -ne 0 ]; then
+	exit 1
+fi
 py_need "virtualenv" "easy_install virtualenv" | tee -a $log
+if [ $? -ne 0 ]; then
+	exit 1
+fi
 
 echo -n "Checking for blast+: " | tee -a $log
 mkdir bin 2>/dev/null
@@ -193,7 +214,6 @@ virtualenv --no-site-packages env >>$log
 echo "`pwd`" >`env/bin/python -c "from distutils.sysconfig import get_python_lib; print(get_python_lib())"`/protvis.pth
 
 echo "Installing pyramid into the virtual environment" | tee -a $log
-echo "This could take a while"
 cd env
 bin/easy_install pyramid >>$log
 bin/easy_install PasteScript >>$log
@@ -224,3 +244,4 @@ echo ""
 echo "There was an error while compiling the C bindings." | tee -a $log
 echo "You can still run the server without them, but mzML files will not display" | tee -a $log
 echo "You can now run protvis by typing ./run" | tee -a $log
+exit 1
