@@ -76,11 +76,13 @@ get() {
 has() {
 	if [ $allow_install -ne 0 ]; then
 		if [ "`which apt-get 2>/dev/null`" ]; then
-			if [ "`apt-cache search $1 | grep "^$1[ \t]"`" ]; then
+			apt-cache show $1 2>/dev/null 1>/dev/null
+			if [ $? -eq 0 ]; then
 				echo $1
 			fi
 		elif [ "`which yum 2>/dev/null`" ]; then
-			if [ "`yum list | grep "^$1[ \t]"`" ]; then
+			yum list $1 2>/dev/null 1>/dev/null
+			if [ $? -eq 0 ]; then
 				echo "$1"
 			fi
 		fi
@@ -127,8 +129,8 @@ dl() {
 	fi
 }
 
-bin_need python
-bin_need make
+bin_need python python27.`uname -i` python26.`uname -i`
+bin_need make make.`uname -i`
 bin_need gcc
 bin_need g++ gpp gcc-c++.`uname -i`
 py_need "setuptools" "dl http://peak.telecommunity.com/dist/ez_setup.py | super python"
