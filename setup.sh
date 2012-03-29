@@ -52,11 +52,11 @@ get() {
 	if [ $allow_install -ne 0 ]; then
 		echo -n "installing... " | tee -a $log
 		if [ "`which apt-get 2>/dev/null`" ]; then
-			super apt-get install --yes $1 >>$log
+			super apt-get install --yes $1 2>>$log >>$log
 		elif [ "`which yum 2>/dev/null`" ]; then
-			super yum -y install $1 >>$log
+			super yum -y install $1 2>>$log >>$log
 		elif [ "`which zypper 2>/dev/null`" ]; then
-			super zypper -n install $1 >>$log
+			super zypper -n install $1 2>>$log >>$log
 		fi
 		if [ $? -eq 0 ]; then
 			echo "done" | tee -a $log
@@ -176,6 +176,7 @@ mkdir bin 2>/dev/null
 PATH=$PATH:./bin/
 if [ "`which makeblastdb 2>/dev/null`" == "" ] || [ "`which blastdbcmd 2>/dev/null`" == "" ]; then
 	if [ "`uname`" == "Linux" ]; then
+		echo "installing"
 		if [ "`uname -p`" == "x86_64" ]; then
 			arch="x64"
 		else
