@@ -64,12 +64,11 @@ BaseGraph = function(container, opts) {
 			callback: function(isRange, range),
 			data: Object [optinal],
 			axis: any combination of 'x', 'y'
-		},
-		pan: function(range, finished)*/
+		}*/
 	};
 	
 	this.Padding = [60, 10, 10, 45]; //l, t, r, b
-	this.DataRange = dojo.clone(opts.data);
+
 	this.ViewRange = {
 		x: { min:opts.axis.x.min, max:opts.axis.x.max },
 		y: { min:opts.axis.y.min, max:opts.axis.y.max }
@@ -280,63 +279,7 @@ BaseGraph = function(container, opts) {
 			dojo._base.event.stop(evt);
 
 			var pt = this.PointOnGraph(evt);
-			if (this.Options.pan && (evt.which == 2 || evt.shiftKey)) {
-				this.Options.tooltip.hide();
-				var moved = false;
-				this.DragPoint = {
-					x: pt.x < this.Padding[0] ? this.Padding[0] : pt.x > this.Width + this.Padding[0] ? this.Width + this.Padding[0] : pt.x,
-					y: pt.y < this.Padding[1] ? this.Padding[1] : pt.y > this.Height + this.Padding[1] ? this.Height + this.Padding[1] : pt.y,
-					active: false,
-					on: this.PointInGraph(pt)
-				};
-				this.Handlers.onmouseup = dojo.connect(window, "onmouseup", this, function(evt) {
-					if (moved) {
-						this.Options.pan(this.ViewRange, true);
-					}
-					this.DragPoint = null;
-					for (var h in this.Handlers) {
-						dojo.disconnect(this.Handlers[h]);
-					}
-					this.Handlers = {}
-				});
-				this.Handlers.onmousemove = dojo.connect(window, "onmousemove", this, function(evt) {
-					var pt = this.PointOnGraph(evt);
-					var x = (this.DragPoint.x - pt.x) / this.ScaleX;
-					var y = (pt.y - this.DragPoint.y) / this.ScaleY;
-					var vr = {
-						x: {
-							min: this.ViewRange.x.min + x,
-							max: this.ViewRange.x.max + x
-						},
-						y: {
-							min: this.ViewRange.y.min + y,
-							max: this.ViewRange.y.max + y
-						}
-					}
-					if (vr.x.min < this.DataRange.x.min) {
-						vr.x.max += this.DataRange.x.min - vr.x.min;
-						vr.x.min = this.DataRange.x.min;
-					} else if (vr.x.max > this.DataRange.x.max) {
-						vr.x.min += this.DataRange.x.max - vr.x.max;
-						vr.x.max = this.DataRange.x.max;
-					}
-					if (vr.y.min < this.DataRange.y.min) {
-						vr.y.max += this.DataRange.y.min - vr.y.min;
-						vr.y.min = this.DataRange.y.min;
-					} else if (vr.y.max > this.DataRange.y.max) {
-						vr.y.min += this.DataRange.y.max - vr.y.max;
-						vr.y.max = this.DataRange.y.max;
-					}
-					if (vr.x.min != this.ViewRange.x.min || vr.x.max != this.ViewRange.x.max || vr.y.min != this.ViewRange.y.min || vr.y.max != this.ViewRange.y.max) {
-						this.ViewRange = vr;
-						this.RenderFrame();
-						this.Options.pan(this.ViewRange, false);
-						moved = true;
-						this.DragPoint.x = pt.x;
-						this.DragPoint.y = pt.y;
-					}
-				});
-			} else if (this.Options.selection) {
+			if (this.Options.selection) {
 				if (this.Selection != null) {
 					return;
 				}
@@ -347,7 +290,7 @@ BaseGraph = function(container, opts) {
 					active: false,
 					on: this.PointInGraph(pt)
 				};
-				this.Handlers.onmouseup = dojo.connect(window, "onmouseup", this, function(evt) {
+				this.Handlers.onmouseup = dojo.connect(window, "onmouseup", this, function(evt) {//this.Interact.connect("onmouseup", this, function(evt) {
 					var pt = this.PointOnGraph(evt);
 					if (this.Options.selection.callback) {
 						if (this.DragPoint.active) {
