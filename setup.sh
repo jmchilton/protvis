@@ -48,33 +48,33 @@ super() {
 
 get() {
 	if [ $allow_install -ne 0 ]; then
-		echo -n "installing... "
+		echo -n "installing... " | tee -a $log
 		if [ "`which apt-get 2>/dev/null`" ]; then
-			super apt-get install --yes $1
+			super apt-get install --yes $1 >>$log
 		elif [ "`which yum 2>/dev/null`" ]; then
-			super yum -y install $1
+			super yum -y install $1 >>$log
 		fi
 		if [ $? -eq 0 ]; then
-			echo "done"
+			echo "done" | tee -a $log
 			return 0
 		else
 			if [ "$2" ]; then
-				super "$2"
+				super "$2" >>$log
 				if [ $? -eq 0 ]; then
-					echo "done"
+					echo "done" | tee -a $log
 					return 0
 				fi
 			fi
-			echo "failed"
-			echo ""
-			echo "The following packages are required before running: make python python-setuptools python-virtualenv make gcc g++"
+			echo "failed" | tee -a $log
+			echo "" | tee -a $log
+			echo "The following packages are required before running: make python python-setuptools python-virtualenv make gcc g++" | tee -a $log
 			return 1
 		fi
 	else
-		echo "can't find a suitable package"
-		echo ""
-		echo "The following packages are required before running: make python python-setuptools python-virtualenv make gcc g++"
-		echo "You can run this script with --auto-install to automatically install packages into your system"
+		echo "can't find a suitable package" | tee -a $log
+		echo "" | tee -a $log
+		echo "The following packages are required before running: make python python-setuptools python-virtualenv make gcc g++" | tee -a $log
+		echo "You can run this script with --auto-install to automatically install packages into your system" | tee -a $log
 		return 1
 	fi
 }
@@ -96,43 +96,45 @@ has() {
 }
 
 bin_need() {
-	echo -n "Checking for $1: "
+	echo -n "Checking for $1: " | tee -a $log
 	for b in $@; do
 		if [ "`which $b 2>/dev/null`" ]; then
-			echo "already installed"
+			echo "already installed" | tee -a $log
 			return 0
 		fi
 	done
-	for b in $@; do
-		if [ "`has $b`" ]; then
-			get $b
-			return $?
-		fi
-	done
-	echo "can't find a suitable package"
-	echo ""
-	if [ $allow_install -eq 0 ]; then
-		echo "You can run this script with --auto-install to automatically install packages into your system"
+	if [ $allow_install -ne 0 ]; then
+		for b in $@; do
+			if [ "`has $b`" ]; then
+				get $b
+				return $?
+			fi
+		done
 	fi
-	return 1
+	echo "can't find a suitable package" | tee -a $log
+	echo "" | tee -a $log
+	if [ $allow_install -eq 0 ]; then
+		echo "You can run this script with --auto-install to automatically install packages into your system" | tee -a $log
+	fi
+	exit 1
 }
 
 py_need() {
-	echo -n "Checking for $1: "
+	echo -n "Checking for $1: " | tee -a $log
 	python -c "import $1" 2>/dev/null >/dev/null
 	if [ $? -ne 0 ]; then
 		get "python-$1" "$2"
 		if [ $? -eq 0 ]; then
 			return 0
 		fi
-		echo "can't find a suitable package"
-		echo ""
+		echo "can't find a suitable package" | tee -a $log
+		echo "" | tee -a $log
 		if [ $allow_install -eq 0 ]; then
-			echo "You can run this script with --auto-install to automatically install packages into your system"
+			echo "You can run this script with --auto-install to automatically install packages into your system" | tee -a $log
 		fi
-		return 1
+		exit 1
 	else
-		echo "already installed"
+		echo "already installed" | tee -a $log
 		return 0
 	fi
 }
@@ -149,30 +151,12 @@ dl() {
 
 rm $log 2>/dev/null
 
-bin_need python python27.`uname -i` python26.`uname -i` | tee -a $log
-if [ $? -ne 0 ]; then
-	exit 1
-fi
-bin_need make make.`uname -i` | tee -a $log
-if [ $? -ne 0 ]; then
-	exit 1
-fi
+bin_need python python27.`uname -i` python26.`uname -i`
+bin_need make make.`uname -i`
 bin_need gcc | tee -a $log
-if [ $? -ne 0 ]; then
-	exit 1
-fi
-bin_need g++ gpp gcc-c++.`uname -i` | tee -a $log
-if [ $? -ne 0 ]; then
-	exit 1
-fi
-py_need "setuptools" "dl http://peak.telecommunity.com/dist/ez_setup.py | super python" | tee -a $log
-if [ $? -ne 0 ]; then
-	exit 1
-fi
-py_need "virtualenv" "easy_install virtualenv" | tee -a $log
-if [ $? -ne 0 ]; then
-	exit 1
-fi
+bin_need g++ gpp gcc-c++.`uname -i`
+py_need "setuptools" "dl http://peak.telecommunity.com/dist/ez_setup.py | super python"
+py_need "virtualenv" "easy_install virtualenv"
 
 echo -n "Checking for blast+: " | tee -a $log
 mkdir bin 2>/dev/null
