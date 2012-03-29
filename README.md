@@ -25,6 +25,9 @@ On Red Hat/CentOS: You may need to append your platform on the end of the name
 
     sudo yum install mercurial  #Possibly  mercurial.i386  OR  mercurial.x86_64
 
+On SuSE:
+	sudo zypper install mercurial
+
 Once you have mercurial, you can clone the repositories and run them.
 Copy and paste one of the following script into the shell on a unix/linux or OSX computer in a directory where you have write permission.
 

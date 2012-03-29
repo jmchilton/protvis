@@ -106,13 +106,14 @@ has() {
 bin_need() {
 	echo -n "Checking for $1: " | tee -a $log
 	for b in $@; do
-		if [ "`which $b 2>/dev/null`" ]; then
+		if [ "`which $b 2>/dev/null | tee -a $log`" ]; then
 			echo "already installed" | tee -a $log
 			return 0
 		fi
 	done
 	if [ $allow_install -ne 0 ]; then
 		for b in $@; do
+			echo "Trying $b" >> $log
 			if [ "`has $b`" ]; then
 				get $b
 				return $?
@@ -123,6 +124,8 @@ bin_need() {
 	echo "" | tee -a $log
 	if [ $allow_install -eq 0 ]; then
 		echo "You can run this script with --auto-install to automatically install packages into your system" | tee -a $log
+	else
+		echo "You need to manually install $1 then re-run this script"
 	fi
 	exit 1
 }
@@ -139,6 +142,8 @@ py_need() {
 		echo "" | tee -a $log
 		if [ $allow_install -eq 0 ]; then
 			echo "You can run this script with --auto-install to automatically install packages into your system" | tee -a $log
+		else
+			echo "You need to manually install $1 then re-run this script"
 		fi
 		exit 1
 	else
@@ -161,7 +166,7 @@ rm $log 2>/dev/null
 
 bin_need python python27.`uname -i` python26.`uname -i`
 bin_need make make.`uname -i`
-bin_need gcc | tee -a $log
+bin_need gcc
 bin_need g++ gxx gcc-c++ gcc-c++.`uname -i`
 py_need "setuptools" "dl http://peak.telecommunity.com/dist/ez_setup.py | super python"
 py_need "virtualenv" "easy_install virtualenv"
