@@ -1,6 +1,8 @@
 #!/bin/bash
 
 allow_install=0
+compile=1
+
 log=setup.log
 
 usage() {
@@ -8,18 +10,50 @@ usage() {
 Usage: ./setup.sh [OPTIONS]
 
 Where [OPTIONS] can be any combination of:
-  --auto-install   Automatically download and install missing packages into
-                   your package manager.
-                   This option only affects system packages. Some packages
-                   will still be downloaded and installed into the local
-                   directory
+  --no-compile      Dont compile the C bindings
+                    This will make mzml files unavaliable and will reduce
+                    performance in other files
+
+  --auto-install=X  Automatically download and install missing requirements
+                    X=all
+                       Installs any missing dependancies. This includes
+                       installing into your systems package manager
+                       May require root access
+                       Equivelent to just --auto-install
+                    X=local
+                       Only download and install packages that will be used
+                       locally, and have no impact on the system configuration
+                    X=none
+                       Dont download or install anything.
+                       Default when --auto-install is not provided
 %%%
 }
 
 for arg in $@; do
 	case $arg in
+		--no-compile)
+			compile=0
+			;;
 		--auto-install)
-			allow_install=1
+			allow_install=2
+			;;
+		--auto-install=*)
+			case `echo "$arg" | cut -b 16-` in
+				all)
+					allow_install=2
+					;;
+				local)
+					allow_install=1
+					;;
+				none)
+					allow_install=0
+					;;
+				*)
+					echo "Unrecognised argument $arg"
+					usage
+					exit 1
+					;;
+			esac
 			;;
 		--help)
 			usage
@@ -49,7 +83,7 @@ super() {
 }
 
 get() {
-	if [ $allow_install -ne 0 ]; then
+	if [ $allow_install -ge 2 ]; then
 		echo -n "installing... " | tee -a $log
 		if [ "`which apt-get 2>/dev/null`" ]; then
 			super apt-get install --yes $1 2>>$log >>$log
@@ -84,7 +118,7 @@ get() {
 }
 
 has() {
-	if [ $allow_install -ne 0 ]; then
+	if [ $allow_install -ge 2 ]; then
 		if [ "`which apt-get 2>/dev/null`" ]; then
 			apt-cache show $1 2>/dev/null 1>/dev/null
 			if [ $? -eq 0 ]; then
@@ -111,7 +145,7 @@ bin_need() {
 			return 0
 		fi
 	done
-	if [ $allow_install -ne 0 ]; then
+	if [ $allow_install -ge 2 ]; then
 		for b in $@; do
 			echo "Trying $b" >> $log
 			if [ "`has $b`" ]; then
@@ -122,10 +156,10 @@ bin_need() {
 	fi
 	echo "can't find a suitable package" | tee -a $log
 	echo "" | tee -a $log
-	if [ $allow_install -eq 0 ]; then
-		echo "You can run this script with --auto-install to automatically install packages into your system" | tee -a $log
-	else
+	if [ $allow_install -ge 2 ]; then
 		echo "You need to manually install $1 then re-run this script"
+	else
+		echo "You can run this script with --auto-install to automatically install packages into your system" | tee -a $log
 	fi
 	exit 1
 }
@@ -140,7 +174,7 @@ py_need() {
 		fi
 		echo "can't find a suitable package" | tee -a $log
 		echo "" | tee -a $log
-		if [ $allow_install -eq 0 ]; then
+		if [ $allow_install -ge 2 ]; then
 			echo "You can run this script with --auto-install to automatically install packages into your system" | tee -a $log
 		else
 			echo "You need to manually install $1 then re-run this script"
@@ -176,8 +210,8 @@ mkdir bin 2>/dev/null
 PATH=$PATH:./bin/
 if [ "`which makeblastdb 2>/dev/null`" == "" ] || [ "`which blastdbcmd 2>/dev/null`" == "" ]; then
 	if [ "`uname`" == "Linux" ]; then
-		echo "installing"
-		if [ "`uname -p`" == "x86_64" ]; then
+		echo "installing" | tee -a $log
+		if [ "`uname -p`" = "x86_64" ]; then
 			arch="x64"
 		else
 			arch="ia32"
@@ -190,14 +224,14 @@ if [ "`which makeblastdb 2>/dev/null`" == "" ] || [ "`which blastdbcmd 2>/dev/nu
 			mv ncbi-blast-$ver+/bin/makeblastdb ncbi-blast-$ver+/bin/blastdbcmd bin/
 			rm -rf ncbi-blast-$ver+ 2>/dev/null
 		else
-			echo "can't find a suitable package"
-			echo ""
+			echo "can't find a suitable package" | tee -a $log
+			echo "" | tee -a $log
 			echo "Please visit ftp://ftp.ncbi.nlm.nih.gov/blast/executables/blast+/LATEST to download and install blast+ either into `pwd`/bin or a location in PATH" | tee -a $log
 			echo "This is an OPTIONAL feature" | tee -a $log
 		fi
 	else
-		echo "unrecognised OS"
-		echo ""
+		echo "unrecognised OS" | tee -a $log
+		echo "" | tee -a $log
 		echo "Please visit ftp://ftp.ncbi.nlm.nih.gov/blast/executables/blast+/LATEST to download and install blast+ either into `pwd`/bin or a location in PATH" | tee -a $log
 		echo "This is an OPTIONAL feature" | tee -a $log
 	fi
@@ -226,20 +260,31 @@ rm dojo 2>/dev/null
 ln -s dojo_mini dojo
 cd ..
 
-echo "Configuring C++ bindings" | tee -a $log
-cd C
-./configure --auto-install
-if [ $? -eq 0 ]; then
-	echo "Compiling C++ bindings" | tee -a $log
-	make -s
-	if [ $? -eq 0 ]; then
-		echo ""
-		echo "You can now run protvis by typing ./run" | tee -a $log
-		exit 0
+if [ $compile -ne 0 ]; then
+	echo "Configuring C++ bindings" | tee -a $log
+	cd C
+	if [ $allow_install -ge 1 ]; then
+		./configure --auto-install
+	else
+		./configure
 	fi
+	if [ $? -eq 0 ]; then
+		echo "Compiling C++ bindings" | tee -a $log
+		make -s
+		if [ $? -eq 0 ]; then
+			echo ""
+			echo "You can now run protvis by typing ./run" | tee -a $log
+			exit 0
+		fi
+	fi
+	echo "" | tee -a $log
+	echo "There was an error while compiling the C bindings." | tee -a $log
+	echo "You can still run the server without them, but mzML files will not display" | tee -a $log
+	echo "" | tee -a $log
+	echo "You can now run protvis by typing ./run" | tee -a $log
+	exit 1
+else
+	echo ""
+	echo "You can now run protvis by typing ./run" | tee -a $log
+	exit 0
 fi
-echo ""
-echo "There was an error while compiling the C bindings." | tee -a $log
-echo "You can still run the server without them, but mzML files will not display" | tee -a $log
-echo "You can now run protvis by typing ./run" | tee -a $log
-exit 1
