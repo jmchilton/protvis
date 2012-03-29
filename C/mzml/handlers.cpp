@@ -143,6 +143,7 @@ bool BinaryDataArray::Begin(State *pState, const XML_Char **pszAttrs) {
 
 void BinaryDataArray::End() {
 	CVParamData *pParams = GetParams();
+	bool bDelete = true;
 	for (DWORD i = GetParamsCount(); i > 0; --i, ++pParams) {
 		if (pParams->nCvRef == ACC_REF_MS) {
 			switch (pParams->nAccession) {
@@ -158,17 +159,17 @@ void BinaryDataArray::End() {
 				}
 				case ACC_MS_DATA_MZ:
 					m_pSpectrum->m_pMz = m_pBinary;
-					m_pBinary = NULL;
+					bDelete = false;
 					break;
 			
 				case ACC_MS_DATA_INTENSITY:
 					m_pSpectrum->m_pIntensity = m_pBinary;
-					m_pBinary = NULL;
+					bDelete = false;
 					break;
 			}
 		}
 	}
-	if (m_pBinary != NULL) {
+	if (m_pBinary != NULL && bDelete) {
 		delete m_pBinary;
 	}
 }

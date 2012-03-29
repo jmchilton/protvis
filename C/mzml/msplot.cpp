@@ -520,6 +520,9 @@ MemoryStream *MS2Plot::RenderFromFile(const char *szFileName, DWORD nWidth, DWOR
 			fclose(pFile);
 			return NULL;
 		}
+		if (run.scans == 0) {
+			return BlankImage();
+		}
 		DWORD nDataSize = run.indexOffset - (mzml.run__offset + 2 * sizeof(DWORD));
 		char *pSrcData = (char *)malloc(nDataSize);
 		if (fread(pSrcData, 1, nDataSize, pFile) != nDataSize) {
