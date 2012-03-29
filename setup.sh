@@ -96,7 +96,7 @@ has() {
 				echo "$1"
 			fi
 		elif [ "`which zypper 2>/dev/null`" ]; then
-			if [ ! "`zypper info pythonz | grep "package '[^']*' not found"`" ]; then
+			if [ ! "`zypper info $1 | grep "package '[^']*' not found"`" ]; then
 				echo "$1"
 			fi
 		fi
