@@ -73,10 +73,13 @@ MemoryStream *BlankImage() {
 			png_set_write_fn(png_ptr, pStream, &PngWriterWrite, &PngWriterFlush);
 			png_set_IHDR(png_ptr, info_ptr, 1, 1, 8, PNG_COLOR_TYPE_GRAY_ALPHA, PNG_INTERLACE_NONE, PNG_COMPRESSION_TYPE_BASE, PNG_FILTER_TYPE_BASE);
 			png_write_info(png_ptr, info_ptr);
-			png_bytep pRows[1 + 1];
-			*pRows = (png_bytep)pRows + 1; //Assign the row
-			*((WORD *)(pRows + 1)) = 0; //Draw the pixel
-			png_write_image(png_ptr, pRows);
+			struct {
+				png_bytep ptr;
+				WORD row;
+			} pRows;
+			pRows.ptr = (png_bytep)&pRows.row; //Assign the row
+			pRows.row = 0; //Draw the pixel
+			png_write_image(png_ptr, &pRows.ptr);
 			png_write_end(png_ptr, NULL);
 		}
 	}
