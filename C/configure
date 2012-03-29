@@ -1,7 +1,7 @@
 #!/bin/sh
 
 config="config.mk"
-log="config.log"
+log="`pwd`/config.log"
 includes=""
 libs=""
 allow_install=0
@@ -281,12 +281,12 @@ else
 	exit 1
 fi
 
+cpptestinc "libpng" "getlibpng" "png.h"
+cpptestlib "libpng" "getlibpng" "png.h" "-lpng"
 cpptestinc "python" "getpython" "Python.h" "python`../env/bin/python --version 2>&1 | awk '{print $2}' | cut -b -3`/Python.h"
 cpptestinc "malloc" "fail" "stdlib.h" "malloc.h" "malloc/malloc.h" "memory.h"
 cpptestinc "zlib" "getzlib" "zlib.h"
 cpptestlib "zlib" "getzlib" "zlib.h" "-lz"
-cpptestinc "libpng" "getlibpng" "png.h"
-cpptestlib "libpng" "getlibpng" "png.h" "-lpng"
 cpptestinc "expat" "getexpat" "expat.h"
 cpptestlib "expat" "getexpat" "expat.h" "-lexpat"
 cpptestinc "boost preprocessor" "getboost" "boost/preprocessor/expand.hpp"

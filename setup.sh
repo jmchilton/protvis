@@ -1,6 +1,7 @@
 #!/bin/bash
 
 allow_install=0
+log=setup.log
 
 usage() {
 	cat <<%%%
@@ -27,7 +28,7 @@ for arg in $@; do
 		*)
 			echo "Unrecognised argument $arg"
 			usage
-			exit 0
+			exit 1
 			;;
 	esac
 done
@@ -47,7 +48,7 @@ super() {
 
 get() {
 	if [ $allow_install -ne 0 ]; then
-		echo "$1 is not installed. Installing it now."
+		echo -n "installing... "
 		if [ "`which apt-get 2>/dev/null`" ]; then
 			super apt-get install --yes $1
 		elif [ "`which yum 2>/dev/null`" ]; then
@@ -60,13 +61,15 @@ get() {
 				super "$2"
 				return $?
 			else
-				echo "Failed to install $1."
+				echo "failed"
+				echo ""
 				echo "The following packages are required before running: make python python-setuptools python-virtualenv make gcc g++"
 				exit
 			fi
 		fi
 	else
-		echo "$1 could not be located"
+		echo ""
+		echo "can't find a suitable package"
 		echo "The following packages are required before running: make python python-setuptools python-virtualenv make gcc g++"
 		echo "You can run this script with --auto-install to automatically install packages into your system"
 		exit
@@ -90,10 +93,10 @@ has() {
 }
 
 bin_need() {
-	echo "Checking for $1"
+	echo -n "Checking for $1: "
 	for b in $@; do
 		if [ "`which $b 2>/dev/null`" ]; then
-			echo "$b is already installed"
+			echo "already installed"
 			return 0
 		fi
 	done
@@ -103,18 +106,30 @@ bin_need() {
 			return $?
 		fi
 	done
-	echo 
-	return 1
+	echo ""
+	echo "can't find a suitable package"
+	if [ $allow_install -eq 0 ]; then
+		echo "You can run this script with --auto-install to automatically install packages into your system"
+	fi
+	exit 1
 }
 
 py_need() {
-	echo "Checking for $1 package"
+	echo -n "Checking for $1: "
 	python -c "import $1" 2>/dev/null >/dev/null
 	if [ $? -ne 0 ]; then
 		get "python-$1" "$2"
-		return $?
+		if [ $? -eq 0 ]; then
+			return 0
+		fi
+		echo ""
+		echo "can't find a suitable package"
+		if [ $allow_install -eq 0 ]; then
+			echo "You can run this script with --auto-install to automatically install packages into your system"
+		fi
+		exit 1
 	else
-		echo "$1 is already installed"
+		echo "already installed"
 		return 0
 	fi
 }
@@ -129,14 +144,16 @@ dl() {
 	fi
 }
 
-bin_need python python27.`uname -i` python26.`uname -i`
-bin_need make make.`uname -i`
-bin_need gcc
-bin_need g++ gpp gcc-c++.`uname -i`
-py_need "setuptools" "dl http://peak.telecommunity.com/dist/ez_setup.py | super python"
-py_need "virtualenv" "easy_install virtualenv"
+rm $log 2>/dev/null
 
-echo "Checking for blast+"
+bin_need python python27.`uname -i` python26.`uname -i` | tee -a $log
+bin_need make make.`uname -i` | tee -a $log
+bin_need gcc | tee -a $log
+bin_need g++ gpp gcc-c++.`uname -i` | tee -a $log
+py_need "setuptools" "dl http://peak.telecommunity.com/dist/ez_setup.py | super python" | tee -a $log
+py_need "virtualenv" "easy_install virtualenv" | tee -a $log
+
+echo -n "Checking for blast+: " | tee -a $log
 mkdir bin 2>/dev/null
 PATH=$PATH:./bin/
 if [ "`which makeblastdb 2>/dev/null`" == "" ] || [ "`which blastdbcmd 2>/dev/null`" == "" ]; then
@@ -154,49 +171,56 @@ if [ "`which makeblastdb 2>/dev/null`" == "" ] || [ "`which blastdbcmd 2>/dev/nu
 			mv ncbi-blast-$ver+/bin/makeblastdb ncbi-blast-$ver+/bin/blastdbcmd bin/
 			rm -rf ncbi-blast-$ver+ 2>/dev/null
 		else
-			echo "Could not locate or get blast+. Please visit ftp://ftp.ncbi.nlm.nih.gov/blast/executables/blast+/LATEST to download and install blast+ either into `pwd`/bin or a location in PATH"
-			echo "This is an OPTIONAL feature"
+			echo "can't find a suitable package"
+			echo ""
+			echo "Please visit ftp://ftp.ncbi.nlm.nih.gov/blast/executables/blast+/LATEST to download and install blast+ either into `pwd`/bin or a location in PATH" | tee -a $log
+			echo "This is an OPTIONAL feature" | tee -a $log
 		fi
 	else
-		echo "Unrecognised OS. Please visit ftp://ftp.ncbi.nlm.nih.gov/blast/executables/blast+/LATEST to download and install blast+ either into `pwd`/bin or a location in PATH"
-		echo "This is an OPTIONAL feature"
+		echo "unrecognised OS"
+		echo ""
+		echo "Please visit ftp://ftp.ncbi.nlm.nih.gov/blast/executables/blast+/LATEST to download and install blast+ either into `pwd`/bin or a location in PATH" | tee -a $log
+		echo "This is an OPTIONAL feature" | tee -a $log
 	fi
 else
 	ln -s `which makeblastdb` bin/makeblastdb 2>/dev/null
 	ln -s `which blastdbcmd` bin/blastdbcmd 2>/dev/null
-	echo "blast+ is already installed"
+	echo "already installed" | tee -a $log
 fi
 
-echo "Building the virtual environment"
-virtualenv --no-site-packages env
+echo "Building the virtual environment" | tee -a $log
+virtualenv --no-site-packages env >>$log
 echo "`pwd`" >`env/bin/python -c "from distutils.sysconfig import get_python_lib; print(get_python_lib())"`/protvis.pth
 
-echo "Installing pyramid into the virtual environment"
+echo "Installing pyramid into the virtual environment" | tee -a $log
 echo "This could take a while"
 cd env
-bin/easy_install pyramid
-bin/easy_install PasteScript
-bin/easy_install WebError
-bin/pip install cherrypy
+bin/easy_install pyramid >>$log
+bin/easy_install PasteScript >>$log
+bin/easy_install WebError >>$log
+bin/pip install cherrypy >>$log
 cd ..
 
-echo "The environment has been set up"
+echo "The environment has been set up" | tee -a $log
 
 cd res
 rm dojo 2>/dev/null
 ln -s dojo_mini dojo
 cd ..
 
-echo "Compiling C++ bindings"
+echo "Configuring C++ bindings" | tee -a $log
 cd C
 ./configure --auto-install
 if [ $? -eq 0 ]; then
+	echo "Compiling C++ bindings" | tee -a $log
 	make -s
 	if [ $? -eq 0 ]; then
-		echo "You can now run protvis by typing ./run"
+		echo ""
+		echo "You can now run protvis by typing ./run" | tee -a $log
 		exit 0
 	fi
 fi
-echo "There was an error while compiling the C bindings."
-echo "You can still run the server without them, but mzML files will not display"
-echo "You can now run protvis by typing ./run"
+echo ""
+echo "There was an error while compiling the C bindings." | tee -a $log
+echo "You can still run the server without them, but mzML files will not display" | tee -a $log
+echo "You can now run protvis by typing ./run" | tee -a $log
