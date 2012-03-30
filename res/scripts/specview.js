@@ -105,6 +105,9 @@ SpecViewer = function(container, opts) {
 		},
 		grid: {
 			axis: "xy",
+		},
+		pan: function(range, finish) {
+			console.log(range, finish);
 		}
 	};
 
@@ -1320,6 +1323,13 @@ MsPlot = function(container, data, opts) {
 	}
 	
 	var defaults = {
+		data: {
+			x: this.DataRange.x,
+			y: {
+				min: 0,
+				max: this.DataRange.y.max * 1.1 //FIXME
+			}
+		},
 		axis: {
 			x: {
 				min: this.DataRange.x.min,

@@ -71,7 +71,7 @@
 				</td>
 			</tal:if>
 			<td valign="middle" align="center" class="plot">
-				<div id="msmsplot_${hash}" align="bottom" style="width:100%; height:100%; min-width:100px; min-height:645px;"></div>
+				<div id="msmsplot_${hash}" align="bottom" style="width:100%; height:100%; min-width:100px; min-height:645px; overflow:hidden;"></div>
 				<!--placeholder for ms1 plot (if data is available)-->
 				<!--if(options.ms1peaks && options.ms1peaks.length > 0) {
 					<div id="msplot" style="width:'+options.width+'px;height:100px;"></div>

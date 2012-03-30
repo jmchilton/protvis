@@ -64,11 +64,12 @@ BaseGraph = function(container, opts) {
 			callback: function(isRange, range),
 			data: Object [optinal],
 			axis: any combination of 'x', 'y'
-		}*/
+		},
+		pan: function(range, finished)*/
 	};
 	
-	this.Padding = [60, 10, 10, 45]; //l, t, r, b
-
+	this.Padding = [65, 15, 15, 50]; //l, t, r, b
+	this.DataRange = dojo.clone(opts.data);
 	this.ViewRange = {
 		x: { min:opts.axis.x.min, max:opts.axis.x.max },
 		y: { min:opts.axis.y.min, max:opts.axis.y.max }
@@ -184,7 +185,7 @@ BaseGraph = function(container, opts) {
 		}
 		if (this.Options.axis.y.label) {
 			var y = this.Padding[1] + this.Height / 2;
-			this.FrameGroup.createText({x:17, y:y, text:this.Options.axis.y.label, align:"middle"}).setFont({family:"Arial", size:"14px", weight:"bold"}).setFill("black").setTransform(dojox.gfx.matrix.rotategAt(270, {x:17, y:y}));
+			this.FrameGroup.createText({x:22, y:y, text:this.Options.axis.y.label, align:"middle"}).setFont({family:"Arial", size:"14px", weight:"bold"}).setFill("black").setTransform(dojox.gfx.matrix.rotategAt(270, {x:22, y:y}));
 		}
 	}
 	
@@ -264,7 +265,7 @@ BaseGraph = function(container, opts) {
 		this.FrameGroup = this.Surface.createGroup();
 		this.Width = wc - this.Padding[0] - this.Padding[2];
 		this.Height = hc - this.Padding[1] - this.Padding[3];
-		this.GraphBottom = container.clientHeight - this.Padding[3];
+		this.GraphBottom = hc - this.Padding[3];
 		this.ScaleX = this.Width / (this.ViewRange.x.max - this.ViewRange.x.min);
 		this.ScaleY = this.Height / (this.ViewRange.y.max - this.ViewRange.y.min);
 		this.RenderFrame();
@@ -279,7 +280,63 @@ BaseGraph = function(container, opts) {
 			dojo._base.event.stop(evt);
 
 			var pt = this.PointOnGraph(evt);
-			if (this.Options.selection) {
+			if (this.Options.pan && (evt.which == 2 || evt.shiftKey)) {
+				this.Options.tooltip.hide();
+				var moved = false;
+				this.DragPoint = {
+					x: pt.x < this.Padding[0] ? this.Padding[0] : pt.x > this.Width + this.Padding[0] ? this.Width + this.Padding[0] : pt.x,
+					y: pt.y < this.Padding[1] ? this.Padding[1] : pt.y > this.Height + this.Padding[1] ? this.Height + this.Padding[1] : pt.y,
+					active: false,
+					on: this.PointInGraph(pt)
+				};
+				this.Handlers.onmouseup = dojo.connect(window, "onmouseup", this, function(evt) {
+					if (moved) {
+						this.Options.pan(this.ViewRange, true);
+					}
+					this.DragPoint = null;
+					for (var h in this.Handlers) {
+						dojo.disconnect(this.Handlers[h]);
+					}
+					this.Handlers = {}
+				});
+				this.Handlers.onmousemove = dojo.connect(window, "onmousemove", this, function(evt) {
+					var pt = this.PointOnGraph(evt);
+					var x = (this.DragPoint.x - pt.x) / this.ScaleX;
+					var y = (pt.y - this.DragPoint.y) / this.ScaleY;
+					var vr = {
+						x: {
+							min: this.ViewRange.x.min + x,
+							max: this.ViewRange.x.max + x
+						},
+						y: {
+							min: this.ViewRange.y.min + y,
+							max: this.ViewRange.y.max + y
+						}
+					}
+					if (vr.x.min < this.DataRange.x.min) {
+						vr.x.max += this.DataRange.x.min - vr.x.min;
+						vr.x.min = this.DataRange.x.min;
+					} else if (vr.x.max > this.DataRange.x.max) {
+						vr.x.min += this.DataRange.x.max - vr.x.max;
+						vr.x.max = this.DataRange.x.max;
+					}
+					if (vr.y.min < this.DataRange.y.min) {
+						vr.y.max += this.DataRange.y.min - vr.y.min;
+						vr.y.min = this.DataRange.y.min;
+					} else if (vr.y.max > this.DataRange.y.max) {
+						vr.y.min += this.DataRange.y.max - vr.y.max;
+						vr.y.max = this.DataRange.y.max;
+					}
+					if (vr.x.min != this.ViewRange.x.min || vr.x.max != this.ViewRange.x.max || vr.y.min != this.ViewRange.y.min || vr.y.max != this.ViewRange.y.max) {
+						this.ViewRange = vr;
+						this.RenderFrame();
+						this.Options.pan(this.ViewRange, false);
+						moved = true;
+						this.DragPoint.x = pt.x;
+						this.DragPoint.y = pt.y;
+					}
+				});
+			} else if (this.Options.selection) {
 				if (this.Selection != null) {
 					return;
 				}
@@ -290,7 +347,7 @@ BaseGraph = function(container, opts) {
 					active: false,
 					on: this.PointInGraph(pt)
 				};
-				this.Handlers.onmouseup = dojo.connect(window, "onmouseup", this, function(evt) {//this.Interact.connect("onmouseup", this, function(evt) {
+				this.Handlers.onmouseup = dojo.connect(window, "onmouseup", this, function(evt) {
 					var pt = this.PointOnGraph(evt);
 					if (this.Options.selection.callback) {
 						if (this.DragPoint.active) {
@@ -385,19 +442,23 @@ BaseGraph = function(container, opts) {
 			clearTimeout(resizeTimeout);
 			var obj = this;
 			resizeTimeout = setTimeout(function() {
+				var img = container.firstChild;
+				img.style.setProperty("display", "none", null);
 				var cs = window.getComputedStyle(container, null);
 				var wc = container.clientWidth - parseInt(cs.getPropertyValue('padding-left')) - parseInt(cs.getPropertyValue('padding-right')) - 3;
-				var hc = container.clientHeight - parseInt(cs.getPropertyValue('padding-top')) - parseInt(cs.getPropertyValue('padding-bottom'));
+				var hc = container.clientHeight - parseInt(cs.getPropertyValue('padding-top')) - parseInt(cs.getPropertyValue('padding-bottom')) - 5;
 				var w = wc - obj.Padding[0] - obj.Padding[2];
 				var h = hc - obj.Padding[1] - obj.Padding[3];
 				if (w != obj.Width || h != obj.Height) {
 					obj.Width = w;
 					obj.Height = h;
+					obj.GraphBottom = hc - obj.Padding[3];
 					obj.Surface.setDimensions(wc, hc);
 					obj.RecalcLayout();
 					obj.Interact.clear();
 					obj.Interact.createRect({x:0, y:0, width:wc, height:hc}).setFill("rgba(0,0,0,0)").setStroke(null);
 				}
+				img.style.setProperty("display", "block", null);
 			}, 250);
 		});
 		if (this.Options.tooltip.enable) {
@@ -491,14 +552,14 @@ LcPlot = function(container, opts) {
 		}
 	}
 	
-	this.Zoom = function(range) {
+	this.Zoom = function(range, force) {
 		if (!range) {
 			range = {
 				x: { min:opts.axis.x.min, max:opts.axis.x.max },
 				y: { min:opts.axis.y.min, max:opts.axis.y.max }
 			};
 		}
-		if (range.x.min == this.ViewRange.x.min && range.x.max == this.ViewRange.x.max && range.y.min == this.ViewRange.y.min && range.y.max == this.ViewRange.y.max) {
+		if (!force && range.x.min == this.ViewRange.x.min && range.x.max == this.ViewRange.x.max && range.y.min == this.ViewRange.y.min && range.y.max == this.ViewRange.y.max) {
 			return false;
 		}
 		this.ViewRange = range;
@@ -523,7 +584,7 @@ LcPlot = function(container, opts) {
 	}
 	
 	this.RecalcLayout = function() {
-		this.Zoom(this.ViewRange);
+		this.Zoom(this.ViewRange, true);
 	}
 	
 	this.RenderData = function() {
