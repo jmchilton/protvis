@@ -72,8 +72,8 @@ class JobManager:
 			dbs = 0
 			files = job["files"]
 			for t, f in files:
-				if t != None and t.Type > f.Type:
-					f.Type = t.Type
+				if t != None and t.Type() > f.Type:
+					f.Type = t.Type()
 				if (f.Type & ~Reference.FileType.MISSING) == Reference.FileType.DATABASE:
 					dbs += 1
 				else:
@@ -229,14 +229,20 @@ def SpawnConvertProcess(mod, src, dst, name):
 			self.q = Queue()
 			kwargs["args"] += (self.q,)
 			Process.__init__(self, *args, **kwargs)
-			self.Type = Reference.FileType.UNKNOWN
+			self._type = None
+			#self.Type = Reference.FileType.UNKNOWN
 
 		def started(self):
 			return self.pid != None
 
 		def run(self):
 			Process.run(self)
-			self.Type = self.q.get()
+			#self.Type = self.q.get()
+
+		def Type(self):
+			if self._type == None:
+				self._type = self.q.get()
+			return self._type
 
 	return _ConvertProcess(target=ConvertProcess, args=(mod, src, dst, name))
 
