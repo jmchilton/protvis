@@ -6,6 +6,7 @@ import binascii;
 from xml.sax.saxutils import escape
 import os
 from threading import Thread, Lock
+from multiprocessing import Process, Queue
 from pyramid.httpexceptions import *
 import tempfile
 import urllib
@@ -62,8 +63,7 @@ class JobManager:
 		alive = 0
 		for t, _ in job["files"]:
 			if t != None:
-				t.join(5.0 / len(job["files"]))
-				if t.isAlive():
+				if not t.started() or t.is_alive():
 					alive += 1
 		if alive == 0:
 			#write the index file
@@ -200,7 +200,7 @@ def RendererGlobals(system):
 
 	return { "test": test, "Literal": Literal, "render_peptide": render_peptide, "try_get": TryGet, "urlencode": urllib.quote, "unique_dataset": unique_dataset }
 
-class ConverterThread(Thread):
+"""class ConverterThread(Thread):
 	def __init__(self, mod, src, dst, name):
 		Thread.__init__(self)
 		self.Source = src
@@ -208,6 +208,9 @@ class ConverterThread(Thread):
 		self.Module = mod
 		self.Name = name
 		self.Type = Reference.FileType.UNKNOWN
+
+	def started(self):
+		return self.ident != None
 
 	def run(self):
 		close = False
@@ -218,7 +221,36 @@ class ConverterThread(Thread):
 			self.Source.seek(0)
 		self.Type = self.Module.ToBinary(self.Source, self.Dest, self.Name)
 		if close:
-			self.Source.close()
+			self.Source.close()"""
+
+def SpawnConvertProcess(mod, src, dst, name):
+	class _ConvertProcess(Process):
+		def __init__(self, *args, **kwargs):
+			self.q = Queue()
+			kwargs["args"] += (self.q,)
+			Process.__init__(self, *args, **kwargs)
+			self.Type = Reference.FileType.UNKNOWN
+
+		def started(self):
+			return self.pid != None
+
+		def run(self):
+			Process.run(self)
+			self.Type = self.q.get()
+
+	return _ConvertProcess(target=ConvertProcess, args=(mod, src, dst, name))
+
+def ConvertProcess(mod, src, dst, name, q):
+	close = False
+	if type(src) != file:
+		src = open(src, "r")
+		close = True
+	else:
+		src.seek(0)
+	q.put(mod.ToBinary(src, dst, name))
+	if close:
+		src.close()
+	
 
 def GetQueryFileName(query):
 	try:
@@ -292,7 +324,8 @@ def Upload(req):
 		if f.Type & Reference.FileType.MISSING or f.Type == Reference.FileType.UNKNOWN:
 			threads[i] = None
 		else:
-			t = ConverterThread(Reference.GetTypeParser(f.Type), f.Stream, data.name + "_" + str(i), f.Name)
+			#t = ConverterThread(Reference.GetTypeParser(f.Type), f.Stream, data.name + "_" + str(i), f.Name)
+			t = SpawnConvertProcess(Reference.GetTypeParser(f.Type), f.Stream, data.name + "_" + str(i), f.Name)
 			t.start()
 			threads[i] = t
 	f = data.name[len(converted):]
@@ -330,7 +363,8 @@ def Convert(req):
 			if p == None:
 				threads[i] = None
 			else:
-				t = ConverterThread(p, f.Name, data.name + "_" + str(i), f.Name)
+				#t = ConverterThread(p, f.Name, data.name + "_" + str(i), f.Name)
+				t = SpawnConvertProcess(p, f.Name, data.name + "_" + str(i), f.Name)
 				t.start()
 				threads[i] = t
 	f = data.name[len(converted):]

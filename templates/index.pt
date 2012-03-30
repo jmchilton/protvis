@@ -23,7 +23,7 @@
 						jobid = dataArray["jobid"];
 						file = dataArray["file"];
 						ShowMessage("processing");
-						setTimeout("Update();", 500);
+						setTimeout("Update();", 1000);
 					} else {
 						dojo.byId("error").innerHTML = dataArray["error"]
 					}
@@ -31,7 +31,7 @@
 				if (require.has('file-multiple')){
 					if (uploader.addDropTarget && uploader.uploadType == 'html5'){
 						dojo.byId("dragdrop").innerHTML = "or Drag and Drop files, then ";
-						uploader.addDropTarget(uploader.domNode.parentNode);
+						uploader.addDropTarget(dojo.byId("drop_target"));
 						//override functions so that we append to the list of files
 						uploader._drop = function(e) {
 							dojo.stopEvent(e);
@@ -68,7 +68,7 @@
 								window.location = "view?file=" + file;
 							} else {
 								ShowMessageStatus(left);
-								setTimeout("Update();", 500);
+								setTimeout("Update();", 1000);
 							}
 						} catch (err) {
 							ShowMessage("error");
@@ -110,7 +110,7 @@
 	<body class="claro">
 		<h1><center>Welcome to ProtVis</center></h1>
 		<div style="float:right; min-width:550px;">
-			<fieldset style="border-radius:10px">
+			<fieldset id="drop_target" style="border-radius:10px">
 				<legend>Upload Files</legend>
 				<div id="uploader">
 					<noscript>
