@@ -4,19 +4,24 @@
 
 ## What is it?
 
-Proteomics visualise is a web based tool for viewing and navigating data from a proteomics workflow with any modern web browser.
+Proteomics visualise is a web based tool for visualising and navigating data from a proteomics workflow with any modern web browser.
 
 It supports Protein Prophet, Interprophet, Peptide Prophet, Search Engines (tested with Mascot, X! Tandem and Omssa), and mzML raw spectrums.
 
 ProtVis works as a standalone tool where files can be uploaded, or integrated directly into galaxy with the galaxy-proteomics.
 
-![Screenshor of ProtVis](https://bitbucket.org/Andrew_Brock/proteomics-visualise/raw/97b43cab8533/docs/coverage.png "ProtVis protein and coverage view")
+![Screenshot of ProtVis](https://bitbucket.org/Andrew_Brock/proteomics-visualise/raw/97b43cab8533/docs/coverage.png "ProtVis protein and coverage view")
 
 ***
 
 ## Quick installation
 
-Firstly make sure you have Mercurial installed to be able to download the code.
+Either [download](https://bitbucket.org/Andrew_Brock/proteomics-visualise/downloads) a copy of the code
+
+OR
+
+Access the code through Mercurial
+
 On Debian/Ubuntu:
 
     sudo apt-get install mercurial
@@ -26,6 +31,7 @@ On Red Hat/CentOS: You may need to append your platform on the end of the name
     sudo yum install mercurial  #Possibly  mercurial.i386  OR  mercurial.x86_64
 
 On SuSE:
+
 	sudo zypper install mercurial
 
 Once you have mercurial, you can clone the repositories and run them.
@@ -33,22 +39,46 @@ Copy and paste one of the following script into the shell on a unix/linux or OSX
 
 Running without galaxy:
 
+    #If using mercurial
     hg clone https://bitbucket.org/Andrew_Brock/proteomics-visualise
+    
+    #OR if using download
+    wget https://bitbucket.org/Andrew_Brock/proteomics-visualise/get/tip.tar.gz -O proteomics-visualise.tar.gz
+    tar xf proteomics-visualise.tar.gz
+    
+    #now setup and run
     cd proteomics-visualise
     ./setup.sh --auto-install
     ./run --daemon --port=8500
     
 Running with galaxy:
 
+    #If using mercurial
+    hg clone https://bitbucket.org/iracooke/protk
     hg clone https://bitbucket.org/iracooke/galaxy-proteomics
-    galaxy-proteomics/run.sh --daemon
     hg clone https://bitbucket.org/Andrew_Brock/proteomics-visualise
+    
+    #OR if using download
+    wget https://bitbucket.org/iracooke/protk/get/tip.tar.gz -O protk.tar.gz
+    wget https://bitbucket.org/iracooke/galaxy-proteomics/get/tip.tar.gz -O galaxy-proteomics.tar.gz
+    wget https://bitbucket.org/Andrew_Brock/proteomics-visualise/get/tip.tar.gz -O proteomics-visualise.tar.gz
+    tar xf protk.tar.gz
+    tar xf galaxy-proteomics.tar.gz
+    tar xf proteomics-visualise.tar.gz
+
+    #now setup and run
+    cd protk
+    ./setup.sh
+    cd ../galaxy-proteomics
+    ./run.sh --daemon
+    cd ../
     cat >proteomics-visualise/conf.py <<%%%
     GALAXY_ROOT = "`pwd`/galaxy-proteomics"
     PATH_WHITELIST = [GALAXY_ROOT + "/database/files/"]
     %%%
-    proteomics-visualise/setup.sh --auto-install
-    proteomics-visualise/run --daemon --port=8500
+    cd proteomics-visualise
+    ./setup.sh --auto-install
+    ./run --daemon --port=8500
 
 You can now connect to the ProtVis server on [http://127.0.0.1:8500](http://127.0.0.1:8500) and the Galaxy server (if installed) on [http://127.0.0.1:8080](http://127.0.0.1:8080)
 

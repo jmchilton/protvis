@@ -268,6 +268,18 @@ BaseGraph = function(container, opts) {
 		this.GraphBottom = hc - this.Padding[3];
 		this.ScaleX = this.Width / (this.ViewRange.x.max - this.ViewRange.x.min);
 		this.ScaleY = this.Height / (this.ViewRange.y.max - this.ViewRange.y.min);
+		this.AllData = this.Surface.createGroup();
+		var clip = document.createElementNS("http://www.w3.org/2000/svg", "clipPath");
+		clip.id = "specview_data_clip";
+		var path = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+		path.id = "specview_data_clip_rect";
+		path.setAttribute("x", this.Padding[0]);
+		path.setAttribute("y", this.Padding[1]);
+		path.setAttribute("width", this.Width);
+		path.setAttribute("height", this.Height);
+		clip.appendChild(path);
+		this.Surface.defNode.appendChild(clip);
+		this.AllData.rawNode.setAttribute("clip-path", "url(#specview_data_clip)");
 		this.RenderFrame();
 		this.RenderData();
 		this.Handlers = {}
@@ -278,6 +290,10 @@ BaseGraph = function(container, opts) {
 		this.Interact.createRect({x:0, y:0, width:wc, height:hc}).setFill("rgba(0,0,0,0)").setStroke(null);
 		this.Interact.connect("onmousedown", this, function(evt) {
 			dojo._base.event.stop(evt);
+			for (var h in this.Handlers) {
+				dojo.disconnect(this.Handlers[h]);
+			}
+			this.Handlers = {}
 
 			var pt = this.PointOnGraph(evt);
 			if (this.Options.pan && (evt.which == 2 || evt.shiftKey)) {
@@ -291,7 +307,7 @@ BaseGraph = function(container, opts) {
 				};
 				this.Handlers.onmouseup = dojo.connect(window, "onmouseup", this, function(evt) {
 					if (moved) {
-						this.Options.pan(this.ViewRange, true);
+						this.Options.pan(this.ViewRange, {x:0, y:0}, true);
 					}
 					this.DragPoint = null;
 					for (var h in this.Handlers) {
@@ -328,9 +344,11 @@ BaseGraph = function(container, opts) {
 						vr.y.max = this.DataRange.y.max;
 					}
 					if (vr.x.min != this.ViewRange.x.min || vr.x.max != this.ViewRange.x.max || vr.y.min != this.ViewRange.y.min || vr.y.max != this.ViewRange.y.max) {
+						x = vr.x.min - this.ViewRange.x.min;
+						y = vr.y.min - this.ViewRange.y.min;
 						this.ViewRange = vr;
 						this.RenderFrame();
-						this.Options.pan(this.ViewRange, false);
+						this.Options.pan(this.ViewRange, {x:x * this.ScaleX, y:y * this.ScaleY}, false);
 						moved = true;
 						this.DragPoint.x = pt.x;
 						this.DragPoint.y = pt.y;
@@ -457,6 +475,9 @@ BaseGraph = function(container, opts) {
 					obj.RecalcLayout();
 					obj.Interact.clear();
 					obj.Interact.createRect({x:0, y:0, width:wc, height:hc}).setFill("rgba(0,0,0,0)").setStroke(null);
+					var clip = dojo.byId("specview_data_clip_rect")
+					clip.setAttribute("width", w);
+					clip.setAttribute("height", h);
 				}
 				img.style.setProperty("display", "block", null);
 			}, 250);
@@ -588,9 +609,9 @@ LcPlot = function(container, opts) {
 	}
 	
 	this.RenderData = function() {
-		this.MS1SmoothGroup = this.Surface.createGroup();
-		this.MS1PointsGroup = this.Surface.createGroup();
-		this.MS2Group = this.Surface.createGroup();
+		this.MS1SmoothGroup = this.AllData.createGroup();
+		this.MS1PointsGroup = this.AllData.createGroup();
+		this.MS2Group = this.AllData.createGroup();
 		if (this.Options.show.ms1smooth) {
 			this.MS1Smooth = this.MS1SmoothGroup.createImage({ x:this.Padding[0], y:this.Padding[1], width:this.Width, height:this.Height, src:"lc?file=" + this.Options.file + "&n=" + this.Options.datafile + "&level=1s&contrast=0.5&w=" + this.Width + "&h=" + this.Height });
 		} else {

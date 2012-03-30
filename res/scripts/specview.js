@@ -106,8 +106,8 @@ SpecViewer = function(container, opts) {
 		grid: {
 			axis: "xy",
 		},
-		pan: function(range, finish) {
-			console.log(range, finish);
+		pan: function(range, pixels, finish) {
+			obj.plot.DataGroup.applyTransform({dx:-pixels.x, dy:pixels.y});
 		}
 	};
 
@@ -307,54 +307,6 @@ SpecViewer = function(container, opts) {
 		this.selectedNeutralLossChanged = false;
 	}
 
-	// -----------------------------------------------
-	// SET UP INTERACTIVE ACTIONS
-	// -----------------------------------------------
-	/*function setupInteractions () {
-
-		// ZOOMING
-		container.find("#msmsplot").bind("plotselected", function (event, ranges) {
-			this.ZoomRange = ranges;
-			var datasets = this.getDatasets();
-			if (!container.find("#zoom_y").attr("checked")) {
-				var maxInt = 0;
-				for (var i in datasets) {
-					var d = datasets[i].data;
-					for (var j in d) {
-						var v = d[j];
-						if (v[0] >= ranges.xaxis.from && v[0] <= ranges.xaxis.to && v[1] > maxInt) {
-							maxInt = v[1];
-						}
-					}
-				}
-				this.ZoomRange.yaxis.to = maxInt * 1.05;
-			}
-			this.createPlot(datasets);
-		});
-
-		// TOOLTIPS
-		container.find("#msmsplot").bind("plothover", function (event, pos, item) {
-
-		   if (container.find("#enableTooltip:checked").length > 0) {
-			  if (item) {
-				 if (previousPoint != item.datapoint) {
-					previousPoint = item.datapoint;
-
-					$("#msmstooltip").remove();
-					var x = item.datapoint[0].toFixed(2),
-						y = item.datapoint[1].toFixed(2);
-
-					showTooltip(item.pageX, item.pageY,
-							  "m/z: " + x + "<br>intensity: " + y);
-				 }
-			  } else {
-				 $("#msmstooltip").remove();
-				 previousPoint = null;		  
-			  }
-		   }
-		});
-	}*/
-
 	this.plotAccordingToChoices = function() {
 		var data = this.getDatasets();
 		if (data.length > 0) {
@@ -552,7 +504,7 @@ SpecViewer = function(container, opts) {
 
 	this.ResetZoom = function() {
 		if (this.ZoomRange != null) {
-			ZoomHistory.push(this.ZoomRange);
+			ZoomHistory.push(this.plot.ViewRange);
 			this.ZoomRange = null;
 			this.massErrorChanged = false;
 			this.createPlot(this.getDatasets());
@@ -1397,28 +1349,29 @@ MsPlot = function(container, data, opts) {
 	function RenderData(data) {
 		for (var i in data.data) {
 			var d = data.data[i];
-			if (d[0] >= obj.ViewRange.x.min && d[0] <= obj.ViewRange.x.max && d[1] > obj.ViewRange.y.min) {
+			//if (d[0] >= obj.ViewRange.x.min && d[0] <= obj.ViewRange.x.max && d[1] > obj.ViewRange.y.min) {
 				var x = (d[0] - obj.ViewRange.x.min) * obj.ScaleX + obj.Padding[0];
 				var y = obj.GraphBottom - (d[1] - obj.ViewRange.y.min) * obj.ScaleY;
-				if (y < obj.Padding[1]) {
+				var y2 = obj.GraphBottom + obj.ViewRange.y.min * obj.ScaleY;
+				/*if (y < obj.Padding[1]) {
 					y = obj.Padding[1];
-				}
-				obj.DataGroup.createLine({x1:x, y1:obj.GraphBottom, x2:x, y2:y}).setStroke({color:data.color, width:1});
-			}
+				}*/
+				obj.DataGroup.createLine({x1:x, y1:y2, x2:x, y2:y}).setStroke({color:data.color, width:1});
+			//}
 		}
 		//Do the labels seperate so they show ontop of the peaks
 		if (data.labels) {
 			var rot = dojox.gfx.matrix.rotategAt;
 			for (var i in data.data) {
 				var d = data.data[i];
-				if (d[0] >= obj.ViewRange.x.min && d[0] <= obj.ViewRange.x.max && d[1] > obj.ViewRange.y.min) {
+				//if (d[0] >= obj.ViewRange.x.min && d[0] <= obj.ViewRange.x.max && d[1] > obj.ViewRange.y.min) {
 					var x = (d[0] - obj.ViewRange.x.min) * obj.ScaleX + obj.Padding[0];
 					var y = obj.GraphBottom - (d[1] - obj.ViewRange.y.min) * obj.ScaleY;
-					if (y < obj.Padding[1]) {
+					/*if (y < obj.Padding[1]) {
 						y = obj.Padding[1];
-					}
+					}*/
 					obj.DataGroup.createText({x:x, y:y, text:data.labels[i], align:"start"}).setFont({family:"Arial", size:"13px"}).setFill(data.color).setTransform(rot(270, {x:x, y:y - 4}));
-				}
+				//}
 			}
 		}
 	}
@@ -1427,7 +1380,7 @@ MsPlot = function(container, data, opts) {
 		if (this.DataGroup) {
 			this.DataGroup.clear();
 		} else {
-			this.DataGroup = this.Surface.createGroup();
+			this.DataGroup = this.AllData.createGroup();
 		}
 		for (var i in data) {
 			RenderData(data[i]);
