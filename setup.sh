@@ -108,13 +108,13 @@ get() {
 			fi
 			echo "failed" | tee -a $log
 			echo "" | tee -a $log
-			echo "The following packages are required before running: make python python-setuptools python-virtualenv make gcc g++" | tee -a $log
+			echo "The following packages are required before running: python python-setuptools python-virtualenv make gcc g++" | tee -a $log
 			return 1
 		fi
 	else
 		echo "can't find a suitable package" | tee -a $log
 		echo "" | tee -a $log
-		echo "The following packages are required before running: make python python-setuptools python-virtualenv make gcc g++" | tee -a $log
+		echo "The following packages are required before running: python python-setuptools python-virtualenv make gcc g++" | tee -a $log
 		echo "You can run this script with --auto-install to automatically install packages into your system" | tee -a $log
 		return 1
 	fi
@@ -212,7 +212,9 @@ echo -n "Checking for blast+: " | tee -a $log
 mkdir bin 2>/dev/null
 PATH=$PATH:./bin/
 if [ "`which makeblastdb 2>/dev/null`" == "" ] || [ "`which blastdbcmd 2>/dev/null`" == "" ]; then
+	_blast="no"
 	if [ "`uname`" == "Linux" ]; then
+		_blast="yes"
 		echo "installing" | tee -a $log
 		if [ "`uname -m`" = "x86_64" ]; then
 			arch="x64"
@@ -228,12 +230,24 @@ if [ "`which makeblastdb 2>/dev/null`" == "" ] || [ "`which blastdbcmd 2>/dev/nu
 			rm -rf ncbi-blast-$ver+ 2>/dev/null
 		else
 			echo "can't find a suitable package" | tee -a $log
-			echo "" | tee -a $log
-			echo "Please visit ftp://ftp.ncbi.nlm.nih.gov/blast/executables/blast+/LATEST to download and install blast+ either into `pwd`/bin or a location in PATH" | tee -a $log
-			echo "This is an OPTIONAL feature" | tee -a $log
+		fi
+	else if [ "`uname`" == "Darwin" ]; then
+		echo "installing" | tee -a $log
+		ver=2.2.25
+		dl ftp://ftp.ncbi.nlm.nih.gov/blast/executables/blast+/$ver/ncbi-blast-$ver+.dmg > ncbi-blast-$ver+-$arch-linux.tar.gz
+		if [ $? -eq 0 ]; then
+			_blast="yes"
+			tar xf ncbi-blast-$ver+-$arch-linux.tar.gz
+			rm ncbi-blast-$ver+-$arch-linux.tar.gz 2>/dev/null
+			mv ncbi-blast-$ver+/bin/makeblastdb ncbi-blast-$ver+/bin/blastdbcmd bin/
+			rm -rf ncbi-blast-$ver+ 2>/dev/null
+		else
+			echo "can't find a suitable package" | tee -a $log
 		fi
 	else
 		echo "unrecognised OS" | tee -a $log
+	fi
+	if [ $_blast = "no" ]; then
 		echo "" | tee -a $log
 		echo "Please visit ftp://ftp.ncbi.nlm.nih.gov/blast/executables/blast+/LATEST to download and install blast+ either into `pwd`/bin or a location in PATH" | tee -a $log
 		echo "This is an OPTIONAL feature" | tee -a $log
