@@ -231,7 +231,7 @@ if [ "`which makeblastdb 2>/dev/null`" == "" ] || [ "`which blastdbcmd 2>/dev/nu
 		else
 			echo "can't find a suitable package" | tee -a $log
 		fi
-	else if [ "`uname`" == "Darwin" ]; then
+	elif [ "`uname`" == "Darwin" ]; then
 		echo "installing" | tee -a $log
 		ver=2.2.25
 		dl ftp://ftp.ncbi.nlm.nih.gov/blast/executables/blast+/$ver/ncbi-blast-$ver+.dmg > ncbi-blast-$ver+-$arch-linux.tar.gz
