@@ -85,14 +85,17 @@ super() {
 get() {
 	if [ $allow_install -ge 2 ]; then
 		echo -n "installing... " | tee -a $log
+		_tried=1
 		if [ "`which apt-get 2>/dev/null`" ]; then
 			super apt-get install --yes $1 2>>$log >>$log
 		elif [ "`which yum 2>/dev/null`" ]; then
 			super yum -y install $1 2>>$log >>$log
 		elif [ "`which zypper 2>/dev/null`" ]; then
 			super zypper -n install $1 2>>$log >>$log
+		else
+			_tried=0
 		fi
-		if [ $? -eq 0 ]; then
+		if [ $_tried -ne 0 ] && [ $? -eq 0 ]; then
 			echo "done" | tee -a $log
 			return 0
 		else
