@@ -1,4 +1,4 @@
-conf_apache2() { #FIXME: test configuration
+conf_apache2() {
 	cat >protvis.conf <<%%%
 #This is a sample configuration file. You may need to change some settings provided
 #Verify the username and user group values for WSGIDaemonProcess are set to who you want to run the scripts as (default is you)

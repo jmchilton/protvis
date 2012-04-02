@@ -526,7 +526,7 @@ LcPlot = function(container, opts) {
 		},
 		pan: function(range, pixels, finish) {
 			if (finish) {
-				if (obj.ViewRange.x.min != range.x.min || obj.ViewRange.x.max != range.x.max || obj.ViewRange.y.min != range.y.min || obj.ViewRange.y.max != range.y.max) {
+				if (this.moved) {
 					obj.DataGroup.setTransform({dx:0, dy:0});
 					range = range ? "&x1=" + range.x.min + "&x2=" + range.x.max + "&y1=" + range.y.min + "&y2=" + range.y.max : "";
 					if (obj.Options.show.ms1smooth) {
@@ -541,8 +541,10 @@ LcPlot = function(container, opts) {
 						obj.MS2Group.remove(obj.MS2);
 						obj.MS2 = obj.MS2Group.createImage({ x:obj.Padding[0], y:obj.Padding[1], width:obj.Width, height:obj.Height, src:"lc?file=" + obj.Options.file + "&n=" + obj.Options.datafile + "&level=2" + range + "&w=" + obj.Width + "&h=" + obj.Height });
 					}
+					this.moved = false;
 				}
 			} else {
+				this.moved = true;
 				obj.DataGroup.applyTransform({dx:-pixels.x, dy:pixels.y});
 			}
 		}

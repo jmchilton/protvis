@@ -271,7 +271,6 @@
 			off_t m_offStartPos;
 			//DWORD m_nChromatogramLists;
 			//MemoryStream *m_pChromatogramLists;
-			friend class Spectrum; //FIXME: Debug
 	};
 
 	class MzML : public TagHandler {
