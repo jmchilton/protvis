@@ -489,6 +489,8 @@ BaseGraph = function(container, opts) {
 }
 
 LcPlot = function(container, opts) {
+	var obj = this;
+	
 	var defaults = {/*
 		minTime: 0,
 		maxTime: 0,
@@ -521,6 +523,26 @@ LcPlot = function(container, opts) {
 		},
 		grid: {
 			axis: "xy"
+		},
+		pan: function(range, pixels, finish) {
+			if (finish) {
+				obj.DataGroup.setTransform({dx:0, dy:0});
+				range = range ? "&x1=" + range.x.min + "&x2=" + range.x.max + "&y1=" + range.y.min + "&y2=" + range.y.max : "";
+				if (obj.Options.show.ms1smooth) {
+					obj.MS1SmoothGroup.remove(obj.MS1Smooth);
+					obj.MS1Smooth = obj.MS1SmoothGroup.createImage({ x:obj.Padding[0], y:obj.Padding[1], width:obj.Width, height:obj.Height, src:"lc?file=" + obj.Options.file + "&n=" + obj.Options.datafile + "&level=1s&contrast=" + obj.Options.contrast + range + "&w=" + obj.Width + "&h=" + obj.Height });
+				}
+				if (obj.Options.show.ms1points) {
+					obj.MS1PointsGroup.remove(obj.MS1Points);
+					obj.MS1Points = obj.MS1PointsGroup.createImage({ x:obj.Padding[0], y:obj.Padding[1], width:obj.Width, height:obj.Height, src:"lc?file=" + obj.Options.file + "&n=" + obj.Options.datafile + "&level=1p&contrast=" + obj.Options.contrast + range + "&w=" + obj.Width + "&h=" + obj.Height });
+				}
+				if (obj.Options.show.ms2) {
+					obj.MS2Group.remove(obj.MS2);
+					obj.MS2 = obj.MS2Group.createImage({ x:obj.Padding[0], y:obj.Padding[1], width:obj.Width, height:obj.Height, src:"lc?file=" + obj.Options.file + "&n=" + obj.Options.datafile + "&level=2" + range + "&w=" + obj.Width + "&h=" + obj.Height });
+				}
+			} else {
+				obj.DataGroup.applyTransform({dx:-pixels.x, dy:pixels.y});
+			}
 		}
 	};
 	MixIn(defaults, opts);
@@ -609,9 +631,10 @@ LcPlot = function(container, opts) {
 	}
 	
 	this.RenderData = function() {
-		this.MS1SmoothGroup = this.AllData.createGroup();
-		this.MS1PointsGroup = this.AllData.createGroup();
-		this.MS2Group = this.AllData.createGroup();
+		this.DataGroup = this.AllData.createGroup();
+		this.MS1SmoothGroup = this.DataGroup.createGroup();
+		this.MS1PointsGroup = this.DataGroup.createGroup();
+		this.MS2Group = this.DataGroup.createGroup();
 		if (this.Options.show.ms1smooth) {
 			this.MS1Smooth = this.MS1SmoothGroup.createImage({ x:this.Padding[0], y:this.Padding[1], width:this.Width, height:this.Height, src:"lc?file=" + this.Options.file + "&n=" + this.Options.datafile + "&level=1s&contrast=0.5&w=" + this.Width + "&h=" + this.Height });
 		} else {
