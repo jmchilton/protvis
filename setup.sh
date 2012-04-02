@@ -251,7 +251,7 @@ if [ ! "`which makeblastdb 2>/dev/null`" ] || [ ! "`which blastdbcmd 2>/dev/null
 				echo "success" >/dev/null
 			fi
 			if [ $? -eq 0 ]; then
-				hdiutil mount `pwd`/ncbi-blast-$ver+.dmg
+				hdiutil mount `pwd`/ncbi-blast-$ver+.dmg 2>>$log 1>>$log
 				if [ $? -eq 0 ]; then
 					_blast="yes"
 					mkdir /tmp/ncbi-blast-$ver+
@@ -259,7 +259,7 @@ if [ ! "`which makeblastdb 2>/dev/null`" ] || [ ! "`which blastdbcmd 2>/dev/null
 					cp /tmp/ncbi-blast-$ver+/usr/local/ncbi/blast/bin/makeblastdb /tmp/ncbi-blast-$ver+/usr/local/ncbi/blast/bin/blastdbcmd bin/
 					rm ncbi-blast-$ver+.dmg 2>/dev/null
 					rm -rf /tmp/ncbi-blast-$ver+
-					hdiutil unmount /Volumes/ncbi-blast-$ver+/
+					hdiutil unmount /Volumes/ncbi-blast-$ver+/ 2>>$log 1>>$log
 				else
 					_blast="extract"
 					echo "extract failed." | tee -a $log
@@ -281,8 +281,7 @@ if [ ! "`which makeblastdb 2>/dev/null`" ] || [ ! "`which blastdbcmd 2>/dev/null
 			echo "This is an OPTIONAL feature" | tee -a $log
 		fi
 	else
-		echo "blast+ could not be found" | tee -a $log
-		echo "This is an OPTIONAL feature" | tee -a $log
+		echo "not found [OPTIONAL]" | tee -a $log
 	fi
 else
 	ln -s `which makeblastdb` bin/makeblastdb 2>/dev/null

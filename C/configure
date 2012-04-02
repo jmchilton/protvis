@@ -208,7 +208,7 @@ getzlib() {
 }
 
 getlibpng() {
-	_file="libpng-1.5.9"
+	_file="libpng-1.5.10"
 	echo "Auto-install libpng $_file" >> $log
 	if [ "$zlib" ]; then
 		oldld=$LDFLAGS
@@ -216,7 +216,7 @@ getlibpng() {
 		export LDFLAGS="-L$zlib"
 		export CPPFLAGS="-I$zlib -fPIC"
 	fi
-	getlib "libpng" "http://aarnet.dl.sourceforge.net/project/libpng/libpng15/1.5.9/$_file.tar.gz" "$_file" "/" "/.libs" "-q"
+	getlib "libpng" "http://aarnet.dl.sourceforge.net/project/libpng/libpng15/1.5.10/$_file.tar.gz" "$_file" "/" "/.libs" "-q"
 	if [ ! -e "Libraries/$_file/.libs/libpng.a" ]; then
 		ln -s libpng15.a Libraries/$_file/.libs/libpng.a
 	fi
