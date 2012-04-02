@@ -105,7 +105,7 @@
 					var p = data[closest.iy][closest.ix][closest.i];
 					var elem = dojo.position(obj.Container, false);
 					if (!this.Tooltip || this.Tooltip.i != closest.i) {
-						this.Tooltip = {i:closest.i, pos:{x: Math.round((p[0] - obj.ViewRange.x.min) * obj.ScaleX + obj.Padding[0] + elem.x + window.scrollX + 5), y: Math.round(obj.GraphBottom - (p[1] - obj.ViewRange.y.min) * obj.ScaleY + elem.y + window.scrollY - 4), w: -10, h: 1}};
+						this.Tooltip = {i:closest.i, pos:{x: Math.round((p[0] - obj.ViewRange.x.min) * obj.ScaleX + obj.Padding[0] + elem.x + window.scrollX + 5), y: Math.round(obj.GraphBottom - (p[1] - obj.ViewRange.y.min) * obj.ScaleY + elem.y + window.scrollY), w: -10, h: 1}};
 						dijit.Tooltip.show('<div style="white-space:nowrap;">Retention Time: ' + p[0].toFixed(3) + "<br/>m/z: " + p[1].toFixed(3) + "<br/>Spectrum: <tal:echo content="python: results[5]"/>." + p[2] + "." + p[2] + "</div>", this.Tooltip.pos, ["after", "before"], false, "ltr");
 						this.Tooltip.node = dijit.Tooltip._masterTT.domNode;
 						this.Tooltip.node.setAttribute("style", "pointer-events:none;" + this.Tooltip.node.getAttribute("style"));

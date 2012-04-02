@@ -209,6 +209,7 @@ MemoryStream *MS1Plot::RenderFromFileSmooth(const char *szFileName, DWORD nWidth
 		char *pSrcData = (char *)malloc(info.size);
 		if (fread(pSrcData, 1, info.size, pFile) != info.size) {
 			fclose(pFile);
+			free(pSrcData);
 			return NULL;
 		}
 		fclose(pFile);
@@ -293,6 +294,7 @@ MemoryStream *MS1Plot::RenderFromFilePoints(const char *szFileName, DWORD nWidth
 		char *pSrcData = (char *)malloc(info.size);
 		if (fread(pSrcData, 1, info.size, pFile) != info.size) {
 			fclose(pFile);
+			free(pSrcData);
 			return NULL;
 		}
 		fclose(pFile);
@@ -544,6 +546,7 @@ MemoryStream *MS2Plot::RenderFromFile(const char *szFileName, DWORD nWidth, DWOR
 		char *pSrcData = (char *)malloc(nDataSize);
 		if (fread(pSrcData, 1, nDataSize, pFile) != nDataSize) {
 			fclose(pFile);
+			free(pSrcData);
 			return NULL;
 		}
 		fclose(pFile);
