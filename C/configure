@@ -126,6 +126,7 @@ dl() {
 	else
 		python -c "import urllib; s=urllib.urlopen('$1').read(); f=open('$2', 'wb'); f.write(s); f.close(); exit(len(s) == 0)" 2>$log
 	fi
+	return $?
 }
 
 fail() {

@@ -197,6 +197,7 @@ dl() {
 	else
 		python -c "import urllib, sys; s=urllib.urlopen('$1').read(); sys.stdout.write(s); exit(len(s) == 0)"
 	fi
+	return $?
 }
 
 rm $log 2>/dev/null
