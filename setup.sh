@@ -211,8 +211,9 @@ py_need "virtualenv" "easy_install virtualenv"
 echo -n "Checking for blast+: " | tee -a $log
 mkdir bin 2>/dev/null
 PATH=$PATH:./bin/
-if [ "`which makeblastdb 2>/dev/null`" == "" ] || [ "`which blastdbcmd 2>/dev/null`" == "" ]; then
+if [ ! "`which makeblastdb 2>/dev/null`" ] || [ ! "`which blastdbcmd 2>/dev/null`" ]; then
 	_blast="no"
+	ver="2.2.25"
 	if [ "`uname`" == "Linux" ]; then
 		_blast="yes"
 		echo "installing" | tee -a $log
@@ -221,35 +222,57 @@ if [ "`which makeblastdb 2>/dev/null`" == "" ] || [ "`which blastdbcmd 2>/dev/nu
 		else
 			arch="ia32"
 		fi
-		ver=2.2.25
-		dl ftp://ftp.ncbi.nlm.nih.gov/blast/executables/blast+/$ver/ncbi-blast-$ver+-$arch-linux.tar.gz > ncbi-blast-$ver+-$arch-linux.tar.gz
+		if [ ! -e "ncbi-blast-$ver+-$arch-linux.tar.gz" ]; then
+			dl ftp://ftp.ncbi.nlm.nih.gov/blast/executables/blast+/$ver/ncbi-blast-$ver+-$arch-linux.tar.gz > ncbi-blast-$ver+-$arch-linux.tar.gz
+		else
+			echo "success" >/dev/null
+		fi
 		if [ $? -eq 0 ]; then
 			tar xf ncbi-blast-$ver+-$arch-linux.tar.gz
-			rm ncbi-blast-$ver+-$arch-linux.tar.gz 2>/dev/null
-			mv ncbi-blast-$ver+/bin/makeblastdb ncbi-blast-$ver+/bin/blastdbcmd bin/
-			rm -rf ncbi-blast-$ver+ 2>/dev/null
+			if [ $? -eq 0 ]; then
+				_blast="yes"
+				rm ncbi-blast-$ver+-$arch-linux.tar.gz 2>/dev/null
+				mv ncbi-blast-$ver+/bin/makeblastdb ncbi-blast-$ver+/bin/blastdbcmd bin/
+				rm -rf ncbi-blast-$ver+ 2>/dev/null
+			else
+				_blast="extract"
+				echo "extract failed."
+				echo "The downloaded file has been left at `pwd`/ncbi-blast-$ver+-$arch-linux.tar.gz"
+			fi
 		else
 			echo "can't find a suitable package" | tee -a $log
 		fi
 	elif [ "`uname`" == "Darwin" ]; then
 		echo "installing" | tee -a $log
-		ver=2.2.25
-		dl ftp://ftp.ncbi.nlm.nih.gov/blast/executables/blast+/$ver/ncbi-blast-$ver+.dmg > ncbi-blast-$ver+-$arch-linux.tar.gz
+		if [ ! -e "ncbi-blast-$ver+.dmg" ]; then
+			dl ftp://ftp.ncbi.nlm.nih.gov/blast/executables/blast+/$ver/ncbi-blast-$ver+.dmg > ncbi-blast-$ver+.dmg
+		else
+			echo "success" >/dev/null
+		fi
 		if [ $? -eq 0 ]; then
-			_blast="yes"
-			tar xf ncbi-blast-$ver+-$arch-linux.tar.gz
-			rm ncbi-blast-$ver+-$arch-linux.tar.gz 2>/dev/null
-			mv ncbi-blast-$ver+/bin/makeblastdb ncbi-blast-$ver+/bin/blastdbcmd bin/
-			rm -rf ncbi-blast-$ver+ 2>/dev/null
+			hdiutil mount `pwd`/ncbi-blast-$ver+.dmg
+			if [ $? -eq 0 ]; then
+				_blast="yes"
+				mv /Volumes/ncbi-blast-$ver+/bin/makeblastdb /Volumes/ncbi-blast-$ver+/bin/blastdbcmd bin/
+				rm ncbi-blast-$ver+-$arch-linux.tar.gz 2>/dev/null
+			else
+				_blast="extract"
+				echo "extract failed."
+				echo "The downloaded file has been left at `pwd`/ncbi-blast-$ver+.dmg"
+			fi
 		else
 			echo "can't find a suitable package" | tee -a $log
 		fi
 	else
 		echo "unrecognised OS" | tee -a $log
 	fi
-	if [ $_blast = "no" ]; then
+	if [ $_blast != "yes" ]; then
 		echo "" | tee -a $log
-		echo "Please visit ftp://ftp.ncbi.nlm.nih.gov/blast/executables/blast+/LATEST to download and install blast+ either into `pwd`/bin or a location in PATH" | tee -a $log
+		if [ $_blast = "no" ]; then
+			echo "Please visit ftp://ftp.ncbi.nlm.nih.gov/blast/executables/blast+/LATEST to download and install blast+ into a location in PATH or copy makeblastdb and blastdbcmd into `pwd`/bin" | tee -a $log
+		elif [ $_blast != "extract" ]; then
+			echo "Please manually install the downloaded file or copy makeblastdb and blastdbcmd into `pwd`/bin" | tee -a $log
+		fi
 		echo "This is an OPTIONAL feature" | tee -a $log
 	fi
 else
