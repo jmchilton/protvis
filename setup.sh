@@ -212,67 +212,76 @@ echo -n "Checking for blast+: " | tee -a $log
 mkdir bin 2>/dev/null
 PATH=$PATH:./bin/
 if [ ! "`which makeblastdb 2>/dev/null`" ] || [ ! "`which blastdbcmd 2>/dev/null`" ]; then
-	_blast="no"
-	ver="2.2.25"
-	if [ "`uname`" == "Linux" ]; then
-		_blast="yes"
-		echo "installing" | tee -a $log
-		if [ "`uname -m`" = "x86_64" ]; then
-			arch="x64"
-		else
-			arch="ia32"
-		fi
-		if [ ! -e "ncbi-blast-$ver+-$arch-linux.tar.gz" ]; then
-			dl ftp://ftp.ncbi.nlm.nih.gov/blast/executables/blast+/$ver/ncbi-blast-$ver+-$arch-linux.tar.gz > ncbi-blast-$ver+-$arch-linux.tar.gz
-		else
-			echo "success" >/dev/null
-		fi
-		if [ $? -eq 0 ]; then
-			tar xf ncbi-blast-$ver+-$arch-linux.tar.gz
-			if [ $? -eq 0 ]; then
-				_blast="yes"
-				rm ncbi-blast-$ver+-$arch-linux.tar.gz 2>/dev/null
-				mv ncbi-blast-$ver+/bin/makeblastdb ncbi-blast-$ver+/bin/blastdbcmd bin/
-				rm -rf ncbi-blast-$ver+ 2>/dev/null
+	if [ $allow_install -ge 1 ]; then
+		_blast="no"
+		ver="2.2.25"
+		if [ "`uname`" == "Linux" ]; then
+			_blast="yes"
+			echo "installing" | tee -a $log
+			if [ "`uname -m`" = "x86_64" ]; then
+				arch="x64"
 			else
-				_blast="extract"
-				echo "extract failed."
-				echo "The downloaded file has been left at `pwd`/ncbi-blast-$ver+-$arch-linux.tar.gz"
+				arch="ia32"
+			fi
+			if [ ! -e "ncbi-blast-$ver+-$arch-linux.tar.gz" ]; then
+				dl ftp://ftp.ncbi.nlm.nih.gov/blast/executables/blast+/$ver/ncbi-blast-$ver+-$arch-linux.tar.gz > ncbi-blast-$ver+-$arch-linux.tar.gz
+			else
+				echo "success" >/dev/null
+			fi
+			if [ $? -eq 0 ]; then
+				tar xf ncbi-blast-$ver+-$arch-linux.tar.gz
+				if [ $? -eq 0 ]; then
+					_blast="yes"
+					rm ncbi-blast-$ver+-$arch-linux.tar.gz 2>/dev/null
+					mv ncbi-blast-$ver+/bin/makeblastdb ncbi-blast-$ver+/bin/blastdbcmd bin/
+					rm -rf ncbi-blast-$ver+ 2>/dev/null
+				else
+					_blast="extract"
+					echo "extract failed." | tee -a $log
+					echo "The downloaded file has been left at `pwd`/ncbi-blast-$ver+-$arch-linux.tar.gz" | tee -a $log
+				fi
+			else
+				echo "can't find a suitable package" | tee -a $log
+			fi
+		elif [ "`uname`" == "Darwin" ]; then
+			echo "installing" | tee -a $log
+			if [ ! -e "ncbi-blast-$ver+.dmg" ]; then
+				dl ftp://ftp.ncbi.nlm.nih.gov/blast/executables/blast+/$ver/ncbi-blast-$ver+.dmg > ncbi-blast-$ver+.dmg
+			else
+				echo "success" >/dev/null
+			fi
+			if [ $? -eq 0 ]; then
+				hdiutil mount `pwd`/ncbi-blast-$ver+.dmg
+				if [ $? -eq 0 ]; then
+					_blast="yes"
+					mkdir /tmp/ncbi-blast-$ver+
+					tar xf /Volumes/ncbi-blast-$ver+/ncbi-blast-$ver+.pkg/Contents/Archive.pax.gz -C /tmp/ncbi-blast-$ver+
+					cp /tmp/ncbi-blast-$ver+/usr/local/ncbi/blast/bin/makeblastdb /tmp/ncbi-blast-$ver+/usr/local/ncbi/blast/bin/blastdbcmd bin/
+					rm ncbi-blast-$ver+.dmg 2>/dev/null
+					rm -rf /tmp/ncbi-blast-$ver+
+					hdiutil unmount /Volumes/ncbi-blast-$ver+/
+				else
+					_blast="extract"
+					echo "extract failed." | tee -a $log
+					echo "The downloaded file has been left at `pwd`/ncbi-blast-$ver+.dmg"
+				fi
+			else
+				echo "can't find a suitable package" | tee -a $log
 			fi
 		else
-			echo "can't find a suitable package" | tee -a $log
+			echo "unrecognised OS" | tee -a $log
 		fi
-	elif [ "`uname`" == "Darwin" ]; then
-		echo "installing" | tee -a $log
-		if [ ! -e "ncbi-blast-$ver+.dmg" ]; then
-			dl ftp://ftp.ncbi.nlm.nih.gov/blast/executables/blast+/$ver/ncbi-blast-$ver+.dmg > ncbi-blast-$ver+.dmg
-		else
-			echo "success" >/dev/null
-		fi
-		if [ $? -eq 0 ]; then
-			hdiutil mount `pwd`/ncbi-blast-$ver+.dmg
-			if [ $? -eq 0 ]; then
-				_blast="yes"
-				mv /Volumes/ncbi-blast-$ver+/bin/makeblastdb /Volumes/ncbi-blast-$ver+/bin/blastdbcmd bin/
-				rm ncbi-blast-$ver+-$arch-linux.tar.gz 2>/dev/null
-			else
-				_blast="extract"
-				echo "extract failed."
-				echo "The downloaded file has been left at `pwd`/ncbi-blast-$ver+.dmg"
+		if [ $_blast != "yes" ]; then
+			echo "" | tee -a $log
+			if [ $_blast = "no" ]; then
+				echo "Please visit ftp://ftp.ncbi.nlm.nih.gov/blast/executables/blast+/LATEST to download and install blast+ into a location in PATH or copy makeblastdb and blastdbcmd into `pwd`/bin" | tee -a $log
+			elif [ $_blast != "extract" ]; then
+				echo "Please manually install the downloaded file or copy makeblastdb and blastdbcmd into `pwd`/bin" | tee -a $log
 			fi
-		else
-			echo "can't find a suitable package" | tee -a $log
+			echo "This is an OPTIONAL feature" | tee -a $log
 		fi
 	else
-		echo "unrecognised OS" | tee -a $log
-	fi
-	if [ $_blast != "yes" ]; then
-		echo "" | tee -a $log
-		if [ $_blast = "no" ]; then
-			echo "Please visit ftp://ftp.ncbi.nlm.nih.gov/blast/executables/blast+/LATEST to download and install blast+ into a location in PATH or copy makeblastdb and blastdbcmd into `pwd`/bin" | tee -a $log
-		elif [ $_blast != "extract" ]; then
-			echo "Please manually install the downloaded file or copy makeblastdb and blastdbcmd into `pwd`/bin" | tee -a $log
-		fi
+		echo "blast+ could not be found" | tee -a $log
 		echo "This is an OPTIONAL feature" | tee -a $log
 	fi
 else
