@@ -145,7 +145,8 @@ bin_need() {
 			return 0
 		fi
 	done
-	if [ $allow_install -ge 2 ]; then
+	if [ $allow_install -ge 2 ]; then2umb2live
+	
 		for b in $@; do
 			echo "Trying $b" >> $log
 			if [ "`has $b`" ]; then
@@ -198,10 +199,10 @@ dl() {
 
 rm $log 2>/dev/null
 
-bin_need python python27.`uname -i` python26.`uname -i`
-bin_need make make.`uname -i`
+bin_need python python27.`uname -m` python26.`uname -m`
+bin_need make make.`uname -m`
 bin_need gcc
-bin_need g++ gxx gcc-c++ gcc-c++.`uname -i`
+bin_need g++ gxx gcc-c++ gcc-c++.`uname -m`
 py_need "setuptools" "dl http://peak.telecommunity.com/dist/ez_setup.py | super python"
 py_need "virtualenv" "easy_install virtualenv"
 
@@ -211,7 +212,7 @@ PATH=$PATH:./bin/
 if [ "`which makeblastdb 2>/dev/null`" == "" ] || [ "`which blastdbcmd 2>/dev/null`" == "" ]; then
 	if [ "`uname`" == "Linux" ]; then
 		echo "installing" | tee -a $log
-		if [ "`uname -p`" = "x86_64" ]; then
+		if [ "`uname -m`" = "x86_64" ]; then
 			arch="x64"
 		else
 			arch="ia32"

@@ -5,7 +5,8 @@
 			<div class="head">Zoom/Pan:</div>
 			<div id="zoom_${hash}">&nbsp;X:<input name="x" type="checkbox" checked="checked"/>&nbsp;Y:<input name="y" type="checkbox" checked="checked" /></div>
 			<nobr><button id="zoomundo_${hash}">Undo Zoom</button><button id="zoomout_${hash}">Show All</button></nobr>
-			<div class="tip">Click and drag in the plot to zoom or pan.</div>
+			<div class="tip">Click and drag in the plot to zoom.</div>
+			<div class="tip">Shift + Click and drag in the plot to pan when zoomed in.</div>
 		</div>
 		<div class="group">
 			<div class="head">Show:</div>

@@ -21,6 +21,7 @@
 						<nobr><input id="enableTooltip_${hash}" type="checkbox" checked="checked" style="margin-left:0">Enable tooltip</nobr><br/>
 						<nobr><input id="grid_${hash}" style="margin-left:0" type="checkbox" checked="checked"/>Grid Lines</nobr><br/>
 						<!--<input id="print_${hash}" type="button" value="Print" />-->
+						<div class="tip">Shift + Click and drag in the plot to pan when zoomed in.</div>
 					</div>
 					<div class="group">
 						<div class="head">Ions:</div>
