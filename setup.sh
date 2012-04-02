@@ -145,8 +145,7 @@ bin_need() {
 			return 0
 		fi
 	done
-	if [ $allow_install -ge 2 ]; then2umb2live
-	
+	if [ $allow_install -ge 2 ]; then
 		for b in $@; do
 			echo "Trying $b" >> $log
 			if [ "`has $b`" ]; then
