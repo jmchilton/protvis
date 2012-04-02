@@ -34,6 +34,20 @@ inline bool DecodeSpectrum(const char *szName, DWORD &nStartScan, DWORD &nEndSca
 	}
 }
 
+inline void ParamGroup::EndChild() {
+	if (m_pCvParam != NULL) {
+		delete m_pCvParam;
+	}
+}
+
+inline CVParamData *ParamGroup::GetParams() {
+	return m_pCvParam == NULL ? NULL : (CVParamData *)m_pCvParam->GetBuffer();
+}
+
+inline DWORD ParamGroup::GetParamsCount() {
+	return m_pCvParam == NULL ? 0 : m_pCvParam->GetLength() / sizeof(CVParamData);
+}
+
 inline void Spectrum::SetStartTime(float nTime) {
 	if (m_nStartTime >= 0.0f) { //FIXME: Do we need this?
 		printf("Scan start time already set to %f\n", m_nStartTime);

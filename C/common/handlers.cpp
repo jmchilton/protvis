@@ -24,16 +24,12 @@ void StartElementHandler(BaseState *pState, const XML_Char *szName, const XML_Ch
 					if (pStream != NULL) {
 						pState->colPath.Push(pHandlers->pNew(pState, pStream, pszAttrs));
 						return;
-					} else {
-						//printf("U: %s\n", szName);
 					}
 					break;
 				}
 				++pHandlers;
 				++nIndex;
 			}
-		} else {
-			//printf("I: %s\n", szName);
 		}
 		pState->colPath.Push(NULL);
 	} else {

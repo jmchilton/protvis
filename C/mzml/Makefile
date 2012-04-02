@@ -10,7 +10,8 @@ PYMODULE=../$(BUILD_DIR)/MzML.so
 LIBS=../$(BUILD_DIR)/common.a
 
 all: $(SOURCES) $(PYMODULE)
-	
+
+exe: $(EXECUTABLE)
 
 $(EXECUTABLE): $(OBJECTS)
 	$(MKDIR) ../$(BUILD_DIR)

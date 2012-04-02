@@ -90,6 +90,8 @@
 	class ParamGroup : public TagHandler {
 		TAG_HANDLER(ParamGroup, m_pCvParam(NULL));
 		virtual OutputStream *BeginChild(DWORD nIndex);
+		virtual void End();
+		void EndChild();
 		CVParamData *GetParams();
 		DWORD GetParamsCount();
 		static void Eat(FILE *f); //Not used, but needed for LIST_TYPE macro
@@ -100,8 +102,16 @@
 		private:
 			MemoryStream *m_pCvParam;
 	};
+	
+	class ScanWindowList : public TagHandler {
+		TAG_HANDLER(ScanWindowList, m_nCount(0));
+		virtual void End();
+		virtual OutputStream *BeginChild(DWORD nIndex);
 
-	LIST_TYPE(ScanWindowList, ParamGroup, "scanWindow");
+		private:
+			off_t m_offStartPos;
+			DWORD m_nCount;
+	};
 	
 	class SelectedIon : public ParamGroup {
 		//This element is not written to file directly
@@ -194,7 +204,7 @@
 			Ion ions[ion__count];
 			float precursor_mz[precursor__count];
 		}*/
-		X_HANDLER(Spectrum, ParamGroup, m_nMsLevel(0), m_nIndex((DWORD)-1), m_nStartTime(-1.0f), m_pPrecursorList(NULL));
+		X_HANDLER(Spectrum, ParamGroup, m_nMsLevel(0), m_nIndex((DWORD)-1), m_nStartTime(-1.0f), m_pPrecursorList(NULL), m_pMz(NULL), m_pIntensity(NULL));
 		virtual void End();
 		virtual OutputStream *BeginChild(DWORD nIndex);
 		void SetStartTime(float nTime);

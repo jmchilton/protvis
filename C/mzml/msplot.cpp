@@ -53,6 +53,18 @@ void ClearMS1Cache() {
 	}
 }
 
+class CacheHandler {
+	public:
+		CacheHandler() {
+			InitaliseMS1Cache();
+		}
+		~CacheHandler() {
+			ClearMS1Cache();
+		}
+};
+
+static CacheHandler g_handler;
+
 MemoryStream *BlankImage() {
 	MemoryStream *pStream = new MemoryStream();
 	png_structp png_ptr = png_create_write_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
@@ -82,6 +94,7 @@ MemoryStream *BlankImage() {
 			png_write_image(png_ptr, &pRows.ptr);
 			png_write_end(png_ptr, NULL);
 		}
+		png_destroy_write_struct(&png_ptr, &info_ptr);
 	}
 	return pStream;
 }
@@ -130,6 +143,7 @@ static MemoryStream *RenderFromCache(MS1Plot::Cache &cache, float nContrast) {
 			png_write_end(png_ptr, NULL);
 			free(pRows);
 		}
+		png_destroy_write_struct(&png_ptr, &info_ptr);
 	}
 	return pStream;
 }
@@ -627,6 +641,7 @@ inline MemoryStream *MS2Plot::RenderFromFileInternal(char *pSrcData, uint32_t nS
 			png_write_end(png_ptr, NULL);
 			free(pRows);
 		}
+		png_destroy_write_struct(&png_ptr, &info_ptr);
 	}
 	free(pImg);
 	return pStream;

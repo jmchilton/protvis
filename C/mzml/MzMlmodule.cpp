@@ -194,7 +194,6 @@ static PyMethodDef Methods[] = {
 
 PyMODINIT_FUNC initMzML() {
 	PyObject *pModule = Py_InitModule("MzML", Methods);
-	InitaliseMS1Cache();
 	if (pModule == NULL) {
 		return;
 	}

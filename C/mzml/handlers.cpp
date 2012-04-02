@@ -37,6 +37,12 @@ bool ParamGroup::Begin(State *pState, const XML_Char **pszAttrs) {
 	return true;
 }
 
+void ParamGroup::End() {
+	if (m_pCvParam != NULL) {
+		delete m_pCvParam;
+	}
+}
+
 OutputStream *ParamGroup::BeginChild(DWORD nIndex) {
 	if (nIndex == 0) { //cvParam
 		if (m_pCvParam == NULL) {
@@ -47,12 +53,26 @@ OutputStream *ParamGroup::BeginChild(DWORD nIndex) {
 	return NULL;
 }
 
-CVParamData *ParamGroup::GetParams() {
-	return m_pCvParam == NULL ? NULL : (CVParamData *)m_pCvParam->GetBuffer();
+bool ScanWindowList::Begin(State *pState, const XML_Char **pszAttrs) {
+	TRACEPOS(m_pStream, "ScanWindowList::Begin(): ");
+	m_offStartPos = m_pStream->Tell();
+	WRITE_STRUCTURE(m_pStream, 1, (DWORD), (0));
+	return true;
 }
 
-DWORD ParamGroup::GetParamsCount() {
-	return m_pCvParam == NULL ? 0 : m_pCvParam->GetLength() / sizeof(CVParamData);
+void ScanWindowList::End() {
+	off_t offEndPos = m_pStream->Tell();
+	m_pStream->Seek(m_offStartPos);
+	WRITE_STRUCTURE(m_pStream, 1, (DWORD), (m_nCount));
+	m_pStream->Seek(offEndPos);
+}
+
+OutputStream *ScanWindowList::BeginChild(DWORD nIndex) {
+	if (nIndex == 0) { /*scanWindow*/
+		++m_nCount;
+		return m_pStream;
+	}
+	return TagHandler::BeginChild(nIndex - 1);
 }
 
 bool SelectedIon::Begin(State *pState, const XML_Char **pszAttrs) {
@@ -68,6 +88,7 @@ void SelectedIon::End() {
 			break;
 		}
 	}
+	ParamGroup::EndChild();
 }
 
 bool SelectedIonList::Begin(State *pState, const XML_Char **pszAttrs) {
@@ -143,13 +164,13 @@ bool BinaryDataArray::Begin(State *pState, const XML_Char **pszAttrs) {
 
 void BinaryDataArray::End() {
 	CVParamData *pParams = GetParams();
-	bool bDelete = true;
+	char nFor = 0;
 	for (DWORD i = GetParamsCount(); i > 0; --i, ++pParams) {
 		if (pParams->nCvRef == ACC_REF_MS) {
 			switch (pParams->nAccession) {
 				case ACC_MS_FLOAT_64: {
 					float *pFloats = (float *)m_pBinary->GetBuffer();
-					double *pDoubles = (double *)m_pBinary->GetBuffer();
+					double *pDoubles = (double *)pFloats;
 					double *pEnd = (double *)((BYTE *)pDoubles + m_pBinary->GetLength());
 					while (pDoubles < pEnd) {
 						*pFloats++ = *pDoubles++;
@@ -158,20 +179,25 @@ void BinaryDataArray::End() {
 					break;
 				}
 				case ACC_MS_DATA_MZ:
-					m_pSpectrum->m_pMz = m_pBinary;
-					bDelete = false;
+					nFor = 1;
 					break;
 			
 				case ACC_MS_DATA_INTENSITY:
-					m_pSpectrum->m_pIntensity = m_pBinary;
-					bDelete = false;
+					nFor = 2;
 					break;
 			}
 		}
 	}
-	if (m_pBinary != NULL && bDelete) {
-		delete m_pBinary;
+	if (m_pBinary != NULL) {
+		if (nFor == 1) {
+			m_pSpectrum->m_pMz = m_pBinary;
+		} else if (nFor == 2) {
+			m_pSpectrum->m_pIntensity = m_pBinary;
+		} else {
+			delete m_pBinary;
+		}
 	}
+	ParamGroup::EndChild();
 }
 
 OutputStream *BinaryDataArray::BeginChild(DWORD nIndex) {
@@ -186,7 +212,7 @@ OutputStream *BinaryDataArray::BeginChild(DWORD nIndex) {
 }
 
 bool BinaryDataArrayList::Begin(State *pState, const XML_Char **pszAttrs) {
-	TRACEPOS(m_pStream, "BinaryDataArrayListList::Begin(): ");
+	TRACEPOS(m_pStream, "BinaryDataArrayList::Begin(): ");
 	return true;
 }
 
@@ -208,9 +234,10 @@ void Scan::End() {
 	for (DWORD i = GetParamsCount(); i > 0; --i, ++pParams) {
 		if (pParams->nAccession == ACC_MS_SCAN_START) {
 			m_pSpectrum->SetStartTime((float)strtod(pParams->szValue, NULL));
-			return;
+			break;
 		}
 	}
+	ParamGroup::EndChild();
 }
 
 OutputStream *Scan::BeginChild(DWORD nIndex) {
@@ -303,6 +330,7 @@ void Spectrum::End() {
 	if (m_pPrecursorList != NULL) {
 		delete m_pPrecursorList;
 	}
+	ParamGroup::EndChild();
 }
 
 OutputStream *Spectrum::BeginChild(DWORD nIndex) {
@@ -349,6 +377,7 @@ void Run::End() {
 	WRITE_STRUCTURE(m_pStream, 2, (DWORD, DWORD), (m_arrSpectrums.GetLength(), offEndPos - m_offStartPos));
 	m_pStream->Seek(offEndPos);
 	m_pStream->WriteBuffered(m_arrSpectrums.GetBuffer(), m_arrSpectrums.GetLength() * sizeof(Index));
+	ParamGroup::EndChild();
 }
 
 OutputStream *Run::BeginChild(DWORD nIndex) {
@@ -371,7 +400,7 @@ void MzML::End() {
 	#define BUFFER_SIZE (256 * 1024)
 	off_t offMidPos = m_pStream->Tell();
 	const uint32_t nSpecs = m_arrMS1Data.GetLength();
-	const MS1Data *pData = m_arrMS1Data.GetBuffer();
+	MS1Data *pData = m_arrMS1Data.GetBuffer();
 	uint32_t j, nPoints, nLoop;
 	float *pMz, *pInt;
 	float nMinTime = pData->nScanTime, nMaxTime = pData->nScanTime;
@@ -417,6 +446,8 @@ void MzML::End() {
 			nPoints -= nLoop;
 			nBufElems += nLoop;
 		}
+		free(pData->pMz);
+		free(pData->pIntensity);
 		++pData;
 	}
 	if (nBufElems != 0) {
