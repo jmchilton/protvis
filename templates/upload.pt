@@ -26,9 +26,12 @@
 							if (left == 0) {
 								ShowMessage("done");
 								window.location = "view?file=${file}";
+							} else if (left < 0) {
+								ShowMessage("ref");
+								setTimeout("Update();", 1000);
 							} else {
 								ShowMessageStatus(left);
-								setTimeout("Update();", 500);
+								setTimeout("Update();", 1000);
 							}
 						} catch (err) {
 							ShowMessage("error");
@@ -43,7 +46,7 @@
 			}
 			
 			function ShowMessage(id) {
-				var ids = ["processing", "done", "error", "error_net"]
+				var ids = ["ref", "processing", "done", "error", "error_net"]
 				if (Active < 0 || id != ids[Active]) {
 					var actions = Array(ids.length)
 					for (i = 0; i < ids.length; ++i) {
@@ -67,8 +70,8 @@
 			}
 			
 			dojo.ready(function() {
-				ShowMessageStatus();
-				setTimeout("Update();", 500);
+				ShowMessage("ref");
+				setTimeout("Update();", 1000);
 			});
 		</script>
 	</head>
@@ -78,6 +81,9 @@
 			Javascript is required to explore your results. Please cunsoult your browsers help for details on how to enable it.
 			Click <a href="view/?file=${file}">here</a> in a few minutes to continue to your results once Javascript is enabled.
 		</noscript>
+		<div id="ref" visible="false" style="display: none;">
+			<div class="dijitContentPaneLoading">Searching for linked files</div>
+		</div>
 		<div id="processing" visible="false" style="display: none;">
 			<div class="dijitContentPaneLoading">Processing your files for the first time.</div>
 		</div>

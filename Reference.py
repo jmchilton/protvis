@@ -369,6 +369,8 @@ def ValidateFilename(IncludedFiles, fname, exts = None):
 	while True:
 		try:
 			t = IncludedFiles.Get(fname)
+			if t & FileType.MISSING:
+				raise Exception()
 			_t = FileType.FromExtensions(ext)
 			if _t > t:
 				t = _t

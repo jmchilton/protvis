@@ -38,16 +38,68 @@ def AjaxError(msg, req):
 	return Response('<script>DetailsDialog.attr("title", "Error Loading Data").attr("style", "width: 300px;").attr("content", "' + msg + '");DetailsDialog.show();</script>', request=req)
 
 class JobManager:
+	class ReferenceThread(Thread):
+		def __init__(self, job, f, data, ref, lock, stream):
+			Thread.__init__(self)
+			self.job = job
+			self.file = f
+			self.data = data
+			self.ref = ref
+			self.lock = lock
+			self.stream = stream
+
+		def run(self):
+			files = self.ref(self.file)
+			threads = range(len(files))
+			links = {}
+			for i in threads:
+				links[files[i].Name] = i
+			#Now generate all the data files
+			for i in threads:
+				f = files[i]
+				if f.Type & Reference.FileType.MISSING:
+					threads[i] = None
+				else:
+					p = Reference.GetTypeParser(f.Type)
+					if p == None:
+						threads[i] = None
+					else:
+						if self.stream:
+							#t = ConverterThread(p, f.Stream, self.data.name + "_" + str(i), f.Name)
+							t = SpawnConvertProcess(p, f.Stream, self.data.name + "_" + str(i), f.Name)
+						else:
+							#t = ConverterThread(p, f.Name, self.data.name + "_" + str(i), f.Name)
+							t = SpawnConvertProcess(p, f.Name, self.data.name + "_" + str(i), f.Name)
+						t.start()
+						threads[i] = t
+			f = self.data.name[len(converted):]
+			Database.insert(f, True)
+			self.lock.acquire()
+			self.job["files"] = [[threads[i], files[i]] for i in xrange(len(threads))]
+			self.lock.release()
+
 	def __init__(self):
 		self.Jobs = {}
 		self.NextJobID = 0
 		self.ThreadsLock = Lock()
 
-	def Add(self, threads, f, files, data):
+	def AddRemote(self, f, data, fs):
 		self.ThreadsLock.acquire()
 		jobid = self.NextJobID
 		self.NextJobID += 1
-		self.Jobs[jobid] = { "index": data, "file": f, "files": [[threads[i], files[i]] for i in xrange(len(threads))] }
+		self.Jobs[jobid] = { "index": data, "file": f }
+		self.Jobs[jobid]["ref"] = JobManager.ReferenceThread(self.Jobs[jobid], [[f.filename, f.file] for f in fs], data, Reference.LoadChainGroup, self.ThreadsLock, True)
+		self.Jobs[jobid]["ref"].start()
+		self.ThreadsLock.release()
+		return jobid
+
+	def AddLocal(self, f, data, ref, fs):
+		self.ThreadsLock.acquire()
+		jobid = self.NextJobID
+		self.NextJobID += 1
+		self.Jobs[jobid] = { "index": data, "file": f }
+		self.Jobs[jobid]["ref"] = JobManager.ReferenceThread(self.Jobs[jobid], fs, data, ref, self.ThreadsLock, False)
+		self.Jobs[jobid]["ref"].start()
 		self.ThreadsLock.release()
 		return jobid
 
@@ -60,38 +112,42 @@ class JobManager:
 			raise
 		if job["file"] != f:
 			raise ValueError()
-		alive = 0
-		for t, _ in job["files"]:
-			if t != None:
-				if not t.started() or t.is_alive():
-					alive += 1
-		if alive == 0:
-			#write the index file
-			data = job["index"]
-			fs = 0
-			dbs = 0
-			files = job["files"]
-			for t, f in files:
-				if t != None and t.Type() > f.Type:
-					f.Type = t.Type()
-				if (f.Type & ~Reference.FileType.MISSING) == Reference.FileType.DATABASE:
-					dbs += 1
-				else:
-					fs += 1
-			data.write(struct.pack("=II", fs, dbs))
-			for t, f in files:
-				if (f.Type & ~Reference.FileType.MISSING) != Reference.FileType.DATABASE:
-					data.write(struct.pack("=BH", f.Type, len(f.Depends)))
-					for d in f.Depends:
-						data.write(struct.pack("=H", test(d < 0, 0xFFFF, d)))
-					EncodeStringToFile(data, f.Name)
-			for t, f in files:
-				if (f.Type & ~Reference.FileType.MISSING) == Reference.FileType.DATABASE:
-					EncodeStringToFile(data, f.Name)
-			data.close()
-			del self.Jobs[jobid]
-		self.ThreadsLock.release()
-		return alive
+		if "files" in job: #converting files
+			alive = 0
+			for t, _ in job["files"]:
+				if t != None:
+					if not t.started() or t.is_alive():
+						alive += 1
+			if alive == 0:
+				#write the index file
+				data = job["index"]
+				fs = 0
+				dbs = 0
+				files = job["files"]
+				for t, f in files:
+					if t != None and t.Type() > f.Type:
+						f.Type = t.Type()
+					if (f.Type & ~Reference.FileType.MISSING) == Reference.FileType.DATABASE:
+						dbs += 1
+					else:
+						fs += 1
+				data.write(struct.pack("=II", fs, dbs))
+				for t, f in files:
+					if (f.Type & ~Reference.FileType.MISSING) != Reference.FileType.DATABASE:
+						data.write(struct.pack("=BH", f.Type, len(f.Depends)))
+						for d in f.Depends:
+							data.write(struct.pack("=H", test(d < 0, 0xFFFF, d)))
+						EncodeStringToFile(data, f.Name)
+				for t, f in files:
+					if (f.Type & ~Reference.FileType.MISSING) == Reference.FileType.DATABASE:
+						EncodeStringToFile(data, f.Name)
+				data.close()
+				del self.Jobs[jobid]
+			self.ThreadsLock.release()
+			return alive
+		else: #still loading up the links
+			self.ThreadsLock.release()
+			return -1
 
 class DatabaseManager(Thread):
 	def __init__(self, name):
@@ -315,67 +371,31 @@ def Upload(req):
 	fs = req.POST.getall("uploadedfiles[]")
 	for f in fs:
 		f.file.seek(0)
-	files = Reference.LoadChainGroup([[f.filename, f.file] for f in fs])
 	#Build the index file
 	if not os.path.exists(converted):
 		os.makedirs(converted)
 	data = tempfile.NamedTemporaryFile(dir = ".", prefix = converted, delete = False)
-	threads = range(len(files))
-	links = {}
-	for i in threads:
-		links[files[i].Name] = i
-	#Now generate all the data files
-	for i in threads:
-		f = files[i]
-		if f.Type & Reference.FileType.MISSING or f.Type == Reference.FileType.UNKNOWN:
-			threads[i] = None
-		else:
-			#t = ConverterThread(Reference.GetTypeParser(f.Type), f.Stream, data.name + "_" + str(i), f.Name)
-			t = SpawnConvertProcess(Reference.GetTypeParser(f.Type), f.Stream, data.name + "_" + str(i), f.Name)
-			t.start()
-			threads[i] = t
 	f = data.name[len(converted):]
-	Database.insert(f, False)
-	jobid = Jobs.Add(threads, f, files, data)
+	jobid = Jobs.AddRemote(f, data, fs)
 	return Response('{"file":"' + f + '","jobid":' + str(jobid) + '}\r\n')
 
 def Convert(req):
 	#for when this is running on the same server as galaxy
 	#just use the local files directly
 	try:
-		f = binascii.unhexlify(req.GET["file"])
+		fs = binascii.unhexlify(req.GET["file"])
 	except:
 		return HTTPBadRequest_Param("file")
 	try:
 		ref = Referencers[req.GET["type"]]
 	except:
 		return HTTPBadRequest_Param("type")
-	files = ref(f)
 	#Build the index file
 	if not os.path.exists(converted):
 		os.makedirs(converted)
 	data = tempfile.NamedTemporaryFile(dir = ".", prefix = converted, delete = False)
-	threads = range(len(files))
-	links = {}
-	for i in threads:
-		links[files[i].Name] = i
-	#Now generate all the data files
-	for i in threads:
-		f = files[i]
-		if f.Type & Reference.FileType.MISSING:
-			threads[i] = None
-		else:
-			p = Reference.GetTypeParser(f.Type)
-			if p == None:
-				threads[i] = None
-			else:
-				#t = ConverterThread(p, f.Name, data.name + "_" + str(i), f.Name)
-				t = SpawnConvertProcess(p, f.Name, data.name + "_" + str(i), f.Name)
-				t.start()
-				threads[i] = t
 	f = data.name[len(converted):]
-	Database.insert(f, True)
-	jobid = Jobs.Add(threads, f, files, data)
+	jobid = Jobs.AddLocal(f, data, ref, fs)
 	return render_to_response(templates + "upload.pt", { "file": f, "jobid": str(jobid) }, request=req)
 
 def QueryInitStatus(req):
@@ -387,13 +407,13 @@ def QueryInitStatus(req):
 		i = int(req.GET["id"])
 	except:
 		return HTTPBadRequest_Param("id")
-	try:
-		alive = Jobs.QueryStatus(f, i)
-		return Response(str(alive) + "\r\n", request=req)
-	except HTTPException:
-		raise
-	except:
-		return Response("-\r\n", request=req)
+	#try:
+	alive = Jobs.QueryStatus(f, i)
+	return Response(str(alive) + "\r\n", request=req)
+#	except HTTPException:
+#		raise
+#	except:
+#		return Response("-\r\n", request=req)
 
 def AddFile(req):
 	def DecreaseLarger(arr, n):

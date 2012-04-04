@@ -22,7 +22,7 @@
 					if (dataArray["file"]) {
 						jobid = dataArray["jobid"];
 						file = dataArray["file"];
-						ShowMessage("processing");
+						ShowMessage("ref");
 						setTimeout("Update();", 1000);
 					} else {
 						dojo.byId("error").innerHTML = dataArray["error"]
@@ -66,6 +66,9 @@
 							if (left == 0) {
 								ShowMessage("done");
 								window.location = "view?file=" + file;
+							} else if (left < 0) {
+								ShowMessage("ref");
+								setTimeout("Update();", 1000);
 							} else {
 								ShowMessageStatus(left);
 								setTimeout("Update();", 1000);
@@ -83,7 +86,7 @@
 			}
 			
 			function ShowMessage(id) {
-				var ids = ["uploader", "processing", "done", "error", "error_net"]
+				var ids = ["uploader", "ref", "processing", "done", "error", "error_net"]
 				if (Active < 0 || id != ids[Active]) {
 					var actions = Array(ids.length)
 					for (i = 0; i < ids.length; ++i) {
@@ -122,6 +125,9 @@
 						<div id="error" style="font-weight:bold; color:red;"></div>
 						<div id="files" dojoType="dojox.form.uploader.InteractiveFileList" uploaderId="uploader"></div>
 					</form>
+				</div>
+				<div id="ref" visible="false" style="display: none;">
+					<div class="dijitContentPaneLoading">Searching for linked files</div>
 				</div>
 				<div id="processing" visible="false" style="display: none;">
 					<div class="dijitContentPaneLoading">Processing your files for the first time.</div>
