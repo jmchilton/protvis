@@ -88,7 +88,7 @@ NOTE:
 }
 
 pass=""
-port="8000"
+port="8500"
 address="0.0.0.0"
 daemon="none"
 

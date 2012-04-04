@@ -49,7 +49,7 @@ Running without galaxy:
     #now setup and run
     cd proteomics-visualise
     ./setup.sh --auto-install
-    ./run --daemon --port=8500
+    ./run --daemon
     
 Running with galaxy:
 
@@ -78,7 +78,7 @@ Running with galaxy:
     %%%
     cd proteomics-visualise
     ./setup.sh --auto-install
-    ./run --daemon --port=8500
+    ./run --daemon
 
 You can now connect to the ProtVis server on [http://127.0.0.1:8500](http://127.0.0.1:8500) and the Galaxy server (if installed) on [http://127.0.0.1:8080](http://127.0.0.1:8080)
 
