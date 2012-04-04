@@ -104,10 +104,13 @@ static PyObject *Display(PyObject *self, PyObject *args) {
 static PyObject *SpectrumMS1Smooth(PyObject *self, PyObject *args) {
 	const char *szFileName;
 	float nContrast;
-	unsigned long nWidth, nHeight;
+	long nWidth, nHeight;
 	float nMinTime = -1.0f, nMaxTime = -1.0f, nMinMz = -1.0f, nMaxMz = -1.0f;
-	if (!PyArg_ParseTuple(args, "sfkk|ffff", &szFileName, &nContrast, &nWidth, &nHeight, &nMinTime, &nMaxTime, &nMinMz, &nMaxMz)) {
+	if (!PyArg_ParseTuple(args, "sfll|ffff", &szFileName, &nContrast, &nWidth, &nHeight, &nMinTime, &nMaxTime, &nMinMz, &nMaxMz)) {
 		return NULL;
+	}
+	if (nWidth <= 0 || nHeight <= 0) {
+		return Py_BuildValue("");
 	}
 	MemoryStream *pStream = MS1Plot::RenderFromFileSmooth(szFileName, nWidth, nHeight, pow(nContrast, 1.2f), nMinTime, nMaxTime, nMinMz, nMaxMz);
 	PyObject *pRet = pStream == NULL ? Py_BuildValue("") : Py_BuildValue("s#", pStream->GetBuffer(), pStream->GetLength());
@@ -118,10 +121,13 @@ static PyObject *SpectrumMS1Smooth(PyObject *self, PyObject *args) {
 static PyObject *SpectrumMS1Points(PyObject *self, PyObject *args) {
 	const char *szFileName;
 	float nContrast;
-	unsigned long nWidth, nHeight;
+	long nWidth, nHeight;
 	float nMinTime = -1.0f, nMaxTime = -1.0f, nMinMz = -1.0f, nMaxMz = -1.0f;
-	if (!PyArg_ParseTuple(args, "sfkk|ffff", &szFileName, &nContrast, &nWidth, &nHeight, &nMinTime, &nMaxTime, &nMinMz, &nMaxMz)) {
+	if (!PyArg_ParseTuple(args, "sfll|ffff", &szFileName, &nContrast, &nWidth, &nHeight, &nMinTime, &nMaxTime, &nMinMz, &nMaxMz)) {
 		return NULL;
+	}
+	if (nWidth <= 0 || nHeight <= 0) {
+		return Py_BuildValue("");
 	}
 	MemoryStream *pStream = MS1Plot::RenderFromFilePoints(szFileName, nWidth, nHeight, pow(nContrast, 1.2f), nMinTime, nMaxTime, nMinMz, nMaxMz);
 	PyObject *pRet = pStream == NULL ? Py_BuildValue("") : Py_BuildValue("s#", pStream->GetBuffer(), pStream->GetLength());
@@ -131,10 +137,13 @@ static PyObject *SpectrumMS1Points(PyObject *self, PyObject *args) {
 
 static PyObject *SpectrumMS2(PyObject *self, PyObject *args) {
 	const char *szFileName;
-	unsigned long nWidth, nHeight;
+	long nWidth, nHeight;
 	float nMinTime = -1.0f, nMaxTime = -1.0f, nMinMz = -1.0f, nMaxMz = -1.0f;
-	if (!PyArg_ParseTuple(args, "skk|ffff", &szFileName, &nWidth, &nHeight, &nMinTime, &nMaxTime, &nMinMz, &nMaxMz)) {
+	if (!PyArg_ParseTuple(args, "sll|ffff", &szFileName, &nWidth, &nHeight, &nMinTime, &nMaxTime, &nMinMz, &nMaxMz)) {
 		return NULL;
+	}
+	if (nWidth <= 0 || nHeight <= 0) {
+		return Py_BuildValue("");
 	}
 	MemoryStream *pStream = MS2Plot::RenderFromFile(szFileName, nWidth, nHeight, nMinTime, nMaxTime, nMinMz, nMaxMz);
 	PyObject *pRet = pStream == NULL ? Py_BuildValue("") : Py_BuildValue("s#", pStream->GetBuffer(), pStream->GetLength());

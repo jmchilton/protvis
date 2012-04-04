@@ -84,13 +84,11 @@ class Spectrum:
 			info["pepmass"] = struct.unpack("=f", f.read(4))
 		else:
 			info["pepmass"] = None
-		
 		if optional & 0x02:
 			info["intensity"] = True
 			info["ions"] = [list(struct.unpack("=ff", f.read(4 + 4))) for i in xrange(count)]
 		else:
 			info["intensity"] = False
-
 			info["ions"] = [struct.unpack("=f", f.read(4))[0] for i in xrange(count)]
 		return info
 

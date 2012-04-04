@@ -467,7 +467,7 @@ BaseGraph = function(container, opts) {
 				var hc = container.clientHeight - parseInt(cs.getPropertyValue('padding-top')) - parseInt(cs.getPropertyValue('padding-bottom')) - 5;
 				var w = wc - obj.Padding[0] - obj.Padding[2];
 				var h = hc - obj.Padding[1] - obj.Padding[3];
-				if (w != obj.Width || h != obj.Height) {
+				if ((w != obj.Width || h != obj.Height) && !isNaN(w) && !isNaN(h)) {
 					obj.Width = w;
 					obj.Height = h;
 					obj.GraphBottom = hc - obj.Padding[3];

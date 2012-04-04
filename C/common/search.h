@@ -175,5 +175,19 @@
 		szStr[nLength] = 0;
 		return szStr;
 	}
+	
+	inline char *DecodeStringFromFileBuffer(FILE *pFile, DWORD nBuffer, WORD &nLen) {
+		WORD nLength;
+		fread(&nLength, sizeof(WORD), 1, pFile);
+		char *szStr = (char *)malloc(nLength + nBuffer + 1);
+		if (!szStr) {
+			fseek(pFile, nLength, SEEK_SET);
+			return NULL;
+		}
+		fread(szStr, 1, nLength, pFile);
+		szStr[nLength] = 0;
+		nLen = nLength;
+		return szStr;
+	}
 
 #endif

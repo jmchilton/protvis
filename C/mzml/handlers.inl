@@ -93,7 +93,8 @@ inline PyObject *Spectrum::GetInfo(FILE *pFile) {
 	}
 	PyObject *pIntensity = Py_True;
 	Py_INCREF(pIntensity);
-	float nPepMass = 0; //FIXME: implement
+	float nPepMass;
+	fread(&nPepMass, 1, sizeof(float), pFile);
 	return Py_BuildValue("{s:O,s:O,s:O}", "pepmass", nPepMass > 0 ? PyFloat_FromDouble(nPepMass) : Py_BuildValue(""), "intensity", pIntensity, "ions", pList);
 }
 
@@ -171,7 +172,12 @@ inline void Run::Search(FILE *pFile, SearchStatus &stat) {
 }
 
 inline PyObject *Run::GetSpectrum(FILE *pFile, DWORD nScan) {
-	return NULL; //FIXME: implement
+	DWORD nOffset = GetSpectrumOffset(pFile, nScan);
+	fseek(pFile, nOffset, SEEK_SET);
+	PyObject *pInfo = Spectrum::GetInfo(pFile);
+	PyDict_SetItemString(pInfo, "charge", PyInt_FromLong(0));
+	PyDict_SetItemString(pInfo, "offset", PyInt_FromLong(nOffset));
+	return pInfo;
 }
 
 inline DWORD Run::GetSpectrumOffset(FILE *pFile, DWORD nScan) {
@@ -212,14 +218,18 @@ inline PyObject *Run::PointsMS2Chunks(FILE *pFile, DWORD nChunks, float nMinTime
 inline PyObject *MzML::GetSpectrum(FILE *pFile, const char *szSpectrumName) {
 	fseek(pFile, 4 * sizeof(DWORD) + 5 * sizeof(float), SEEK_SET);
 	DWORD nScan, nEndScan, nCharge;
-	char *szName = DecodeStringFromFile(pFile);
+	WORD nLength;
+	char *szName = DecodeStringFromFileBuffer(pFile, 21, nLength);
 	if (!DecodeSpectrum(szSpectrumName, nScan, nEndScan, nCharge, szName)) {
 		return Py_BuildValue("");
 	}
+	PyObject *pInfo = Run::GetSpectrum(pFile, nScan);
+	sprintf(szName + nLength, "%u.%u", nScan, nScan);
+	PyDict_SetItemString(pInfo, "title", PyString_FromString(szName));
 	if (szName != NULL) {
 		free(szName);
 	}
-	return Run::GetSpectrum(pFile, nScan);
+	return pInfo;
 }
 
 inline DWORD MzML::GetSpectrumOffset(FILE *pFile, const char *szSpectrumName) {

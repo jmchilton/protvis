@@ -124,7 +124,7 @@
 					</form>
 				</div>
 				<div id="processing" visible="false" style="display: none;">
-					<div class="dijitContentPaneLoading">Processing your file for the first time.</div>
+					<div class="dijitContentPaneLoading">Processing your files for the first time.</div>
 				</div>
 				<div id="done" visible="false" style="display: none;">
 					Finished.<br/>

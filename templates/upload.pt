@@ -79,7 +79,7 @@
 			Click <a href="view/?file=${file}">here</a> in a few minutes to continue to your results once Javascript is enabled.
 		</noscript>
 		<div id="processing" visible="false" style="display: none;">
-			<div class="dijitContentPaneLoading">Processing your file for the first time.</div>
+			<div class="dijitContentPaneLoading">Processing your files for the first time.</div>
 		</div>
 		<div id="done" visible="false" style="display: none;">
 			Finished.<br/>
