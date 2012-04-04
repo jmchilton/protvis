@@ -1,3 +1,15 @@
+Contents
+  1. Quick Installation
+  2. Manual Installation
+    2.1 Setting up with a virtual environment
+    2.2 Installing into your system python
+    2.3 Installing blast+ (Optional)
+  3. Working with other web servers
+    3.1 Apache 2.X
+    3.2 nginx
+  4. Development
+
+
 1. Quick Installation
 
   Quick installation is only avaliable for unix systems. Windows users must follow the manual installation instructions in Section 2

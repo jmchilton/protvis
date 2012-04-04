@@ -43,7 +43,7 @@ Running without galaxy:
     hg clone https://bitbucket.org/Andrew_Brock/proteomics-visualise
     
     #OR if using download
-    wget https://bitbucket.org/Andrew_Brock/proteomics-visualise/get/tip.tar.gz -O proteomics-visualise.tar.gz
+    curl https://bitbucket.org/Andrew_Brock/proteomics-visualise/get/tip.tar.gz -o proteomics-visualise.tar.gz
     tar xf proteomics-visualise.tar.gz
     
     #now setup and run
@@ -59,9 +59,9 @@ Running with galaxy:
     hg clone https://bitbucket.org/Andrew_Brock/proteomics-visualise
     
     #OR if using download
-    wget https://bitbucket.org/iracooke/protk/get/tip.tar.gz -O protk.tar.gz
-    wget https://bitbucket.org/iracooke/galaxy-proteomics/get/tip.tar.gz -O galaxy-proteomics.tar.gz
-    wget https://bitbucket.org/Andrew_Brock/proteomics-visualise/get/tip.tar.gz -O proteomics-visualise.tar.gz
+    curl https://bitbucket.org/iracooke/protk/get/tip.tar.gz -o protk.tar.gz
+    curl https://bitbucket.org/iracooke/galaxy-proteomics/get/tip.tar.gz -o galaxy-proteomics.tar.gz
+    curl https://bitbucket.org/Andrew_Brock/proteomics-visualise/get/tip.tar.gz -o proteomics-visualise.tar.gz
     tar xf protk.tar.gz
     tar xf galaxy-proteomics.tar.gz
     tar xf proteomics-visualise.tar.gz
