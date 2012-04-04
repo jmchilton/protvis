@@ -50,12 +50,13 @@ static PyObject *GetSpectrumFromOffset(PyObject *self, PyObject *args) {
 
 static PyObject *GetOffsetFromSpectrum(PyObject *self, PyObject *args) {
 	const char *szFileName, *szSpectrumName;
-	if (!PyArg_ParseTuple(args, "ss", &szFileName, &szSpectrumName)) {
+	char bForce = 0;
+	if (!PyArg_ParseTuple(args, "ss|b", &szFileName, &szSpectrumName, &bForce)) {
 		return NULL;
 	}
 	FILE *pFile = fopen(szFileName, "r");
 	if (pFile != NULL) {
-		long nOffset = MzML::GetSpectrumOffset(pFile, szSpectrumName);
+		long nOffset = MzML::GetSpectrumOffset(pFile, szSpectrumName, bForce);
 		fclose(pFile);
 		return Py_BuildValue("i", nOffset);
 	}

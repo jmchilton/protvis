@@ -306,7 +306,7 @@
 		virtual OutputStream *BeginChild(DWORD nIndex);
 		void AddSpectrum1(float nStartTime, DWORD nCount, float *pMz, float *pIntensity);
 		static PyObject *GetSpectrum(FILE *pFile, const char *szSpectrumName);
-		static DWORD GetSpectrumOffset(FILE *pFile, const char *szSpectrumName);
+		static DWORD GetSpectrumOffset(FILE *pFile, const char *szSpectrumName, bool bForce);
 		static void SearchSpectrums(FILE *pFile, SearchStatus &stat);
 		static void Info(FILE *pFile, float &nMinTime, float &nMaxTime, float &nMinMz, float &nMaxMz, float &nMaxIntensity, char *&szName); //MUST call free() on szName
 		static PyObject *PointsMS2(FILE *pFile);

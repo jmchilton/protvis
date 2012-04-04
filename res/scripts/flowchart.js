@@ -358,8 +358,8 @@ FlowChart = function(parent, files, OnSelect) {
 			n.type_shaddow.setFill("transparent").setStroke({width:0});
 			n.title.setFill("black");
 			n.type.setFill(n.type_color);
-			n.title_shaddow_g.rawNode.setAttribute("filter", "");
-			n.type_shaddow_g.rawNode.setAttribute("filter", "");
+			n.title_shaddow_g.rawNode.removeAttribute("filter");
+			n.type_shaddow_g.rawNode.removeAttribute("filter");
 		}
 		if (index >= 0) {
 			var col = new dojo._base.Color("black");

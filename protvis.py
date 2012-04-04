@@ -881,11 +881,16 @@ def Spectrum(req):
 		links = Reference.FileLinks(fname)
 		possible = []
 		pep_datafile = TryGet(req.GET, "pn")
+		missing = False
 		if pep_datafile == None:
 			for i in xrange(len(links.Links)):
 				l = links.Links[i]
-				if l.Type == Reference.FileType.MZML or l.Type == Reference.FileType.MGF:
-					possible.append(i)
+				t = l.Type & ~Reference.FileType.MISSING
+				if t == Reference.FileType.MZML or t == Reference.FileType.MGF:
+					if l.Type & Reference.FileType.MISSING:
+						missing = True
+					else:
+						possible.append(i)
 		else:
 			deps = links.Links[int(pep_datafile)].Depends
 			i = 0
@@ -896,8 +901,12 @@ def Spectrum(req):
 			for d in deps:
 				if d >= 0 and d < len(links.Links):
 					l = links.Links[d]
-					if l.Type == Reference.FileType.MZML or l.Type == Reference.FileType.MGF:
-						possible.append(d)
+					t = l.Type & ~Reference.FileType.MISSING
+					if t == Reference.FileType.MZML or t == Reference.FileType.MGF:
+						if l.Type & Reference.FileType.MISSING:
+							missing = True
+						else:
+							possible.append(d)
 		pep_datafile = int(pep_datafile)
 		possible = list(set(possible))
 		offset = -1
@@ -910,6 +919,13 @@ def Spectrum(req):
 							datafile = f
 							filetype = t
 							break
+		if datafile == None and not missing and len(possible) == 1: #There is only 1 choice of where the spectrum came from
+			f = possible[0]
+			t = links.Links[f].Type
+			offset = Parsers[Reference.FileType.NameBasic(t)].GetOffsetFromSpectrum(fname + "_" + str(f), spectrum, True)
+			if offset >= 0:
+				datafile = f
+				filetype = t
 		pep_query_offset = TryGet(req.GET, "pqoff")
 		if pep_query_offset != None:
 			#pep_hit_offset = TryGet(req.GET, "phoff")

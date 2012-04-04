@@ -232,11 +232,11 @@ inline PyObject *MzML::GetSpectrum(FILE *pFile, const char *szSpectrumName) {
 	return pInfo;
 }
 
-inline DWORD MzML::GetSpectrumOffset(FILE *pFile, const char *szSpectrumName) {
+inline DWORD MzML::GetSpectrumOffset(FILE *pFile, const char *szSpectrumName, bool bForce) {
 	fseek(pFile, 4 * sizeof(DWORD) + 5 * sizeof(float), SEEK_SET);
 	DWORD nScan, nEndScan, nCharge;
 	char *szName = DecodeStringFromFile(pFile);
-	if (!DecodeSpectrum(szSpectrumName, nScan, nEndScan, nCharge, szName)) {
+	if (!DecodeSpectrum(szSpectrumName, nScan, nEndScan, nCharge, bForce ? NULL : szName)) {
 		return (DWORD)-1;
 	}
 	if (szName != NULL) {

@@ -159,10 +159,16 @@ class Header:
 		return None
 
 	@staticmethod
-	def get_spectrum_offset(f, name):
+	def get_spectrum_offset(f, name, force):
 		[count, offset] = struct.unpack("=II", f.read(4 + 4))
 		name = name.split(".")
-		if DecodeStringFromFile(f) == ".".join(name[:-3]):
+		match = False
+		if force:
+			match = True
+			EatStringFromFile(f)
+		elif DecodeStringFromFile(f) == ".".join(name[:-3]):
+			match = True
+		if match:
 			f.seek(offset)
 			i = 0
 			scan = int(name[-3])
@@ -182,15 +188,12 @@ class Header:
 		f.seek(offset)
 		i = 0
 		while i < count:
-			#print title
 			s = stat.copy()
 			[scan, charge, offset] = struct.unpack("=III", f.read(4 + 4 + 4))
 			title = spectrum + "." + str(scan) + "." + str(scan) + "." + str(charge)
 			s.SearchItemString("title", title)
 			if s.IsMatched():
 				stat.Results.append(Result(title, offset))
-			else:
-				f.seek(4, 1)
 			i += 1
 
 def ToBinary(f, dst, name):
@@ -241,9 +244,9 @@ def GetSpectrumFromOffset(filename, offset):
 	f.close()
 	return spec
 
-def GetOffsetFromSpectrum(filename, spectrum):
+def GetOffsetFromSpectrum(filename, spectrum, force = False):
 	f = open(filename, "r")
-	offset = Header.get_spectrum_offset(f, spectrum)
+	offset = Header.get_spectrum_offset(f, spectrum, force)
 	f.close()
 	return offset
 
