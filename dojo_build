@@ -55,7 +55,7 @@ fi
 if [ "$1" = "release" ]; then
 	build_flags="cssOptimize=comments optimize=shrinksafe layerOptimize=shrinksafe stripConsole=normal"
 elif [ "$1" = "debug" ]; then
-	build_flags="layerOptimize=falsy"
+	build_flags="layerOptimize=false"
 else
 	echo "Unknown build type."
 	echo "Usage: $0 <debug|release> [--commit]"

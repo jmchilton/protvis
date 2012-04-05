@@ -17,16 +17,16 @@ define([
 				tooltipWidget: this,
 				load: function(response, ioArgs) {
 					this.tooltipWidget.label = response;
-					if (this.isOpen) {
+					if (this.tooltipWidget.isOpen) {
 						this.tooltipWidget.close();
-						this.tooltipWidget.open(node);
+						this.tooltipWidget.open(this.tooltipWidget.node);
 					}
 				},
 				error: function() {
 					this.tooltipWidget.label = "Error contacting server";
-					if (isOpen) {
+					if (this.tooltipWidget.isOpen) {
 						this.tooltipWidget.close();
-						this.tooltipWidget.open(node);
+						this.tooltipWidget.open(this.tooltipWidget.node);
 					}
 				},
 				preventCache: this.preventCache
@@ -47,6 +47,7 @@ define([
 		
 		open: function(/*DomNode*/ target){
  			this.isOpen = true;
+ 			this.node = target;
 			this.inherited(arguments);
 		},
 		
