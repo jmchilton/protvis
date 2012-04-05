@@ -1,5 +1,6 @@
 dojo.require("dojox.gfx");
 dojo.require("dojo._base.Color");
+dojo.require("dojo.has");
 
 //Constants
 var BoxSlotSpacing = 7;
@@ -40,6 +41,7 @@ FlowChart = function(parent, files, OnSelect) {
 	}
 
 	function MakeBox(file) {
+		offset = obj.CanBlur ? 0 : 1;
 		var missing = file.type & 0x80;
 		var color = missing ? "#808080" : Colors[file.type];
 		var mat = obj.Matrix.translate(file.x, file.y);
@@ -49,10 +51,10 @@ FlowChart = function(parent, files, OnSelect) {
 		var box = g.createRect({x:-BoxWidth/2, y:-BoxHeight/2, width:BoxWidth, height:BoxHeight, r:5}).setFill({type:"linear", y1:-BoxHeight * 0.75, x2:0, y2:BoxHeight, colors:[{offset:0, color:"white"}, {offset:1, color:color}]}).setStroke({color:"black", width:2});
 		var title_shaddow_g = g.createGroup();
 		title_shaddow_g.createRect({x:-BoxWidth/2, y:-BoxHeight/2, width:BoxWidth, height:BoxHeight}).setFill(null).setStroke(null);
-		var title_shaddow = title_shaddow_g.createText({x:0, y:-3, text:name, align:"middle"}).setFont({family:"Arial", size:"14px", weight:"bold"}).setFill("transparent");
+		var title_shaddow = title_shaddow_g.createText({x:0 + offset, y:-3 + offset, text:name, align:"middle"}).setFont({family:"Arial", size:"14px", weight:"bold"}).setFill("transparent");
 		var type_shaddow_g = g.createGroup();
 		type_shaddow_g.createRect({x:-BoxWidth/2, y:-BoxHeight/2, width:BoxWidth, height:BoxHeight}).setFill(null).setStroke(null);
-		var type_shaddow = type_shaddow_g.createText({x:0, y:14, text:tname, align:"middle"}).setFont({family:"Arial", size:"12px"}).setFill("transparent");
+		var type_shaddow = type_shaddow_g.createText({x:0 + offset, y:14 + offset, text:tname, align:"middle"}).setFont({family:"Arial", size:"12px"}).setFill("transparent");
 		var title = g.createText({x:0, y:-3, text:name, align:"middle"}).setFont({family:"Arial", size:"14px", weight:"bold"}).setFill("black");
 		var type = g.createText({x:0, y:14, text:tname, align:"middle"}).setFont({family:"Arial", size:"12px"}).setFill(missing ? "red" : "black");
 		if (OnSelect) {
@@ -358,18 +360,20 @@ FlowChart = function(parent, files, OnSelect) {
 			n.type_shaddow.setFill("transparent").setStroke({width:0});
 			n.title.setFill("black");
 			n.type.setFill(n.type_color);
-			n.title_shaddow_g.rawNode.removeAttribute("filter");
-			n.type_shaddow_g.rawNode.removeAttribute("filter");
+			if (this.CanBlur) {
+				n.title_shaddow_g.rawNode.removeAttribute("filter");
+				n.type_shaddow_g.rawNode.removeAttribute("filter");
+			}
 		}
 		if (index >= 0) {
-			var col = new dojo._base.Color("black");
+			var col = this.CanBlur ? new dojo._base.Color("black") : new dojo._base.Color("rgba(0, 0, 0, 0.5)");
 			var n = this.Nodes[index];
 			n.box.setStroke({color:n.missing ? "grey" : Shade(Colors[n.t], 0.65), width:2});
 			n.title_shaddow.setFill(col).setStroke({color:col, width:1.25});
-			n.title_shaddow_g.rawNode.setAttribute("filter", "url(#text_shadow_filter)");
+			this.CanBlur && n.title_shaddow_g.rawNode.setAttribute("filter", "url(#text_shadow_filter)");
 			if (n.type_color == "black") {
 				n.type_shaddow.setFill(col).setStroke({color:col, width:1.25});
-				n.type_shaddow_g.rawNode.setAttribute("filter", "url(#text_shadow_filter)");
+				this.CanBlur && n.type_shaddow_g.rawNode.setAttribute("filter", "url(#text_shadow_filter)");
 			}
 			n.title.setFill("white");
 			n.type.setFill(n.type_color == "black" ? "white" : n.type_color);
@@ -404,6 +408,7 @@ FlowChart = function(parent, files, OnSelect) {
 	}
 	
 	var columns = null;
+	this.CanBlur = !dojo.has("ie") && !dojo.has("safari");
 	
 	this.Reload = function(files) {
 		this.Surface = null;
@@ -469,15 +474,17 @@ FlowChart = function(parent, files, OnSelect) {
 		offset -= 20;
 		parent.innerHTML = "";
 		this.Surface = dojox.gfx.createSurface(parent, 10 + BoxHSpacing * (columns.length - 1) + BoxWidth * columns.length + 10, offset + 6 + BoxSlots * BoxSlotSpacing);
-		var filter = document.createElementNS("http://www.w3.org/2000/svg", "filter");
-		filter.id = "text_shadow_filter";
-		filter.setAttribute("x", "0");
-		filter.setAttribute("y", "0");
-		var blur = document.createElementNS("http://www.w3.org/2000/svg", "feGaussianBlur");
-		blur.setAttribute("in", "SourceGraphic");
-		blur.setAttribute("stdDeviation", "2.5");
-		filter.appendChild(blur);
-		this.Surface.defNode.appendChild(filter);
+		if (this.CanBlur) {
+			var filter = document.createElementNS("http://www.w3.org/2000/svg", "filter");
+			filter.id = "text_shadow_filter";
+			filter.setAttribute("x", "0");
+			filter.setAttribute("y", "0");
+			var blur = document.createElementNS("http://www.w3.org/2000/svg", "feGaussianBlur");
+			blur.setAttribute("in", "SourceGraphic");
+			blur.setAttribute("stdDeviation", "2.5");
+			filter.appendChild(blur);
+			this.Surface.defNode.appendChild(filter);
+		}
 		for (var f in files) {
 			this.Nodes.push(MakeBox(files[f]));
 		}
