@@ -6,8 +6,10 @@
 		<link href="res/dojo/dijit/themes/dijit.css" rel="stylesheet" />
 		<link id="themeStyles" href="res/dojo/dijit/themes/claro/claro.css" type="text/css" rel="stylesheet" />
 		<link href="res/dojo/dojox/form/resources/UploaderInteractiveFileList.css" rel="stylesheet" />
+		<link href="res/styles/protvis.css" type="text/css" rel="stylesheet" />
 		<script type="text/javascript" src="res/dojo/dojo/dojo.js" data-dojo-config="parseOnLoad: true"></script>
 		<script type="text/javascript">
+			dojo.require("dojo.has");
 			dojo.require("dojo.fx");
 			dojo.require("dojox.form.AppendUploader");
 			dojo.require("dojox.form.uploader.plugins.IFrame");
@@ -47,6 +49,12 @@
 					}
 				}
 				dojo.byId("uploadForm").setAttribute("style", "");
+				if (dojo.has("ie")) {
+					dojo.byId("tested").innerHTML = "Uploading files in Internet Explorer is not currently supported. You must use the galaxy inerface.";
+					dojo.byId("tested").style.setAttribute("display", "block");
+				} else if (!(dojo.has("chrome") >= 15 || dojo.has("firefox") >= 10 || dojo.has("safari") >= 5)) {
+					dojo.byId("tested").style.setAttribute("display", "block");
+				}
 			});
 
 			//converting
@@ -111,6 +119,9 @@
 		</script>
 	</head>
 	<body class="claro">
+		<div id="tested" class="notice" style="border:1px solid #A66; background:#FCC; color:#611; display:none;">
+			You are using an untested web browser. Please <a href="https://bitbucket.org/Andrew_Brock/proteomics-visualise/issues/new" target="new">report</a> any issues you experince.
+		</div>
 		<h1><center>Welcome to ProtVis</center></h1>
 		<div style="float:right; min-width:550px;">
 			<fieldset id="drop_target" style="border-radius:10px">

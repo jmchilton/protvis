@@ -45,6 +45,8 @@ div.lorikeet #ionTable td.seq {font-weight:bold; background-color:#CCCCCC;}
 div.lorikeet #ionTable td.modified{background-color:#E9E9FF;}
 div.lorikeet #ionTable td.numCell {background-color:#E3E3E3; color:#444444;}
 div.lorikeet #ionTable td.matchIon {font-weight:bold; opacity:0.8; filter:alpha(opacity=80); -moz-opacity:0.8; color:white;}
+.notice { width:auto; padding:10px; position:relative; top:0; left:0; right:0; font-family:Arial; font-size:15px; font-weight:bold; text-align:center; margin-bottom:5px; }
+.notice a { color:inherit; }
 @media print {
 .noprint {display:none;}
 .printbreak {page-break-after:always}
