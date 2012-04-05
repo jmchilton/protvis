@@ -377,7 +377,9 @@ def Upload(req):
 	data = tempfile.NamedTemporaryFile(dir = ".", prefix = converted, delete = False)
 	f = data.name[len(converted):]
 	jobid = Jobs.AddRemote(f, data, fs)
-	return Response('{"file":"' + f + '","jobid":' + str(jobid) + '}\r\n')
+	resp = Response('{"file":"' + f + '","jobid":' + str(jobid) + '}\r\n')
+	resp.cache_expires(0)
+	return resp
 
 def Convert(req):
 	#for when this is running on the same server as galaxy
@@ -396,7 +398,9 @@ def Convert(req):
 	data = tempfile.NamedTemporaryFile(dir = ".", prefix = converted, delete = False)
 	f = data.name[len(converted):]
 	jobid = Jobs.AddLocal(f, data, ref, fs)
-	return render_to_response(templates + "upload.pt", { "file": f, "jobid": str(jobid) }, request=req)
+	resp = render_to_response(templates + "upload.pt", { "file": f, "jobid": str(jobid) }, request=req)
+	resp.cache_expires(0)
+	return resp
 
 def QueryInitStatus(req):
 	try:
@@ -407,13 +411,15 @@ def QueryInitStatus(req):
 		i = int(req.GET["id"])
 	except:
 		return HTTPBadRequest_Param("id")
-	#try:
-	alive = Jobs.QueryStatus(f, i)
-	return Response(str(alive) + "\r\n", request=req)
-#	except HTTPException:
-#		raise
-#	except:
-#		return Response("-\r\n", request=req)
+	try:
+		alive = Jobs.QueryStatus(f, i)
+		resp = Response(str(alive) + "\r\n", request=req)
+	except HTTPException:
+		raise
+	except:
+		resp = Response("-\r\n", request=req)
+	resp.cache_expires(0)
+	return resp
 
 def AddFile(req):
 	def DecreaseLarger(arr, n):
@@ -501,7 +507,9 @@ def AddFile(req):
 					links.Add(f.Name, f.Type, [])
 	l.Depends = deps_exists + range(deps_start, len(links))
 	links.Write(fname)
-	return Response('{"added":[' + ",".join(added) + '],"removed":[' + ",".join(removed) + '],"select":' + n + ',"files":[' + ",".join(['{"name":"' + os.path.split(l.Name)[1] + '","type":' + str(l.Type) + ',"deps":[' + ",".join([test(d < 65535, str(d), "-1") for d in l.Depends]) + ']}' for l in links]) + ']}\r\n', request=req)
+	resp = Response('{"added":[' + ",".join(added) + '],"removed":[' + ",".join(removed) + '],"select":' + n + ',"files":[' + ",".join(['{"name":"' + os.path.split(l.Name)[1] + '","type":' + str(l.Type) + ',"deps":[' + ",".join([test(d < 65535, str(d), "-1") for d in l.Depends]) + ']}' for l in links]) + ']}\r\n', request=req)
+	resp.cache_expires(0)
+	return resp
 
 def MergeFile(req):
 	def DecreaseLarger(arr, n):
@@ -533,7 +541,9 @@ def MergeFile(req):
 		o -= 1
 	del links.Links[n]
 	links.Write(fname)
-	return Response('{"removed":[' + str(n) + '],"select":' + str(o) + ',"files":[' + ",".join(['{"name":"' + os.path.split(l.Name)[1] + '","type":' + str(l.Type) + ',"deps":[' + ",".join([test(d < 65535, str(d), "-1") for d in l.Depends]) + ']}' for l in links]) + ']}\r\n', request=req)
+	resp = Response('{"removed":[' + str(n) + '],"select":' + str(o) + ',"files":[' + ",".join(['{"name":"' + os.path.split(l.Name)[1] + '","type":' + str(l.Type) + ',"deps":[' + ",".join([test(d < 65535, str(d), "-1") for d in l.Depends]) + ']}' for l in links]) + ']}\r\n', request=req)
+	resp.cache_expires(0)
+	return resp
 
 def View(req):
 	try:
