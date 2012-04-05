@@ -169,7 +169,7 @@ static PyObject *PointsMS2(PyObject *self, PyObject *args) {
 static PyObject *PointsMS2Chunks(PyObject *self, PyObject *args) {
 	const char *szFileName;
 	DWORD nChunks;
-	if (!PyArg_ParseTuple(args, "sk", &szFileName, &nChunks)) {
+	if (!PyArg_ParseTuple(args, "sI", &szFileName, &nChunks)) {
 		return NULL;
 	}
 	FILE *pFile = fopen(szFileName, "r");
