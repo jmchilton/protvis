@@ -11,11 +11,16 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="binary.cpp" />
-    <ClCompile Include="main.cpp" />
+    <ClCompile Include="handlers.cpp" />
+    <ClCompile Include="msplot.cpp" />
+    <ClCompile Include="MzMlmodule.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="binary.h" />
+    <ClInclude Include="handlers.h" />
+    <ClInclude Include="msplot.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="handlers.inl" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{AC66EB6A-716C-42D6-B256-2CD43067E07C}</ProjectGuid>
@@ -24,12 +29,12 @@
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
-    <ConfigurationType>Application</ConfigurationType>
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
-    <ConfigurationType>Application</ConfigurationType>
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
@@ -58,37 +63,50 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;XML_STATIC;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>..\Libraries\expat\lib;..\Libraries\boost;..\Libraries\zlib\</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\Libraries\expat\lib;..\Libraries\boost;..\Libraries\zlib\;..\Libraries\Python\Include;..\Libraries\Python\PC;..\Libraries\libpng\</AdditionalIncludeDirectories>
       <PreprocessToFile>
       </PreprocessToFile>
-      <DisableSpecificWarnings>4996</DisableSpecificWarnings>
+      <DisableSpecificWarnings>4996;4200</DisableSpecificWarnings>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>..\bin\$(ConfigurationName)\common.lib;..\Libraries\expat\win32\bin\$(ConfigurationName)\libexpatMT.lib;..\Libraries\zlib\bin\$(ConfigurationName)\zlibvc.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>..\bin\$(ConfigurationName)\common.lib;..\Libraries\expat\win32\bin\$(ConfigurationName)\libexpatMT.lib;..\Libraries\libpng\projects\visualc71\Win32_LIB_Release\libpng.lib;..\Libraries\libpng\projects\visualc71\Win32_LIB_Release\ZLib\zlib.lib;..\Libraries\Python\PCbuild\python27_d.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
+    <PostBuildEvent>
+      <Command>copy $(TargetPath) $(SolutionDir)..\MzML.pyd</Command>
+      <Message>Copying compiled module</Message>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <Optimization>MaxSpeed</Optimization>
-      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <FunctionLevelLinking>false</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;XML_STATIC;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>..\Libraries\expat\lib;..\Libraries\boost;..\Libraries\zlib\</AdditionalIncludeDirectories>
-      <DisableSpecificWarnings>4996</DisableSpecificWarnings>
+      <AdditionalIncludeDirectories>..\Libraries\expat\lib;..\Libraries\boost;..\Libraries\zlib\;..\Libraries\Python\Include;..\Libraries\Python\PC;..\Libraries\libpng\</AdditionalIncludeDirectories>
+      <DisableSpecificWarnings>4996;4200</DisableSpecificWarnings>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+      <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
+      <OmitFramePointers>true</OmitFramePointers>
+      <StringPooling>true</StringPooling>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalDependencies>..\bin\$(ConfigurationName)\common.lib;..\Libraries\expat\win32\bin\$(ConfigurationName)\libexpatMT.lib;..\Libraries\zlib\bin\$(ConfigurationName)\zlibvc.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>..\bin\$(ConfigurationName)\common.lib;..\Libraries\expat\win32\bin\$(ConfigurationName)\libexpatMT.lib;..\Libraries\libpng\projects\visualc71\Win32_LIB_Release\libpng.lib;..\Libraries\libpng\projects\visualc71\Win32_LIB_Release\ZLib\zlib.lib;..\Libraries\Python\PCbuild\python27.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
+    <PostBuildEvent>
+      <Command>copy $(TargetPath) $(SolutionDir)..\MzML.pyd</Command>
+    </PostBuildEvent>
+    <PostBuildEvent>
+      <Message>Copying compiled module</Message>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

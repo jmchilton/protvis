@@ -1,24 +1,12 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 11.00
 # Visual Studio 2010
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "pepxml", "pepxml\pepxml.vcxproj", "{56D69B6C-830E-42CF-BA4B-1BD25BE3D289}"
-	ProjectSection(ProjectDependencies) = postProject
-		{5820D391-F8B1-4B6C-B36F-378D42B4EC88} = {5820D391-F8B1-4B6C-B36F-378D42B4EC88}
-	EndProjectSection
-EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "protxml", "protxml\protxml.vcxproj", "{46820B71-7A36-4BA6-AD62-134A6B0B596E}"
-	ProjectSection(ProjectDependencies) = postProject
-		{5820D391-F8B1-4B6C-B36F-378D42B4EC88} = {5820D391-F8B1-4B6C-B36F-378D42B4EC88}
-	EndProjectSection
-EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "mzml", "mzml\mzml.vcxproj", "{AC66EB6A-716C-42D6-B256-2CD43067E07C}"
 	ProjectSection(ProjectDependencies) = postProject
 		{5820D391-F8B1-4B6C-B36F-378D42B4EC88} = {5820D391-F8B1-4B6C-B36F-378D42B4EC88}
 	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "common", "common\common.vcxproj", "{5820D391-F8B1-4B6C-B36F-378D42B4EC88}"
-EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "mgf", "mgf\mgf.vcxproj", "{6493339E-2549-4189-902B-0A84449236A2}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -27,18 +15,6 @@ Global
 		Template|Win32 = Template|Win32
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{56D69B6C-830E-42CF-BA4B-1BD25BE3D289}.Debug|Win32.ActiveCfg = Debug|Win32
-		{56D69B6C-830E-42CF-BA4B-1BD25BE3D289}.Debug|Win32.Build.0 = Debug|Win32
-		{56D69B6C-830E-42CF-BA4B-1BD25BE3D289}.Release|Win32.ActiveCfg = Release|Win32
-		{56D69B6C-830E-42CF-BA4B-1BD25BE3D289}.Release|Win32.Build.0 = Release|Win32
-		{56D69B6C-830E-42CF-BA4B-1BD25BE3D289}.Template|Win32.ActiveCfg = Release|Win32
-		{56D69B6C-830E-42CF-BA4B-1BD25BE3D289}.Template|Win32.Build.0 = Release|Win32
-		{46820B71-7A36-4BA6-AD62-134A6B0B596E}.Debug|Win32.ActiveCfg = Debug|Win32
-		{46820B71-7A36-4BA6-AD62-134A6B0B596E}.Debug|Win32.Build.0 = Debug|Win32
-		{46820B71-7A36-4BA6-AD62-134A6B0B596E}.Release|Win32.ActiveCfg = Release|Win32
-		{46820B71-7A36-4BA6-AD62-134A6B0B596E}.Release|Win32.Build.0 = Release|Win32
-		{46820B71-7A36-4BA6-AD62-134A6B0B596E}.Template|Win32.ActiveCfg = Release|Win32
-		{46820B71-7A36-4BA6-AD62-134A6B0B596E}.Template|Win32.Build.0 = Release|Win32
 		{AC66EB6A-716C-42D6-B256-2CD43067E07C}.Debug|Win32.ActiveCfg = Debug|Win32
 		{AC66EB6A-716C-42D6-B256-2CD43067E07C}.Debug|Win32.Build.0 = Debug|Win32
 		{AC66EB6A-716C-42D6-B256-2CD43067E07C}.Release|Win32.ActiveCfg = Release|Win32
@@ -51,12 +27,6 @@ Global
 		{5820D391-F8B1-4B6C-B36F-378D42B4EC88}.Release|Win32.Build.0 = Release|Win32
 		{5820D391-F8B1-4B6C-B36F-378D42B4EC88}.Template|Win32.ActiveCfg = Release|Win32
 		{5820D391-F8B1-4B6C-B36F-378D42B4EC88}.Template|Win32.Build.0 = Release|Win32
-		{6493339E-2549-4189-902B-0A84449236A2}.Debug|Win32.ActiveCfg = Debug|Win32
-		{6493339E-2549-4189-902B-0A84449236A2}.Debug|Win32.Build.0 = Debug|Win32
-		{6493339E-2549-4189-902B-0A84449236A2}.Release|Win32.ActiveCfg = Release|Win32
-		{6493339E-2549-4189-902B-0A84449236A2}.Release|Win32.Build.0 = Release|Win32
-		{6493339E-2549-4189-902B-0A84449236A2}.Template|Win32.ActiveCfg = Release|Win32
-		{6493339E-2549-4189-902B-0A84449236A2}.Template|Win32.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

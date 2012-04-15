@@ -1,7 +1,11 @@
 #ifndef __ARRAY_H__
 	#define __ARRAY_H__
 	
-	#include "inc.h"
+	#ifdef _MSC_VER
+		#include "incvc.h"
+	#else
+		#include "inc.h"
+	#endif
 	#include "stdinc.h"
 
 	//A very crude but fast vector

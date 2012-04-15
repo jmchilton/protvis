@@ -1,0 +1,80 @@
+These instructions are for when compiling with Microsoft Visual Studio for windows.
+If you are compiling for linux, OSX or Windows with cygwin/msys/SFU simply run ./setup.sh in the main directory
+
+--== DOWNLOADING ==--
+
+boost  : http://prdownloads.sourceforge.net/boost/boost_1_49_0.zip?download
+zlib   : http://zlib.net/zlib-1.2.6.tar.gz
+libpng : http://prdownloads.sourceforge.net/libpng/lpng1510.zip?download
+expat  : http://prdownloads.sourceforge.net/expat/expat-2.1.0.tar.gz?download
+Python : http://www.python.org/ftp/python/2.7.2/Python-2.7.2.tgz
+
+
+
+--== EXTRACTING ==--
+
+Extract the downloaded files to look like the following structure
+
+Some files are only avaliable in gzip format. You will need an arcive manager which can read the gzip format.
+If you cannot extract the expat, zlib or Python archives, try downloading 7zip from http://www.7-zip.org/
+
+protvis
+   C
+      Libraries
+         boost
+            boost
+               preprocessor
+                  arithmetic
+                  array
+                  arithmetic.hpp
+                  array.hpp
+                  ...
+               [all other files can be deleted]
+            [all other files can be deleted]
+         expat
+            amiga
+            bcb5
+            README
+            ...
+         libpng
+            contrib
+            projects
+            png.h
+            png.c
+            ...
+         Python
+            LICENSE
+            README
+            ...
+         zlib
+            amiga
+            as400
+            zlib.h
+            ...
+   ...
+
+
+--== COMPILING ==--
+
+Boost
+  Boost does not need to be compiled. Only the headers for the preprocessor library are required.
+
+zlib
+  zlib will be compiled as part of the libpng compile process
+
+libpng
+  1. Open the visual studio project file under libpng\projects\visualc71\libpng.sln
+     Even if you have visual studio 2010, still open this older project file as the filenames are broken in the new project file.
+  2. Select "LIB Release" from the dropdown menu for project configuration in the toolbar
+  3. Right click on the libpng project on the right hand side and select Build
+
+Python
+  1. Open the visual studio project file under Python\PCBuild\pcbuild.sln
+  2. Select "Release" from the dropdown menu for project configuration in the toolbar
+  3. Right click on the python project on the right hand side (highlighted in bold about half way down the list) and select Build
+
+expat
+  1. Open the visual studio project file under expat\lib\expat.dsp
+  2. Select "Release" from the dropdown menu for project configuration in the toolbar
+  3. Right click on the expat project on the right hand side and select Build
+  

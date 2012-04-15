@@ -12,7 +12,9 @@ Contents
 
 1. Quick Installation
 
-  Quick installation is only avaliable for unix systems. Windows users must follow the manual installation instructions in Section 2
+  Quick installation is only avaliable for unix systems, or cygwin/msys running on Windows.
+  Windows users using Microsoft Visual Studio must follow the installation instructions in INSTALLING.win32.txt.
+  
   For easy installation you can use the setup script.
   This script will download missing/new packages from the internet and install them into a local directory, without affecting your system
   To install missing packages which will affect the system, such as compiler, supply the option --install-missing

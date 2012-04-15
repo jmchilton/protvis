@@ -2,7 +2,6 @@
 	#define __SEARCH_H__
 
 	#include "array.h"
-	#include "inc.h"
 
 	class SearchStatus {
 		public:
@@ -110,7 +109,7 @@
 					nPrecision = szToken == NULL ? strlen(szToken) : (szToken2 - szToken) - strlen(szToken2 + 1);
 				}
 				nValue -= nPhrase;
-				return (nValue >= 0 ? nValue : -nValue) < pow(10, -nPrecision);
+				return (nValue >= 0 ? nValue : -nValue) < pow(10.0, -nPrecision);
 			}
 			
 			bool Compare(int nValue, const char *szPhrase) {

@@ -634,7 +634,7 @@
 		<script type="text/javascript" src="res/scripts/main.js"></script>
 	</head>
 	<body class="claro">
-		<div id="tested" class="notice" style="border:1px solid #A66; background:#FCC; color:#611; display:none;">
+		<div id="tested" class="notice-bnr" style="border:1px solid #A66; background:#FCC; color:#611; display:none;">
 			You are using an untested web browser. Please <a href="https://bitbucket.org/Andrew_Brock/proteomics-visualise/issues/new" target="new">report</a> any issues you experince.
 		</div>
 		<div id="selectBtn"></div>

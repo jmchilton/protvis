@@ -5,7 +5,9 @@
     <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
-    <LocalDebuggerCommandArguments>B:\Temp\large_interprophet.pepXML.xml B:\Temp\large_interprophet.pepBIN</LocalDebuggerCommandArguments>
+    <LocalDebuggerCommandArguments>Server.py 0.0.0.0 8500</LocalDebuggerCommandArguments>
     <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
+    <LocalDebuggerCommand>E:\Users\Andrew\Downloads\Andrew_Brock-proteomics-visualise-37683a0bde17\env\Scripts\python.exe</LocalDebuggerCommand>
+    <LocalDebuggerWorkingDirectory>E:\Users\Andrew\Downloads\Andrew_Brock-proteomics-visualise-37683a0bde17\</LocalDebuggerWorkingDirectory>
   </PropertyGroup>
 </Project>

@@ -27,6 +27,9 @@ SPECTRUM_REGEX = r"(.+?)(\.mzML)?\.[0-9]+\.[0-9]+\.[0-9]+"
 #For performance you should place the most likely database to match a protein first
 PROTEIN_DATABASES = []
 
+
+
+
 ### There are no options beyond this point ###
 import subprocess
 import os
@@ -43,7 +46,6 @@ if len(PROTEIN_DATABASES) == 0:
 	print " * No protein databases specified. Users will not be able to view the coverage graph."
 
 try:
-	f = open("/dev/null")
 	subprocess.call([HOME + "/bin/blastdbcmd", "-h"], stderr=subprocess.STDOUT, stdout=subprocess.PIPE)
 	subprocess.call([HOME + "/bin/makeblastdb", "-h"], stderr=subprocess.STDOUT, stdout=subprocess.PIPE)
 except:

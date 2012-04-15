@@ -126,7 +126,7 @@ for arg in $@; do
 	esac
 done
 if [ "x$daemon" = "xnone" ]; then
-	env/bin/python Server.py $pass $address $port
+	env/bin/python Server.py $address $port $pass
 else
 	if [ ! -f "production.ini" ]; then
 		cp production.ini.sample production.ini

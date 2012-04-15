@@ -18,10 +18,6 @@ static void PngWriterWrite(png_structp png_ptr, png_bytep data, png_size_t lengt
 static void PngWriterFlush(png_structp png_ptr) {
 }
 
-inline float abs(float x) {
-	return x >= 0 ? x : -x;
-}
-
 //MS1
 //FIXME: Make caching threadsafe
 
@@ -148,7 +144,7 @@ static MemoryStream *RenderFromCache(MS1Plot::Cache &cache, float nContrast) {
 	return pStream;
 }
 
-inline void AddCache(const char *szId, DWORD nCode, DWORD nWidth, DWORD nHeight, float nMinTime, float nMaxTime, float nMinMz, float nMaxMz, MS1Plot::Cache &cache) {
+inline void AddCache(const char *szId, char nCode, DWORD nWidth, DWORD nHeight, float nMinTime, float nMaxTime, float nMinMz, float nMaxMz, MS1Plot::Cache &cache) {
 	DWORD nMin = (DWORD)-1;
 	DWORD nMinIdx = 0;
 	for (DWORD i = 0; i < CACHE_MAX; ++i) {
@@ -213,7 +209,7 @@ MemoryStream *MS1Plot::RenderFromFileSmooth(const char *szFileName, DWORD nWidth
 			return NULL;
 		}
 		fclose(pFile);
-		if ((nMinTime < 0 || abs(nMinTime - info.minTime) < 0.001) && (nMaxTime < 0 || abs(nMaxTime - info.maxTime) < 0.001)) {
+		if ((nMinTime < 0 || fabsf(nMinTime - info.minTime) < 0.001) && (nMaxTime < 0 || fabsf(nMaxTime - info.maxTime) < 0.001)) {
 			if (nWidth > info.count) {
 				nWidth = info.count;
 			}
@@ -299,10 +295,10 @@ MemoryStream *MS1Plot::RenderFromFilePoints(const char *szFileName, DWORD nWidth
 		}
 		fclose(pFile);
 		DWORD nScans = 0, nMaxPeaks = 0, nPoints;
-		if ((nMinTime < 0 || abs(nMinTime - info.minTime) < 0.001) && (nMaxTime < 0 || abs(nMaxTime - info.maxTime) < 0.001)) {
+		if ((nMinTime < 0 || fabsf(nMinTime - info.minTime) < 0.001) && (nMaxTime < 0 || fabsf(nMaxTime - info.maxTime) < 0.001)) {
 			nScans = info.count;
 			char *pSrcDataPtr = pSrcData;
-			if ((nMinMz < 0 || abs(nMinMz - info.minMz) < 0.001) && (nMaxMz < 0 || abs(nMaxMz - info.maxMz) < 0.001)) {
+			if ((nMinMz < 0 || fabsf(nMinMz - info.minMz) < 0.001) && (nMaxMz < 0 || fabsf(nMaxMz - info.maxMz) < 0.001)) {
 				for (uint32_t i = 0; i < info.count; ++i) {
 					Scan *pScan = (Scan *)pSrcDataPtr;
 					++nScans;
@@ -331,7 +327,7 @@ MemoryStream *MS1Plot::RenderFromFilePoints(const char *szFileName, DWORD nWidth
 			}
 		} else {
 			char *pSrcDataPtr = pSrcData;
-			if ((nMinMz < 0 || abs(nMinMz - info.minMz) < 0.001) && (nMaxMz < 0 || abs(nMaxMz - info.maxMz) < 0.001)) {
+			if ((nMinMz < 0 || fabsf(nMinMz - info.minMz) < 0.001) && (nMaxMz < 0 || fabsf(nMaxMz - info.maxMz) < 0.001)) {
 				for (uint32_t i = 0; i < info.count; ++i) {
 					Scan *pScan = (Scan *)pSrcDataPtr;
 					if (pScan->nStartTime >= nMinTime && pScan->nStartTime <= nMaxTime) {
@@ -504,6 +500,13 @@ inline MemoryStream *MS1Plot::RenderFromFileInternalPoints(const char *szFileNam
 }
 
 //MS2
+
+#ifdef min
+	#undef min
+#endif
+#ifdef max
+	#undef max
+#endif
 
 template <typename T>
 inline T min(T x, T y) {

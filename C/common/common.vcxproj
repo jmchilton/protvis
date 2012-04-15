@@ -12,12 +12,16 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="array.h" />
+    <ClInclude Include="binary.h" />
     <ClInclude Include="debug.h" />
     <ClInclude Include="handlers.h" />
+    <ClInclude Include="reference.h" />
+    <ClInclude Include="search.h" />
     <ClInclude Include="stdinc.h" />
     <ClInclude Include="streams.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="binary.cpp" />
     <ClCompile Include="handlers.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
@@ -61,7 +65,7 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;XML_STATIC;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>..\Libraries\expat\lib;..\Libraries\boost</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\Libraries\expat\lib;..\Libraries\boost;..\Libraries\Python\Include;..\Libraries\Python\PC;..\Libraries\zlib;..\Libraries\libpng\</AdditionalIncludeDirectories>
       <PreprocessToFile>
       </PreprocessToFile>
       <DisableSpecificWarnings>4996</DisableSpecificWarnings>
@@ -78,12 +82,15 @@
       <WarningLevel>Level3</WarningLevel>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <Optimization>MaxSpeed</Optimization>
-      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <FunctionLevelLinking>false</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;XML_STATIC;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>..\Libraries\expat\lib;..\Libraries\boost</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\Libraries\expat\lib;..\Libraries\boost;..\Libraries\Python\Include;..\Libraries\Python\PC;..\Libraries\zlib;..\Libraries\libpng\</AdditionalIncludeDirectories>
       <DisableSpecificWarnings>4996</DisableSpecificWarnings>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+      <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
+      <OmitFramePointers>true</OmitFramePointers>
+      <StringPooling>true</StringPooling>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>

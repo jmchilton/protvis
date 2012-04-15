@@ -1,4 +1,8 @@
-#include "../common/inc.h"
+#ifdef _MSC_VER
+	#include "../common/inc.h"
+#else
+	#include "../common/inc.h"
+#endif
 #include "../common/stdinc.h"
 #include "../common/reference.h"
 #include "handlers.h"

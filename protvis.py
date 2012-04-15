@@ -20,6 +20,7 @@ import subprocess
 import parameters
 import time
 import sys
+import platform
 try:
 	import sqlite3
 except:
@@ -65,11 +66,9 @@ class JobManager:
 						threads[i] = None
 					else:
 						if self.stream:
-							#t = ConverterThread(p, f.Stream, self.data.name + "_" + str(i), f.Name)
-							t = SpawnConvertProcess(p, f.Stream, self.data.name + "_" + str(i), f.Name)
+							t = Converter(p, f.Stream, self.data.name + "_" + str(i), f.Name)
 						else:
-							#t = ConverterThread(p, f.Name, self.data.name + "_" + str(i), f.Name)
-							t = SpawnConvertProcess(p, f.Name, self.data.name + "_" + str(i), f.Name)
+							t = Converter(p, f.Name, self.data.name + "_" + str(i), f.Name)
 						t.start()
 						threads[i] = t
 			f = self.data.name[len(converted):]
@@ -256,7 +255,13 @@ def RendererGlobals(system):
 
 	return { "test": test, "Literal": Literal, "render_peptide": render_peptide, "try_get": TryGet, "urlencode": urllib.quote, "unique_dataset": unique_dataset }
 
-"""class ConverterThread(Thread):
+def Converter(mod, src, dst, name):
+	if platform.system() == "Windows":
+		return ConverterThread(mod, src, dst, name)
+	else:
+		return SpawnConvertProcess(mod, src, dst, name)
+
+class ConverterThread(Thread):
 	def __init__(self, mod, src, dst, name):
 		Thread.__init__(self)
 		self.Source = src
@@ -277,7 +282,7 @@ def RendererGlobals(system):
 			self.Source.seek(0)
 		self.Type = self.Module.ToBinary(self.Source, self.Dest, self.Name)
 		if close:
-			self.Source.close()"""
+			self.Source.close()
 
 def SpawnConvertProcess(mod, src, dst, name):
 	class _ConvertProcess(Process):
@@ -369,6 +374,10 @@ def Index(req):
 def Upload(req):
 	#uploading from a remote server
 	fs = req.POST.getall("uploadedfiles[]")
+	if platform.system() == "Windows": #Windows has an extra .file in here for some reason
+		for f in fs:
+			if hasattr(f.file, "file"):
+				f.file = f.file.file
 	for f in fs:
 		f.file.seek(0)
 	#Build the index file

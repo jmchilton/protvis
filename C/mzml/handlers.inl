@@ -68,7 +68,7 @@ inline void Spectrum::SearchAll(FILE *pFile, SearchStatus &stat, DWORD nCount) {
 		stat.Match("time", header._3);
 		stat.Match("pepmass", header._4);
 		if (stat.IsMatched()) {
-			fseek(pFile, -(2 * sizeof(DWORD) + 2 * sizeof(float)), SEEK_CUR);
+			fseek(pFile, -(long)(2 * sizeof(DWORD) + 2 * sizeof(float)), SEEK_CUR);
 			stat.AddResult(GetInfo(pFile));
 		} else {
 			fseek(pFile, header._0 * (sizeof(float) * 2) + header._1 * sizeof(float), SEEK_CUR);

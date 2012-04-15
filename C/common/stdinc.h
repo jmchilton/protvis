@@ -8,7 +8,7 @@
 		typedef int int32_t;
 		typedef DWORD uint32_t;
 		typedef QWORD uint64_t;
-		typedef unsigned int ssize_t;
+		//typedef unsigned int ssize_t; //defined in pyconfig.h
 	#else
 		#include <stdint.h>
 

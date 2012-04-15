@@ -1,0 +1,17 @@
+1. Get Visual Studio 2010
+  If you dont have a copy of Visual Studio 2010, you can download a free version from
+  http://www.microsoft.com/visualstudio/en-us/products/2010-editions/visual-cpp-express
+
+2. Get additional libraries for compiling C++ code
+  Follow the instructions in C\Libraries\structure.txt subdirectory for instructions on how to download and install additional libraries
+
+3. Compile the project
+  Open the file C\Proteomics.sln with Visual Studio
+  Now select   Build -> Build Solution   from the menubar at the top of the window
+
+5. Configure Python
+  Download and install a copy of Python 2.7 from
+  http://www.python.org/ftp/python/2.7.2/python-2.7.2.msi
+
+  Run setup.bat either by double clicking it or running it from a terminal
+  Then run run.bat either by double clicking it or running it from a terminal
