@@ -4,6 +4,7 @@ import xml.parsers.expat
 from xml.sax.saxutils import unescape
 from cStringIO import StringIO
 import sys
+import re
 from pyramid.httpexceptions import *
 
 #Util functions
@@ -127,10 +128,13 @@ class SearchStatus:
 	def SearchItemInt(self, name, value):
 		def CmpInt(val, s):
 			try:
-				if val == int(s):
-					return 1
+				if hasattr(s, "match"):
+					if s.match(str(val)):
+						return 1
 				else:
-					return 0
+					if val == int(s):
+						return 1
+				return 0
 			except:
 				return 0
 		return self._SearchItem(name, value, CmpInt)
@@ -153,12 +157,15 @@ class SearchStatus:
 
 		def CmpFloat(val, s):
 			try:
-				f = float(s)
-				prec = Precision(s)
-				if abs(val - f) < pow(10, -prec):
-					return 1
+				if hasattr(s, "match"):
+					if s.match(str(val)):
+						return 1
 				else:
-					return 0
+					f = float(s)
+					prec = Precision(s)
+					if abs(val - f) < pow(10, -prec):
+						return 1
+				return 0
 			except:
 				return 0
 
@@ -167,15 +174,59 @@ class SearchStatus:
 	def SearchItemString(self, name, value):
 		def CmpString(val, s):
 			try:
-				if val.upper().find(s) >= 0:
-					return 1
+				if hasattr(s, "match"):
+					if s.match(val):
+						return 1
+				else:
+					if val.upper().find(s) >= 0:
+						return 1
 				return 0
 			except:
 				return 0
 		return self._SearchItem(name, value, CmpString)
 
+def WildcardToRegex(wc):
+	return wc.replace("*", ".*").replace("?", ".");
+
 def SplitPhrase(phrase):
-	return phrase.split(); #FIXME: don't split quotes
+	i = 0
+	start = 0
+	n = len(phrase)
+	quote = False
+	phrases = []
+	match = None
+	while i < n:
+		if start == i:
+			if phrase[i] == "\"":
+				quote = True
+				i += 1
+				start = i
+				continue
+		if quote:
+			if phrase[i] == "\"":
+				quote = False
+				match = phrase[start:i]
+				start = i + 1
+		else:
+			if phrase[i] == " " or phrase[i] == "\t":
+				if start == i:
+					i += 1
+					start = i
+					continue
+				match = phrase[start:i]
+				start = i + 1
+		if match:
+			if match.find("*") >= 0 or match.find("?") >= 0:
+				match = re.compile(WildcardToRegex(match), re.IGNORECASE)
+			phrases.append(match)
+			match = None
+		i += 1
+	if start != i:
+		match = phrase[start:i]
+		if match.find("*") >= 0 or match.find("?") >= 0:
+			match = re.compile(WildcardToRegex(match), re.IGNORECASE)
+		phrases.append(match)
+	return phrases
 
 def EncodeTermsBasic(terms):
 	return { None: SplitPhrase(terms.upper()) }

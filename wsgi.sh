@@ -2,6 +2,9 @@ conf_apache2() {
 	cat >protvis.conf <<%%%
 #This is a sample configuration file. You may need to change some settings provided
 #Verify the username and user group values for WSGIDaemonProcess are set to who you want to run the scripts as (default is you)
+#if you get the error "(13)Permission denied: mod_wsgi (pid=26962): Unable to connect to WSGI" try uncommenting the following, changing /tmp/wsgi yo a directory that has write permission for the user specified in WSGIDaemonProcess
+#WSGISocketPrefix /tmp/wsgi
+
 WSGIApplicationGroup %{GLOBAL}
 WSGIPassAuthorization On
 WSGIDaemonProcess pyramid user=`id -un` group=`id -gn` processes=1 threads=4 python-path=`env/bin/python -c "from distutils.sysconfig import get_python_lib; print(get_python_lib())"`
