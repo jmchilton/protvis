@@ -1492,7 +1492,7 @@ def select_indistinguishable_peptide(BaseFile, query):
 	return peptides
 
 def DefaultSortColumn(scores):
-	return ["probability", ["probability"]]
+	return ["probability", "Probability", ["probability"]]
 
 #FIXME: DEBUG
 def PrintResults(results):

@@ -2231,14 +2231,14 @@ def SearchEngineOnlyName(scores):
 def DefaultSortColumn(scores):
 	reverses = ["hyperscore", "ionscore", "pp_prob", "ip_prob"]
 	if scores & 0x800:
-		return ["ip_prob", reverses]
+		return ["ip_prob", "Interprophet Prob.", reverses]
 	if scores & 0x400:
-		return ["pp_prob", reverses]
+		return ["pp_prob", "Peptideprophet Prob.", reverses]
 	#if scores & 0x08:
 	#	return ["hyperscore", reverses]
 	#elif scores & 0x20:
 	#	return ["ionscore", reverses]
-	return ["expect", reverses]
+	return ["expect", "Expect", reverses]
 
 def select_scores(BaseFile, query):
 	f = open(BaseFile + "_" + query["n"], "r")

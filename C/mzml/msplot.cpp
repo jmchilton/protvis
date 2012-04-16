@@ -5,7 +5,6 @@
 #define UPDATE_VAL(n) \
 	nVal = pImg[nIdx]; \
 	nVal += n; \
-	/*nVal = 1.0f;*/ \
 	pImg[nIdx] = nVal; \
 	if (nVal > nMax) { \
 		nMax = nVal; \
@@ -35,7 +34,7 @@ ImageCache gs_cache[CACHE_MAX];
 
 #ifdef _MSC_VER
 	HANDLE g_mxCache = CreateMutex(NULL, FALSE, NULL);
-	
+
 	void LockCache() {
 		WaitForSingleObject(g_mxCache, INFINITE); //Assume all went well
 	}

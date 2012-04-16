@@ -639,7 +639,7 @@ def ListResults(req):
 			else:
 				[scores, total, results] = parser.Search(fname + "_" + n, EncodeTermsBasic(q))
 			matches = len(results)
-			[score, reverses] = parser.DefaultSortColumn(scores)
+			[score, scorename, reverses] = parser.DefaultSortColumn(scores)
 			try:
 				sortcol = req.GET["sort"]
 			except:
@@ -674,7 +674,7 @@ def ListResults(req):
 					r.style = DecodeDecoy(r.HitInfo["protein"])
 				except:
 					r.style = "row"
-			info = { "total": total, "matches": matches, "start": start + 1, "end": start + len(results), "type": t, "score": score, "file": req.GET["file"], "datafile": n, "query": q, "datas": links.Types(), "limit": limit }
+			info = { "total": total, "matches": matches, "start": start + 1, "end": start + len(results), "type": t, "score": score, "scorename": scorename, "file": req.GET["file"], "datafile": n, "query": q, "datas": links.Types(), "limit": limit }
 			return render_to_response(templates + t + "_results.pt", { "sortcol": sortcol, "sortdsc": reverse, "info": info, "results": results, "url": Literal(req.path_qs) }, request = req)
 
 def ListPeptide(req):
@@ -704,7 +704,7 @@ def ListPeptide(req):
 	if results == None or len(results) == 0:
 		return AjaxError("The requested peptide could not be found.", req)
 	total = len(results)
-	[score, reverses] = PepXML.DefaultSortColumn(scores)
+	[score, scorename, reverses] = PepXML.DefaultSortColumn(scores)
 	try:
 		sortcol = req.GET["sort"]
 	except:
@@ -1007,7 +1007,7 @@ def Tooltip(req):
 		except:
 			return HTTPBadRequest_Param("n")
 		[scores, results] = PepXML.SearchPeptide(fname + "_" + n, req.GET["peptide"])
-		[score, reverses] = PepXML.DefaultSortColumn(scores)
+		[score, scorename, reverses] = PepXML.DefaultSortColumn(scores)
 		results = SortPeptides(results, "score", score, score in reverses)
 		count = len(results)
 		shown = count

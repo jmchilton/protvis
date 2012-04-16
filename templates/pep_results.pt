@@ -1,5 +1,5 @@
 <tal:var define="global hash python: unique_dataset()" />
-<tal:var define="global columns python: [{'name':'peptide', 'title': 'Peptide'}, {'name': 'protein', 'title': 'Protein'}, {'name': 'massdiff', 'title': 'Mass Difference'}, {'name': info['score'], 'title': info['score']}]"></tal:var>
+<tal:var define="global columns python: [{'name':'peptide', 'title': 'Peptide'}, {'name': 'protein', 'title': 'Protein'}, {'name': 'massdiff', 'title': 'Mass Difference'}, {'name': info['score'], 'title': info['scorename']}]"></tal:var>
 <form id="filter_pepxml_${hash}_basic" onsubmit="FilterCurrent(document.getElementById('filter_pepxml_${hash}').value); return false;">
 	Filter: <input type="text" id="filter_pepxml_${hash}" value="${info.query}" />&nbsp;<input type="submit" value="Filter" />
 </form>

@@ -258,4 +258,4 @@ def Search(filename, terms):
 	return [0, stat.Total, stat.Results]
 
 def DefaultSortColumn(scores):
-	return ["spectrum", []]
+	return ["spectrum", "Spectrum", []]
