@@ -19,7 +19,6 @@ static void PngWriterFlush(png_structp png_ptr) {
 }
 
 //MS1
-//FIXME: Make caching threadsafe
 
 #define CACHE_MAX 10
 typedef struct {
@@ -33,12 +32,22 @@ typedef struct {
 
 static DWORD gs_nTimeStamp = 0;
 ImageCache gs_cache[CACHE_MAX];
+pthread_mutex_t g_mxCache = PTHREAD_MUTEX_INITIALIZER;
+
+void LockCache() {
+	pthread_mutex_lock(&g_mxCache);
+}
+
+void UnlockCache() {
+	pthread_mutex_unlock(&g_mxCache);
+}
 
 void InitaliseMS1Cache() {
 	memset(gs_cache, 0, sizeof(gs_cache));
 }
 
 void ClearMS1Cache() {
+	LockCache();
 	ImageCache *pCache = gs_cache;
 	for (DWORD i = 0; i < CACHE_MAX; ++i, ++pCache) {
 		if (pCache->ID == NULL) {
@@ -47,6 +56,7 @@ void ClearMS1Cache() {
 			free(pCache->Image.pImage);
 		}
 	}
+	UnlockCache();
 }
 
 class CacheHandler {
@@ -95,13 +105,14 @@ MemoryStream *BlankImage() {
 	return pStream;
 }
 
-static MemoryStream *RenderFromCache(MS1Plot::Cache &cache, float nContrast) {
+static MemoryStream *RenderFromCache(MS1Plot::Cache &cache, float nContrast) { //NOTE: the cache should be locked from when searching for the entry
 	MemoryStream *pStream = new MemoryStream();
 	png_structp png_ptr = png_create_write_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
 	if (png_ptr != NULL) {
 		png_infop info_ptr = NULL;
 		png_bytep *pRows = NULL;
 		if (setjmp(png_jmpbuf(png_ptr))) {
+			UnlockCache();
 			puts("ERROR");
 			if (pRows != NULL) {
 				free(pRows);
@@ -135,11 +146,16 @@ static MemoryStream *RenderFromCache(MS1Plot::Cache &cache, float nContrast) {
 				pData[1] = nVal >= 1.0f ? 255 : (png_byte)(nVal * 255.0f + 0.5f);
 				pData += 2;
 			}
+			UnlockCache();
 			png_write_image(png_ptr, pRows);
 			png_write_end(png_ptr, NULL);
 			free(pRows);
+		} else {
+			UnlockCache();
 		}
 		png_destroy_write_struct(&png_ptr, &info_ptr);
+	} else {
+		UnlockCache();
 	}
 	return pStream;
 }
@@ -147,6 +163,7 @@ static MemoryStream *RenderFromCache(MS1Plot::Cache &cache, float nContrast) {
 inline void AddCache(const char *szId, char nCode, DWORD nWidth, DWORD nHeight, float nMinTime, float nMaxTime, float nMinMz, float nMaxMz, MS1Plot::Cache &cache) {
 	DWORD nMin = (DWORD)-1;
 	DWORD nMinIdx = 0;
+	LockCache();
 	for (DWORD i = 0; i < CACHE_MAX; ++i) {
 		if (gs_cache[i].ID == NULL) {
 			nMinIdx = 0;
@@ -171,10 +188,12 @@ inline void AddCache(const char *szId, char nCode, DWORD nWidth, DWORD nHeight, 
 		free(pCache->Image.pImage);
 	}
 	memcpy(&pCache->Image, &cache, sizeof(MS1Plot::Cache));
+	UnlockCache();
 }
 
 MemoryStream *MS1Plot::RenderFromFileSmooth(const char *szFileName, DWORD nWidth, DWORD nHeight, float nContrast, float nMinTime, float nMaxTime, float nMinMz, float nMaxMz) {
 	//Try the cache first
+	LockCache();
 	for (DWORD i = 0; i < CACHE_MAX; ++i) {
 		ImageCache &c = gs_cache[i];
 		if (c.ID == NULL) {
@@ -184,6 +203,7 @@ MemoryStream *MS1Plot::RenderFromFileSmooth(const char *szFileName, DWORD nWidth
 			return RenderFromCache(c.Image, nContrast);
 		}
 	}
+	UnlockCache();
 	//Not in cache, load it up
 	FILE *pFile = fopen(szFileName, "rb");
 	if (pFile != NULL) {
@@ -260,6 +280,7 @@ MemoryStream *MS1Plot::RenderFromFileSmooth(const char *szFileName, DWORD nWidth
 
 MemoryStream *MS1Plot::RenderFromFilePoints(const char *szFileName, DWORD nWidth, DWORD nHeight, float nContrast, float nMinTime, float nMaxTime, float nMinMz, float nMaxMz) {
 	//Try the cache first
+	LockCache();
 	for (DWORD i = 0; i < CACHE_MAX; ++i) {
 		ImageCache &c = gs_cache[i];
 		if (c.ID == NULL) {
@@ -269,6 +290,7 @@ MemoryStream *MS1Plot::RenderFromFilePoints(const char *szFileName, DWORD nWidth
 			return RenderFromCache(c.Image, nContrast);
 		}
 	}
+	UnlockCache();
 	//Not in cache, load it up
 	FILE *pFile = fopen(szFileName, "rb");
 	if (pFile != NULL) {

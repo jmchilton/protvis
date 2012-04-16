@@ -2,7 +2,7 @@
 
 config="config.mk"
 log="`pwd`/config.log"
-includes=""
+includes="pthread.h"
 libs=""
 allow_install=0
 

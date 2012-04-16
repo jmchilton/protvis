@@ -7,7 +7,7 @@ PYSOURCES=handlers.cpp msplot.cpp MzMlmodule.cpp
 PYOBJECTS=$(PYSOURCES:.cpp=.o)
 EXECUTABLE=../$(BUILD_DIR)/mzml
 PYMODULE=../$(BUILD_DIR)/MzML.so
-LIBS=../$(BUILD_DIR)/common.a
+LIBS=../$(BUILD_DIR)/common.a -pthread
 
 all: $(SOURCES) $(PYMODULE)
 
