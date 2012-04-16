@@ -72,7 +72,15 @@ common_flags="bin=$engine action=release profile=protvis releaseDir=../../../../
 dojo_src="dojo-release-1.7.1-src"
 cd compile
 if [ ! -d "$dojo_src" ]; then
-	wget http://download.dojotoolkit.org/release-1.7.1/$dojo_src.tar.gz
+	if [ `which wget` ]; then
+		wget http://download.dojotoolkit.org/release-1.7.1/$dojo_src.tar.gz
+	elif [ `which curl` ]; then
+		curl http://download.dojotoolkit.org/release-1.7.1/$dojo_src.tar.gz -o $dojo_src.tar.gz
+	else
+		echo "Could not find a suitable tool to download $dojo_src.tar.gz"
+		echo "Please download http://download.dojotoolkit.org/release-1.7.1/$dojo_src.tar.gz and save it to `pwd`"
+		exit
+	fi
 	tar -xf $dojo_src.tar.gz
 	rm $dojo_src.tar.gz
 fi
