@@ -32,15 +32,28 @@ typedef struct {
 
 static DWORD gs_nTimeStamp = 0;
 ImageCache gs_cache[CACHE_MAX];
-pthread_mutex_t g_mxCache = PTHREAD_MUTEX_INITIALIZER;
 
-void LockCache() {
-	pthread_mutex_lock(&g_mxCache);
-}
+#ifdef _MSC_VER
+	HANDLE g_mxCache = CreateMutex(NULL, FALSE, NULL);
+	
+	void LockCache() {
+		WaitForSingleObject(g_mxCache, INFINITE); //Assume all went well
+	}
 
-void UnlockCache() {
-	pthread_mutex_unlock(&g_mxCache);
-}
+	void UnlockCache() {
+		ReleaseMutex(g_mxCache)
+	}
+#else
+	pthread_mutex_t g_mxCache = PTHREAD_MUTEX_INITIALIZER;
+
+	void LockCache() {
+		pthread_mutex_lock(&g_mxCache);
+	}
+
+	void UnlockCache() {
+		pthread_mutex_unlock(&g_mxCache);
+	}
+#endif
 
 void InitaliseMS1Cache() {
 	memset(gs_cache, 0, sizeof(gs_cache));
