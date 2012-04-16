@@ -34,6 +34,7 @@ This includes layout styles, JavaScript, images and the compiled copy of the doj
 This directory contains all of the HTML template files.
 These files are used to build the overall structure of everything displayed in the web browser
 These files are in the ZPT format.
+Refer to _templates.md_ for detailed information on each template
 
 ##Directory: test
 This contains testing files for some of the javascript code to assist with development

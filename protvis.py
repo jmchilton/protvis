@@ -35,10 +35,14 @@ Parsers = { "mzml": MzML, "mgf": MGF, "pep": PepXML, "prot": ProtXML }
 Referencers = { "protxml": Reference.LoadChainProt, "pepxml": Reference.LoadChainPep, "mgf": Reference.LoadChainMgf, "mzml": Reference.LoadChainMzml }
 Database = None
 
+#returns an script which will display an error message and retry button when an error occurs during an ajax call
+#this prevents it from returning an epty response which is then cached
 def AjaxError(msg, req):
 	return Response('<script>DetailsDialog.attr("title", "Error Loading Data").attr("style", "width: 300px;").attr("content", "' + msg + '");DetailsDialog.show();</script>', request=req)
 
+#Keeps track of all the uploads while they are going through the initial processing stage, both from galaxy and the web interface
 class JobManager:
+	#This class takes care of the referencing stage of the processing
 	class ReferenceThread(Thread):
 		def __init__(self, job, f, data, ref, lock, stream, cleanup):
 			Thread.__init__(self)
@@ -83,6 +87,7 @@ class JobManager:
 		self.NextJobID = 0
 		self.ThreadsLock = Lock()
 
+	#add a job from the web interface uploader
 	def AddRemote(self, f, data, fs, cleanup):
 		self.ThreadsLock.acquire()
 		jobid = self.NextJobID
@@ -93,6 +98,7 @@ class JobManager:
 		self.ThreadsLock.release()
 		return jobid
 
+	#add a job from galaxy
 	def AddLocal(self, f, data, ref, fs, cleanup):
 		self.ThreadsLock.acquire()
 		jobid = self.NextJobID
@@ -103,6 +109,8 @@ class JobManager:
 		self.ThreadsLock.release()
 		return jobid
 
+	#check the status of a job to see if it has finished, or how many tasks are remaining
+	#if the job has finished, it updates the index file for the dataset with the correct information
 	def QueryStatus(self, f, jobid):
 		self.ThreadsLock.acquire()
 		try:
@@ -149,6 +157,9 @@ class JobManager:
 			self.ThreadsLock.release()
 			return -1
 
+#Keeps track of every group of files uploaded, and deletes them after a set amount of time to free some space
+#it also checks periodically to see if there has been any new jobs and adds them to its database
+#this relies on the sqlite3 module. if it is not abaliable then the files wont be deleted automatically
 class DatabaseManager(Thread):
 	def __init__(self, name):
 		Thread.__init__(self)
@@ -166,6 +177,7 @@ class DatabaseManager(Thread):
 		if self.new != None:
 			Thread.start(self)
 
+	#The monitoring thread
 	def run(self):
 		conn = sqlite3.connect(self.name)
 		c = conn.cursor()
@@ -195,6 +207,7 @@ class DatabaseManager(Thread):
 			self.inserts.release()
 
 	@staticmethod
+	#this is for use directly from the commandline
 	def cleanup(name):
 		try:
 			sqlite3
@@ -231,6 +244,7 @@ class DatabaseManager(Thread):
 Jobs = JobManager()
 Database = DatabaseManager(converted + "sets.db")
 
+#Defines a set of global variables which will be automatically defined in every template file
 def RendererGlobals(system):
 	def render_peptide(peptide):
 		try:
@@ -256,12 +270,18 @@ def RendererGlobals(system):
 
 	return { "test": test, "Literal": Literal, "render_peptide": render_peptide, "try_get": TryGet, "urlencode": urllib.quote, "unique_dataset": unique_dataset }
 
+#The top level function for converting files
 def Converter(mod, src, dst, name):
 	if platform.system() == "Windows":
+		#windows cannot handle the seperate processes, and so we must use seperate threads
+		#this is much slower, but the only way
 		return ConverterThread(mod, src, dst, name)
 	else:
+		#linux/OSX can have a sperate process for each task, and can perform many tasks at once
 		return SpawnConvertProcess(mod, src, dst, name)
 
+#the converter for windows
+#uses the threading module, which can only perform 1 task at a time
 class ConverterThread(Thread):
 	def __init__(self, mod, src, dst, name):
 		Thread.__init__(self)
@@ -285,6 +305,8 @@ class ConverterThread(Thread):
 		if close:
 			self.Source.close()
 
+#the converter for unix
+#uses the processing module, which can process any number of tasks at a time
 def SpawnConvertProcess(mod, src, dst, name):
 	class _ConvertProcess(Process):
 		def __init__(self, *args, **kwargs):
@@ -308,6 +330,7 @@ def SpawnConvertProcess(mod, src, dst, name):
 
 	return _ConvertProcess(target=ConvertProcess, args=(mod, src, dst, name))
 
+#The entry point function for processes created with the above class
 def ConvertProcess(mod, src, dst, name, q):
 	close = False
 	if type(src) != file:
@@ -319,7 +342,7 @@ def ConvertProcess(mod, src, dst, name, q):
 	if close:
 		src.close()
 	
-
+#Extracts the name of the file that the HTTP request was for, and checks that it does not try to get a file from another folder
 def GetQueryFileName(query):
 	try:
 		fname = query["file"]
@@ -329,11 +352,13 @@ def GetQueryFileName(query):
 		raise HTTPUnauthorized()
 	return converted + fname
 
+#Checks the name of a protein to see if it is a decoy in order to change the color of it in the list
 def DecodeDecoy(protein):
 	if decoy_regex.match(protein.lower()) != None:
 		return "rowdecoy"
 	return "row"
 
+#sorts a list of peptides using the best avaliable score
 def SortPeptides(results, sortcol, score, reverse = False):
 	if sortcol == "score":
 		def Comparator(a, b):
@@ -368,10 +393,12 @@ def SortPeptides(results, sortcol, score, reverse = False):
 	else:
 		return sorted(results, key = lambda key: key[sortcol], reverse=reverse)
 
+#HTTP: Returns the homepage
 def Index(req):
 	#for when this is used as a standalone tool
 	return render_to_response(templates + "index.pt", { }, request=req)
 
+#HTTP: Handles the uploading of files from the homepage
 def Upload(req):
 	#uploading from a remote server
 	fs = req.POST.getall("uploadedfiles[]")
@@ -395,6 +422,7 @@ def Upload(req):
 	resp.cache_expires(0)
 	return resp
 
+#HTTP: Handles the processing of files from a locally accesible galaxy
 def Convert(req):
 	#for when this is running on the same server as galaxy
 	#just use the local files directly
@@ -416,6 +444,7 @@ def Convert(req):
 	resp.cache_expires(0)
 	return resp
 
+#HTTP: Checks the progress of processing and converting files after uploaded
 def QueryInitStatus(req):
 	try:
 		f = req.GET["file"]
@@ -435,6 +464,8 @@ def QueryInitStatus(req):
 	resp.cache_expires(0)
 	return resp
 
+#HTTP: Addes a file to an existing dataset
+#A reference to the file must already exist in the dataset, but the contents of the file missing
 def AddFile(req):
 	def DecreaseLarger(arr, n):
 		for i in xrange(len(arr)):
@@ -525,6 +556,8 @@ def AddFile(req):
 	resp.cache_expires(0)
 	return resp
 
+#HTTP: Merges a file which the contents could not be found into a file which could
+#useful for when the same file is references with different file extensions as the tools add and remove them at their will
 def MergeFile(req):
 	def DecreaseLarger(arr, n):
 		for i in xrange(len(arr)):
@@ -559,6 +592,8 @@ def MergeFile(req):
 	resp.cache_expires(0)
 	return resp
 
+#HTTP: The main results page
+#it does not contain any data, only the information relating to what data you had, what files, how they were linked, ...
 def View(req):
 	try:
 		links = Reference.FileLinks(GetQueryFileName(req.GET))
@@ -576,6 +611,8 @@ def View(req):
 	files = ",".join(["{" + ",".join(["name:'" + os.path.split(l.Name)[1] + "'", "type:" + str(l.Type), "deps:[" + ",".join([test(d < 65535, str(d), "-1") for d in l.Depends]) + "]"]) + "}" for l in links])
 	return render_to_response(templates + "dataview.pt", { "file": req.GET["file"], "index": index, "type": typename, "files": files, "nfiles": len(links) }, request=req)
 
+#HTTP: Retreives the main list of results for the file
+#has special cases for mzML LC view and missing file
 def ListResults(req):
 	fname = GetQueryFileName(req.GET)
 	try:
@@ -682,6 +719,7 @@ def ListResults(req):
 			info = { "total": total, "matches": matches, "start": start + 1, "end": start + len(results), "type": t, "score": score, "scorename": scorename, "file": req.GET["file"], "datafile": n, "query": q, "datas": links.Types(), "limit": limit }
 			return render_to_response(templates + t + "_results.pt", { "sortcol": sortcol, "sortdsc": reverse, "info": info, "results": results, "url": Literal(req.path_qs) }, request = req)
 
+#HTTP: Gets a list of all proteins which reference a given peptide in a single file
 def ListPeptide(req):
 	fname = GetQueryFileName(req.GET)
 	try:
@@ -774,6 +812,8 @@ def ListPeptide(req):
 	instances = render(templates + "pepxml_peptide.pt", { "info": info, "peptides": results, "columns": columns, "datafile": n, "sortcol": sortcol, "sortdsc": reverse, "counts": SearchEngines.items() }, request=req)
 	return Response('<span class="link" onclick="ReturnToResults(' + n + ');">Back to all results</span>' + specs + '<div id="peptide_results_list">' + instances + "</div>", request=req)
 
+#HTTP: A generic function which calls "select_X" on the datafile
+#used to retreive: scores avaliable for a pepXML result, coverage of a protein and indistinguishable results from protXML
 def SelectInfo(req):
 	fname = GetQueryFileName(req.GET)
 	try:
@@ -792,6 +832,7 @@ def SelectInfo(req):
 	results = select(fname, req.GET)
 	return render_to_response(templates + "select_" + t + ".pt", { "query": req.GET, "results": results }, request=req)
 
+#HTTP: Retreives a PNG image for the given MS level showing the datapoints
 def SpectumLC(req):
 	fname = GetQueryFileName(req.GET)
 	try:
@@ -846,6 +887,7 @@ def SpectumLC(req):
 	else:
 		return HTTPBadRequest_Param("level")
 
+#HTTP: Retreives a spectrum viewer for the selected spectrum
 def Spectrum(req):
 	def PeptideInfo(pep):
 		peptide = { "peptide": pep["peptide"], "modification_info": pep["modification_info"], "protein": pep["protein"], "sort":pep["expect"], "masstol": pep["masstol"] }
@@ -1002,6 +1044,8 @@ def Spectrum(req):
 		spectrum = { "file": None, "scan": 1, "charge": 1, "offset":str(offset), "ions": parser.GetSpectrumFromOffset(fname + "_" + str(datafile), int(offset)) }
 	return render_to_response(templates + "specview.pt", { "query": req.GET, "datafile": str(datafile), "spectrum": spectrum, "peptide": peptide, "init_pep": init_pep, "score": score, "render_peptide_lorikeet": render_peptide_lorikeet }, request=req)
 
+#HTTP: Retreives the contents of a dynamic tooltip
+#presently only the information on a peptide
 def Tooltip(req):
 	t = req.matchdict["type"]
 	fname = GetQueryFileName(req.GET)
@@ -1051,6 +1095,7 @@ def Tooltip(req):
 		return render_to_response(templates + "pepxml_peptide_tooltip.pt", { "info": info, "peptides": results, "counts": SearchEngines.items() }, request=req)
 	return HTTPNotFound()
 
+#Provides the configuration to the pyramid or paster web server
 def main(*args, **kwargs):
 	#check to make sure everything is set up properly
 	if not os.path.exists(converted):
@@ -1069,6 +1114,7 @@ def main(*args, **kwargs):
 	JobsTotal = 0
 	Database.start()
 	config = Configurator(renderer_globals_factory=RendererGlobals)
+	#Routes: give each URL a name
 	config.add_route("index", "/")
 	config.add_route("upload", "/init")
 	config.add_route("convert", "/init_local")
@@ -1082,6 +1128,7 @@ def main(*args, **kwargs):
 	config.add_route("spectrum", "/spectrum")
 	config.add_route("lc", "/lc")
 	config.add_route("tooltip", "/tooltip/{type}")
+	#Views: now associate a function with each route name
 	#config.add_view(SearchHit, route_name="search_hit")
 	config.add_view(Index, route_name="index")
 	config.add_view(Upload, route_name="upload")
@@ -1096,6 +1143,7 @@ def main(*args, **kwargs):
 	config.add_view(Spectrum, route_name="spectrum")
 	config.add_view(SpectumLC, route_name="lc")
 	config.add_view(Tooltip, route_name="tooltip")
+	#these views provide content which does not change, such as images and javascript
 	config.add_static_view("/favicon.ico", parameters.HOME + "/res/favicon.ico", cache_max_age=3600*24*7)
 	config.add_static_view("res", parameters.HOME + "/res", cache_max_age=3600*24*7)
 	config.add_static_view("test", parameters.HOME + "/test", cache_max_age=0)
