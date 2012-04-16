@@ -40,7 +40,7 @@ def AjaxError(msg, req):
 
 class JobManager:
 	class ReferenceThread(Thread):
-		def __init__(self, job, f, data, ref, lock, stream):
+		def __init__(self, job, f, data, ref, lock, stream, cleanup):
 			Thread.__init__(self)
 			self.job = job
 			self.file = f
@@ -48,6 +48,7 @@ class JobManager:
 			self.ref = ref
 			self.lock = lock
 			self.stream = stream
+			self.cleanup = cleanup
 
 		def run(self):
 			files = self.ref(self.file)
@@ -72,7 +73,7 @@ class JobManager:
 						t.start()
 						threads[i] = t
 			f = self.data.name[len(converted):]
-			Database.insert(f, True)
+			Database.insert(f, True, self.cleanup)
 			self.lock.acquire()
 			self.job["files"] = [[threads[i], files[i]] for i in xrange(len(threads))]
 			self.lock.release()
@@ -82,22 +83,22 @@ class JobManager:
 		self.NextJobID = 0
 		self.ThreadsLock = Lock()
 
-	def AddRemote(self, f, data, fs):
+	def AddRemote(self, f, data, fs, cleanup):
 		self.ThreadsLock.acquire()
 		jobid = self.NextJobID
 		self.NextJobID += 1
 		self.Jobs[jobid] = { "index": data, "file": f }
-		self.Jobs[jobid]["ref"] = JobManager.ReferenceThread(self.Jobs[jobid], [[f.filename, f.file] for f in fs], data, Reference.LoadChainGroup, self.ThreadsLock, True)
+		self.Jobs[jobid]["ref"] = JobManager.ReferenceThread(self.Jobs[jobid], [[f.filename, f.file] for f in fs], data, Reference.LoadChainGroup, self.ThreadsLock, True, cleanup)
 		self.Jobs[jobid]["ref"].start()
 		self.ThreadsLock.release()
 		return jobid
 
-	def AddLocal(self, f, data, ref, fs):
+	def AddLocal(self, f, data, ref, fs, cleanup):
 		self.ThreadsLock.acquire()
 		jobid = self.NextJobID
 		self.NextJobID += 1
 		self.Jobs[jobid] = { "index": data, "file": f }
-		self.Jobs[jobid]["ref"] = JobManager.ReferenceThread(self.Jobs[jobid], fs, data, ref, self.ThreadsLock, False)
+		self.Jobs[jobid]["ref"] = JobManager.ReferenceThread(self.Jobs[jobid], fs, data, ref, self.ThreadsLock, False, cleanup)
 		self.Jobs[jobid]["ref"].start()
 		self.ThreadsLock.release()
 		return jobid
@@ -385,7 +386,11 @@ def Upload(req):
 		os.makedirs(converted)
 	data = tempfile.NamedTemporaryFile(dir = ".", prefix = converted, delete = False)
 	f = data.name[len(converted):]
-	jobid = Jobs.AddRemote(f, data, fs)
+	try:
+		cleanup = req.POST["delete"]
+	except:
+		cleanup = 7
+	jobid = Jobs.AddRemote(f, data, fs, cleanup * 24 * 60 * 60)
 	resp = Response('{"file":"' + f + '","jobid":' + str(jobid) + '}\r\n')
 	resp.cache_expires(0)
 	return resp
@@ -406,7 +411,7 @@ def Convert(req):
 		os.makedirs(converted)
 	data = tempfile.NamedTemporaryFile(dir = ".", prefix = converted, delete = False)
 	f = data.name[len(converted):]
-	jobid = Jobs.AddLocal(f, data, ref, fs)
+	jobid = Jobs.AddLocal(f, data, ref, fs, 7 * 24 * 60 * 60)
 	resp = render_to_response(templates + "upload.pt", { "file": f, "jobid": str(jobid) }, request=req)
 	resp.cache_expires(0)
 	return resp

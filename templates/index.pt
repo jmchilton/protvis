@@ -124,7 +124,7 @@
 		</div>
 		<h1><center>Welcome to ProtVis</center></h1>
 		<div style="float:right; min-width:550px;">
-			<fieldset id="drop_target" style="border-radius:10px">
+			<fieldset id="drop_target" style="border-radius:10px;background:white">
 				<legend>Upload Files</legend>
 				<div id="uploader">
 					<noscript>
@@ -135,6 +135,13 @@
 						<input type="submit" label="Upload" dojoType="dijit.form.Button" />
 						<div id="error" style="font-weight:bold; color:red;"></div>
 						<div id="files" dojoType="dojox.form.uploader.InteractiveFileList" uploaderId="uploader"></div>
+						Clean up my files after: <select style="margin-top:8px" name="delete">
+							<option value="1">1 day</option>
+							<option value="2">2 days</option>
+							<option value="7" selected="selected">1 week</option>
+							<option value="28">1 month</option>
+							<option value="0">Never</option>
+						</select>
 					</form>
 				</div>
 				<div id="ref" visible="false" style="display: none;">
