@@ -206,8 +206,10 @@ bin_need python python27.`uname -m` python26.`uname -m`
 bin_need make make.`uname -m`
 bin_need gcc
 bin_need g++ gxx gcc-c++ gcc-c++.`uname -m`
-py_need "setuptools" "dl http://peak.telecommunity.com/dist/ez_setup.py | super python"
-py_need "virtualenv" "easy_install virtualenv"
+if [ ! -f env/bin/python ]; then
+    py_need "setuptools" "dl http://peak.telecommunity.com/dist/ez_setup.py | super python"
+    py_need "virtualenv" "easy_install virtualenv"
+fi
 
 echo -n "Checking for blast+: " | tee -a $log
 mkdir bin 2>/dev/null
@@ -290,9 +292,11 @@ else
 	echo "already installed" | tee -a $log
 fi
 
-echo "Building the virtual environment" | tee -a $log
-virtualenv --no-site-packages env >>$log
-echo "`pwd`" >`env/bin/python -c "from distutils.sysconfig import get_python_lib; print(get_python_lib())"`/protvis.pth
+if [ ! -d env ]; then
+    echo "Building the virtual environment" | tee -a $log
+    virtualenv --no-site-packages env >>$log
+    echo "`pwd`" >`env/bin/python -c "from distutils.sysconfig import get_python_lib; print(get_python_lib())"`/protvis.pth
+fi
 
 echo "Installing pyramid into the virtual environment" | tee -a $log
 cd env
