@@ -1109,7 +1109,7 @@ def main(*args, **kwargs):
 				p.stderr.close()
 				p.stdout.close()
 				if p.wait() != 0:
-					subprocess.call([parameters.HOME + "/bin/makeblastdb", "-in", f, "-parse_seqids"])
+					subprocess.call([parameters.HOME + "/bin/makeblastdb", "-in", f, "-parse_seqids","-dbtype","prot"])
 	Threads = {}
 	JobsTotal = 0
 	Database.start()
