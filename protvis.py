@@ -15,6 +15,7 @@ import Reference
 import struct
 from Common import *
 from FileTypes import *
+import GPMDB
 import time
 import subprocess
 import parameters
@@ -1128,6 +1129,7 @@ def main(*args, **kwargs):
 	config.add_route("spectrum", "/spectrum")
 	config.add_route("lc", "/lc")
 	config.add_route("tooltip", "/tooltip/{type}")
+	config.add_route("gpmdb_peptide","/gpmdb_peptide")
 	#Views: now associate a function with each route name
 	#config.add_view(SearchHit, route_name="search_hit")
 	config.add_view(Index, route_name="index")
@@ -1143,6 +1145,7 @@ def main(*args, **kwargs):
 	config.add_view(Spectrum, route_name="spectrum")
 	config.add_view(SpectumLC, route_name="lc")
 	config.add_view(Tooltip, route_name="tooltip")
+	config.add_view(GPMDB.GetObservationsForPeptide,route_name="gpmdb_peptide",renderer="json")
 	#these views provide content which does not change, such as images and javascript
 	config.add_static_view("/favicon.ico", parameters.HOME + "/res/favicon.ico", cache_max_age=3600*24*7)
 	config.add_static_view("res", parameters.HOME + "/res", cache_max_age=3600*24*7)

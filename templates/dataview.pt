@@ -11,6 +11,7 @@
 		<script type="text/javascript" src="res/scripts/flowchart.js"></script>
 		<script type="text/javascript" src="res/scripts/specview.js"></script>
 		<script type="text/javascript" src="res/scripts/graph.js"></script>
+		<script type="text/javascript" src="res/scripts/gpmdb.js"></script>
 		<script type="text/javascript">
 			dojo.require("dojo.fx");
 			dojo.require("dojo.query");
