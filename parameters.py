@@ -27,14 +27,16 @@ SPECTRUM_REGEX = r"(.+?)(\.mzML)?\.[0-9]+\.[0-9]+\.[0-9]+"
 #For performance you should place the most likely database to match a protein first
 PROTEIN_DATABASES = []
 
+import os
+HOME = os.path.realpath(os.path.dirname(__file__))
 
+#Location of cached files
+CONVERTED_FILES = HOME + "/ConvertedFiles/"
 
 
 ### There are no options beyond this point ###
 import subprocess
-import os
 
-HOME = os.path.realpath(os.path.dirname(__file__))
 #Import user-defined settings
 try:
 	from conf import *
