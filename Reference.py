@@ -16,7 +16,7 @@ except:
 def EnsureWhitelistFile(fname):
 	fname = os.path.abspath(fname)
 	for d in parameters.PATH_WHITELIST:
-		if fname.startswith(d):
+		if fname.startswith(os.path.normpath(d)):
 			return True
 	return False
 
