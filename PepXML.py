@@ -228,9 +228,9 @@ class ModificationInfo(TagHandler):
 		mod_cterm_mass = TryGet(attr, "mod_cterm_mass")
 		stream.write(struct.pack("=HB", 0, EncodeOptional(mod_nterm_mass, mod_cterm_mass)))
 		if mod_nterm_mass != None:
-			stream.write(struct.pack("=d", mod_nterm_mass))
+			stream.write(struct.pack("=d", float(mod_nterm_mass)))
 		if mod_cterm_mass != None:
-			stream.write(struct.pack("=d", mod_cterm_mass))
+			stream.write(struct.pack("=d", float(mod_cterm_mass)))
 		self.MassCount = 0
 
 	def End(self):
