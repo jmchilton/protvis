@@ -1,9 +1,7 @@
-from wsgiref.simple_server import make_server
 from pyramid.config import Configurator
 from pyramid.response import Response
 from pyramid.renderers import render, render_to_response
-import binascii;
-from xml.sax.saxutils import escape
+import binascii
 import os
 from threading import Thread, Lock
 from multiprocessing import Process, Queue
@@ -19,8 +17,6 @@ import GPMDB
 import time
 import subprocess
 import parameters
-import time
-import sys
 import platform
 try:
     import sqlite3
@@ -32,17 +28,19 @@ decoy_regex = re.compile(parameters.DECOY_REGEX)
 spectrum_regex = re.compile(parameters.SPECTRUM_REGEX)
 converted = parameters.CONVERTED_FILES
 if not converted.endswith("/"):
-    converted = converted + "/" # Must end in / or it justs creates files in parent directory.
+    converted = converted + "/"  # Must end in / or it justs creates files in parent directory.
 converted = os.path.normpath(converted)
 
-Parsers = { "mzml": MzML, "mgf": MGF, "pep": PepXML, "prot": ProtXML }
-Referencers = { "protxml": Reference.LoadChainProt, "pepxml": Reference.LoadChainPep, "mgf": Reference.LoadChainMgf, "mzml": Reference.LoadChainMzml }
+Parsers = {"mzml": MzML, "mgf": MGF, "pep": PepXML, "prot": ProtXML}
+Referencers = {"protxml": Reference.LoadChainProt, "pepxml": Reference.LoadChainPep, "mgf": Reference.LoadChainMgf, "mzml": Reference.LoadChainMzml}
 Database = None
+
 
 #returns an script which will display an error message and retry button when an error occurs during an ajax call
 #this prevents it from returning an epty response which is then cached
 def AjaxError(msg, req):
     return Response('<script>DetailsDialog.attr("title", "Error Loading Data").attr("style", "width: 300px;").attr("content", "' + msg + '");DetailsDialog.show();</script>', request=req)
+
 
 #Keeps track of all the uploads while they are going through the initial processing stage, both from galaxy and the web interface
 class JobManager:
@@ -96,7 +94,7 @@ class JobManager:
         self.ThreadsLock.acquire()
         jobid = self.NextJobID
         self.NextJobID += 1
-        self.Jobs[jobid] = { "index": data, "file": f }
+        self.Jobs[jobid] = {"index": data, "file": f}
         self.Jobs[jobid]["ref"] = JobManager.ReferenceThread(self.Jobs[jobid], [[f.filename, f.file] for f in fs], data, Reference.LoadChainGroup, self.ThreadsLock, True, cleanup)
         self.Jobs[jobid]["ref"].start()
         self.ThreadsLock.release()
@@ -107,7 +105,7 @@ class JobManager:
         self.ThreadsLock.acquire()
         jobid = self.NextJobID
         self.NextJobID += 1
-        self.Jobs[jobid] = { "index": data, "file": f }
+        self.Jobs[jobid] = {"index": data, "file": f}
         self.Jobs[jobid]["ref"] = JobManager.ReferenceThread(self.Jobs[jobid], fs, data, ref, self.ThreadsLock, False, cleanup)
         self.Jobs[jobid]["ref"].start()
         self.ThreadsLock.release()
@@ -124,7 +122,7 @@ class JobManager:
             raise
         if job["file"] != f:
             raise ValueError()
-        if "files" in job: #converting files
+        if "files" in job:  # converting files
             alive = 0
             for t, _ in job["files"]:
                 if t != None:
@@ -157,9 +155,10 @@ class JobManager:
                 del self.Jobs[jobid]
             self.ThreadsLock.release()
             return alive
-        else: #still loading up the links
+        else:  # still loading up the links
             self.ThreadsLock.release()
             return -1
+
 
 #Keeps track of every group of files uploaded, and deletes them after a set amount of time to free some space
 #it also checks periodically to see if there has been any new jobs and adds them to its database
@@ -204,10 +203,10 @@ class DatabaseManager(Thread):
                 print "Nothing to clean up"
         conn.close()
 
-    def insert(self, name, galaxy, expires = 7 * 24 * 60 * 60):
+    def insert(self, name, galaxy, expires=7 * 24 * 60 * 60):
         if self.new != None:
             self.inserts.acquire()
-            self.new.append({"name":name, "time":str(int(time.mktime(time.gmtime()))), "expires":str(expires), "galaxy":str(test(galaxy, 1, 0))})
+            self.new.append({"name": name, "time": str(int(time.mktime(time.gmtime()))), "expires": str(expires), "galaxy": str(test(galaxy, 1, 0))})
             self.inserts.release()
 
     @staticmethod
@@ -248,6 +247,7 @@ class DatabaseManager(Thread):
 Jobs = JobManager()
 Database = DatabaseManager(converted + "sets.db")
 
+
 #Defines a set of global variables which will be automatically defined in every template file
 def RendererGlobals(system):
     def render_peptide(peptide):
@@ -263,7 +263,7 @@ def RendererGlobals(system):
             mods = []
             for m in mod:
                 mods += m
-            mods = sorted(mods, key = lambda mam: mam[0], reverse = True)
+            mods = sorted(mods, key=lambda mam: mam[0], reverse=True)
             for m in mods:
                 (pos, mass) = m
                 pep = pep[:pos] + '<span class="modification">[' + str(int(mass)) + ']</span>' + pep[pos:]
@@ -272,7 +272,8 @@ def RendererGlobals(system):
     def unique_dataset():
         return abs(hash(time.gmtime()))
 
-    return { "test": test, "Literal": Literal, "render_peptide": render_peptide, "try_get": TryGet, "urlencode": urllib.quote, "unique_dataset": unique_dataset }
+    return {"test": test, "Literal": Literal, "render_peptide": render_peptide, "try_get": TryGet, "urlencode": urllib.quote, "unique_dataset": unique_dataset}
+
 
 #The top level function for converting files
 def Converter(mod, src, dst, name):
@@ -283,6 +284,7 @@ def Converter(mod, src, dst, name):
     else:
         #linux/OSX can have a sperate process for each task, and can perform many tasks at once
         return SpawnConvertProcess(mod, src, dst, name)
+
 
 #the converter for windows
 #uses the threading module, which can only perform 1 task at a time
@@ -309,6 +311,7 @@ class ConverterThread(Thread):
         if close:
             self.Source.close()
 
+
 #the converter for unix
 #uses the processing module, which can process any number of tasks at a time
 def SpawnConvertProcess(mod, src, dst, name):
@@ -334,6 +337,7 @@ def SpawnConvertProcess(mod, src, dst, name):
 
     return _ConvertProcess(target=ConvertProcess, args=(mod, src, dst, name))
 
+
 #The entry point function for processes created with the above class
 def ConvertProcess(mod, src, dst, name, q):
     close = False
@@ -346,6 +350,7 @@ def ConvertProcess(mod, src, dst, name, q):
     if close:
         src.close()
 
+
 #Extracts the name of the file that the HTTP request was for, and checks that it does not try to get a file from another folder
 def GetQueryFileName(query):
     try:
@@ -356,14 +361,16 @@ def GetQueryFileName(query):
         raise HTTPUnauthorized()
     return converted + fname
 
+
 #Checks the name of a protein to see if it is a decoy in order to change the color of it in the list
 def DecodeDecoy(protein):
     if decoy_regex.match(protein.lower()) != None:
         return "rowdecoy"
     return "row"
 
+
 #sorts a list of peptides using the best avaliable score
-def SortPeptides(results, sortcol, score, reverse = False):
+def SortPeptides(results, sortcol, score, reverse=False):
     if sortcol == "score":
         def Comparator(a, b):
             try:
@@ -393,20 +400,22 @@ def SortPeptides(results, sortcol, score, reverse = False):
                 elif _a == _b:
                     return 0
                 return 1
-        return sorted(results, cmp = Comparator, reverse=reverse)
+        return sorted(results, cmp=Comparator, reverse=reverse)
     else:
-        return sorted(results, key = lambda key: key[sortcol], reverse=reverse)
+        return sorted(results, key=lambda key: key[sortcol], reverse=reverse)
+
 
 #HTTP: Returns the homepage
 def Index(req):
     #for when this is used as a standalone tool
-    return render_to_response(templates + "index.pt", { }, request=req)
+    return render_to_response(templates + "index.pt", {}, request=req)
+
 
 #HTTP: Handles the uploading of files from the homepage
 def Upload(req):
     #uploading from a remote server
     fs = req.POST.getall("uploadedfiles[]")
-    if platform.system() == "Windows": #Windows has an extra .file in here for some reason
+    if platform.system() == "Windows":  # Windows has an extra .file in here for some reason
         for f in fs:
             if hasattr(f.file, "file"):
                 f.file = f.file.file
@@ -415,7 +424,7 @@ def Upload(req):
     #Build the index file
     if not os.path.exists(converted):
         os.makedirs(converted)
-    data = tempfile.NamedTemporaryFile(dir = ".", prefix = converted, delete = False)
+    data = tempfile.NamedTemporaryFile(dir=".", prefix=converted, delete=False)
     f = data.name[len(converted):]
     try:
         cleanup = req.POST["delete"]
@@ -425,6 +434,7 @@ def Upload(req):
     resp = Response('{"file":"' + f + '","jobid":' + str(jobid) + '}\r\n')
     resp.cache_expires(0)
     return resp
+
 
 #HTTP: Handles the processing of files from a locally accesible galaxy
 def Convert(req):
@@ -441,12 +451,13 @@ def Convert(req):
     #Build the index file
     if not os.path.exists(converted):
         os.makedirs(converted)
-    data = tempfile.NamedTemporaryFile(dir = ".", prefix = converted, delete = False)
+    data = tempfile.NamedTemporaryFile(dir=".", prefix=converted, delete=False)
     f = data.name[len(converted):]
     jobid = Jobs.AddLocal(f, data, ref, fs, 7 * 24 * 60 * 60)
-    resp = render_to_response(templates + "upload.pt", { "file": f, "jobid": str(jobid) }, request=req)
+    resp = render_to_response(templates + "upload.pt", {"file": f, "jobid": str(jobid)}, request=req)
     resp.cache_expires(0)
     return resp
+
 
 #HTTP: Checks the progress of processing and converting files after uploaded
 def QueryInitStatus(req):
@@ -467,6 +478,7 @@ def QueryInitStatus(req):
         resp = Response("-\r\n", request=req)
     resp.cache_expires(0)
     return resp
+
 
 #HTTP: Addes a file to an existing dataset
 #A reference to the file must already exist in the dataset, but the contents of the file missing
@@ -560,6 +572,7 @@ def AddFile(req):
     resp.cache_expires(0)
     return resp
 
+
 #HTTP: Merges a file which the contents could not be found into a file which could
 #useful for when the same file is references with different file extensions as the tools add and remove them at their will
 def MergeFile(req):
@@ -596,6 +609,7 @@ def MergeFile(req):
     resp.cache_expires(0)
     return resp
 
+
 #HTTP: The main results page
 #it does not contain any data, only the information relating to what data you had, what files, how they were linked, ...
 def View(req):
@@ -613,7 +627,8 @@ def View(req):
         typename = Reference.FileType.NameBasic(index["type"])
         index = index["index"]
     files = ",".join(["{" + ",".join(["name:'" + os.path.split(l.Name)[1] + "'", "type:" + str(l.Type), "deps:[" + ",".join([test(d < 65535, str(d), "-1") for d in l.Depends]) + "]"]) + "}" for l in links])
-    return render_to_response(templates + "dataview.pt", { "file": req.GET["file"], "index": index, "type": typename, "files": files, "nfiles": len(links) }, request=req)
+    return render_to_response(templates + "dataview.pt", {"file": req.GET["file"], "index": index, "type": typename, "files": files, "nfiles": len(links)}, request=req)
+
 
 #HTTP: Retreives the main list of results for the file
 #has special cases for mzML LC view and missing file
@@ -663,9 +678,9 @@ def ListResults(req):
                         j -= 1
                     name = ".".join(name)
                     if name == myname:
-                        similar.append({"index":i, "name":os.path.basename(l.Name)})
+                        similar.append({"index": i, "name": os.path.basename(l.Name)})
             i += 1
-        return render_to_response(templates + "missing_results.pt", { "links": links, "query": req.GET, "similar": similar, "os": os }, request = req)
+        return render_to_response(templates + "missing_results.pt", {"links": links, "query": req.GET, "similar": similar, "os": os}, request=req)
     else:
         t = Reference.FileType.NameBasic(links.Links[ni].Type)
         try:
@@ -677,8 +692,8 @@ def ListResults(req):
         if t == "mzml" and TryGet(req.GET, "list") != "1":
             results = parser.Display(fname + "_" + n, req.GET)
             points = parser.points_ms2_chunks(fname + "_" + n, 16)
-            info = { "type": t, "file": req.GET["file"], "datafile": n, "query": q, "datas": links.Types() }
-            return render_to_response(templates + t + "_display.pt", { "info": info, "results": results, "points": points, "url": Literal(req.path_qs) }, request = req)
+            info = {"type": t, "file": req.GET["file"], "datafile": n, "query": q, "datas": links.Types()}
+            return render_to_response(templates + t + "_display.pt", {"info": info, "results": results, "points": points, "url": Literal(req.path_qs)}, request=req)
         else:
             if TryGet(req.GET, "level") == "adv":
                 [scores, total, results] = parser.Search(fname + "_" + n, EncodeTermsAdvanced(q))
@@ -697,7 +712,7 @@ def ListResults(req):
                     reverse = True
             except:
                 reverse = False
-            results = sorted(results, key = lambda key: key.HitInfo[sortcol], reverse = test(test(sortcol == "score", score, sortcol) in reverses, not reverse, reverse))
+            results = sorted(results, key=lambda key: key.HitInfo[sortcol], reverse=test(test(sortcol == "score", score, sortcol) in reverses, not reverse, reverse))
             try:
                 start = int(req.GET["start"])
             except:
@@ -720,8 +735,9 @@ def ListResults(req):
                     r.style = DecodeDecoy(r.HitInfo["protein"])
                 except:
                     r.style = "row"
-            info = { "total": total, "matches": matches, "start": start + 1, "end": start + len(results), "type": t, "score": score, "scorename": scorename, "file": req.GET["file"], "datafile": n, "query": q, "datas": links.Types(), "limit": limit }
-            return render_to_response(templates + t + "_results.pt", { "sortcol": sortcol, "sortdsc": reverse, "info": info, "results": results, "url": Literal(req.path_qs) }, request = req)
+            info = {"total": total, "matches": matches, "start": start + 1, "end": start + len(results), "type": t, "score": score, "scorename": scorename, "file": req.GET["file"], "datafile": n, "query": q, "datas": links.Types(), "limit": limit}
+            return render_to_response(templates + t + "_results.pt", {"sortcol": sortcol, "sortdsc": reverse, "info": info, "results": results, "url": Literal(req.path_qs)}, request=req)
+
 
 #HTTP: Gets a list of all proteins which reference a given peptide in a single file
 def ListPeptide(req):
@@ -763,7 +779,7 @@ def ListPeptide(req):
             reverse = True
     except:
         reverse = False
-    SearchEngines = { "X-Tandem": 0, "Mascot": 0, "Omssa": 0 }
+    SearchEngines = {"X-Tandem": 0, "Mascot": 0, "Omssa": 0}
     spectrums = {}
     for r in results:
         r["score"] = TryGet(r, score)
@@ -793,7 +809,7 @@ def ListPeptide(req):
         del SearchEngines["Mascot"]
     if SearchEngines["Omssa"] == 0:
         del SearchEngines["Omssa"]
-    spectrums = sorted([Spec(k, v) for k, v in spectrums.items()], reverse = True, key = lambda spec: spec.Count)
+    spectrums = sorted([Spec(k, v) for k, v in spectrums.items()], reverse=True, key=lambda spec: spec.Count)
     results = SortPeptides(results, sortcol, score, test(test(sortcol == "score", score, sortcol) in reverses, not reverse, reverse))
     try:
         start = int(req.GET["start"])
@@ -805,16 +821,17 @@ def ListPeptide(req):
         limit = -1
     if start > 0:
         if limit > 0:
-            results = results[start:start+limit]
+            results = results[start:start + limit]
         else:
             results = results[start:]
     elif limit > 0:
         results = results[:limit]
-    info = { "total": total, "start": start + 1, "end": start + len(results), "peptide": peptide }
+    info = {"total": total, "start": start + 1, "end": start + len(results), "peptide": peptide}
     columns = [{"name": "spectrum", "title": "Spectrum", "click": ViewSpectrum}, {"name": "massdiff", "title": "Mass Diff"}, {"name": "score", "title": "Score"}, {"name": "engine", "title": "Search Engine"}, {"name": "engine_score", "title": "Engine Score"}]
-    specs = render(templates + "pepxml_peptide_spectrums.pt", { "count": len(spectrums), "spectrums": spectrums}, request=req)
-    instances = render(templates + "pepxml_peptide.pt", { "info": info, "peptides": results, "columns": columns, "datafile": n, "sortcol": sortcol, "sortdsc": reverse, "counts": SearchEngines.items() }, request=req)
+    specs = render(templates + "pepxml_peptide_spectrums.pt", {"count": len(spectrums), "spectrums": spectrums}, request=req)
+    instances = render(templates + "pepxml_peptide.pt", {"info": info, "peptides": results, "columns": columns, "datafile": n, "sortcol": sortcol, "sortdsc": reverse, "counts": SearchEngines.items()}, request=req)
     return Response('<span class="link" onclick="ReturnToResults(' + n + ');">Back to all results</span>' + specs + '<div id="peptide_results_list">' + instances + "</div>", request=req)
+
 
 #HTTP: A generic function which calls "select_X" on the datafile
 #used to retreive: scores avaliable for a pepXML result, coverage of a protein and indistinguishable results from protXML
@@ -834,7 +851,8 @@ def SelectInfo(req):
     parser = links.GetParser(n)
     select = eval("parser.select_" + t)
     results = select(fname, req.GET)
-    return render_to_response(templates + "select_" + t + ".pt", { "query": req.GET, "results": results }, request=req)
+    return render_to_response(templates + "select_" + t + ".pt", {"query": req.GET, "results": results}, request=req)
+
 
 #HTTP: Retreives a PNG image for the given MS level showing the datapoints
 def SpectumLC(req):
@@ -891,10 +909,11 @@ def SpectumLC(req):
     else:
         return HTTPBadRequest_Param("level")
 
+
 #HTTP: Retreives a spectrum viewer for the selected spectrum
 def Spectrum(req):
     def PeptideInfo(pep):
-        peptide = { "peptide": pep["peptide"], "modification_info": pep["modification_info"], "protein": pep["protein"], "sort":pep["expect"], "masstol": pep["masstol"] }
+        peptide = {"peptide": pep["peptide"], "modification_info": pep["modification_info"], "protein": pep["protein"], "sort": pep["expect"], "masstol": pep["masstol"]}
         if "hyperscore" in pep:
             peptide["engine"] = "X-Tandem"
             peptide["score"] = str(pep["hyperscore"])
@@ -932,7 +951,7 @@ def Spectrum(req):
         pep = peptide["peptide"]
         mods = peptide["mods"]
         if mods != None and len(mods) > 0:
-            mods = sorted(mods, key = lambda mam: mam["index"], reverse = True)
+            mods = sorted(mods, key=lambda mam: mam["index"], reverse=True)
             for m in mods:
                 pep = pep[:m["index"]] + '<span class="modification">[' + str(int(m["mass"])) + ']</span>' + pep[m["index"]:]
         return Literal(pep)
@@ -942,7 +961,6 @@ def Spectrum(req):
     datafile = TryGet(req.GET, "n")
     offset = TryGet(req.GET, "off")
     filetype = None
-    params = ""
     pep_datafile = None
     init_pep = 0
     peptide = None
@@ -989,7 +1007,7 @@ def Spectrum(req):
                             datafile = f
                             filetype = t
                             break
-        if datafile == None and not missing and len(possible) == 1: #There is only 1 choice of where the spectrum came from
+        if datafile == None and not missing and len(possible) == 1:  # There is only 1 choice of where the spectrum came from
             f = possible[0]
             t = links.Links[f].Type
             offset = Parsers[Reference.FileType.NameBasic(t)].GetOffsetFromSpectrum(fname + "_" + str(f), spectrum, True)
@@ -1022,7 +1040,7 @@ def Spectrum(req):
         filetype = links.Links[datafile].Type
     i = 0
     if peptide == None:
-        peptide = {"peptides":[], "precursor_neutral_mass":0}
+        peptide = {"peptides": [], "precursor_neutral_mass": 0}
     for f in links.Links:
         if datafile in f.Depends and f.Type < Reference.FileType.PEPXML_COMPARE and i != pep_datafile:
             #peptide["peptides"] += PepXML.GetQueryHitInfosFromName(fname + "_" + str(i), spectrum)
@@ -1030,7 +1048,7 @@ def Spectrum(req):
             if p != None:
                 peptide["peptides"] += p
         i += 1
-    peptide["peptides"] = sorted([PeptideInfo(p) for p in peptide["peptides"]], key = lambda key: key["sort"])
+    peptide["peptides"] = sorted([PeptideInfo(p) for p in peptide["peptides"]], key=lambda key: key["sort"])
     for r in peptide["peptides"]:
         try:
             r["style"] = DecodeDecoy(r["protein"])
@@ -1043,10 +1061,11 @@ def Spectrum(req):
         raise HTTPBadRequest_Param("n")
     if spectrum != None:
         spec = spectrum.split(".")
-        spectrum = { "file": Literal(".".join(spec[:-3]).replace("\\", "\\\\").replace("\"", "\\\"")), "scan": int(spec[-3]), "charge": int(spec[-1]), "offset":str(offset), "ions": parser.GetSpectrumFromOffset(fname + "_" + str(datafile), int(offset)) }
+        spectrum = {"file": Literal(".".join(spec[:-3]).replace("\\", "\\\\").replace("\"", "\\\"")), "scan": int(spec[-3]), "charge": int(spec[-1]), "offset": str(offset), "ions": parser.GetSpectrumFromOffset(fname + "_" + str(datafile), int(offset))}
     else:
-        spectrum = { "file": None, "scan": 1, "charge": 1, "offset":str(offset), "ions": parser.GetSpectrumFromOffset(fname + "_" + str(datafile), int(offset)) }
-    return render_to_response(templates + "specview.pt", { "query": req.GET, "datafile": str(datafile), "spectrum": spectrum, "peptide": peptide, "init_pep": init_pep, "score": score, "render_peptide_lorikeet": render_peptide_lorikeet }, request=req)
+        spectrum = {"file": None, "scan": 1, "charge": 1, "offset": str(offset), "ions": parser.GetSpectrumFromOffset(fname + "_" + str(datafile), int(offset))}
+    return render_to_response(templates + "specview.pt", {"query": req.GET, "datafile": str(datafile), "spectrum": spectrum, "peptide": peptide, "init_pep": init_pep, "score": score, "render_peptide_lorikeet": render_peptide_lorikeet}, request=req)
+
 
 #HTTP: Retreives the contents of a dynamic tooltip
 #presently only the information on a peptide
@@ -1064,7 +1083,7 @@ def Tooltip(req):
         results = SortPeptides(results, "score", score, score in reverses)
         count = len(results)
         shown = count
-        SearchEngines = { "X-Tandem": 0, "Mascot": 0, "Omssa": 0 }
+        SearchEngines = {"X-Tandem": 0, "Mascot": 0, "Omssa": 0}
         for r in results:
             if "hyperscore" in r:
                 SearchEngines["X-Tandem"] += 1
@@ -1095,9 +1114,10 @@ def Tooltip(req):
             del SearchEngines["Mascot"]
         if SearchEngines["Omssa"] == 0:
             del SearchEngines["Omssa"]
-        info = { "shown": shown, "total": count, "engine": PepXML.SearchEngineScoreName(scores) }
-        return render_to_response(templates + "pepxml_peptide_tooltip.pt", { "info": info, "peptides": results, "counts": SearchEngines.items() }, request=req)
+        info = {"shown": shown, "total": count, "engine": PepXML.SearchEngineScoreName(scores)}
+        return render_to_response(templates + "pepxml_peptide_tooltip.pt", {"info": info, "peptides": results, "counts": SearchEngines.items()}, request=req)
     return HTTPNotFound()
+
 
 #Provides the configuration to the pyramid or paster web server
 def main(*args, **kwargs):
@@ -1113,9 +1133,7 @@ def main(*args, **kwargs):
                 p.stderr.close()
                 p.stdout.close()
                 if p.wait() != 0:
-                    subprocess.call([parameters.HOME + "/bin/makeblastdb", "-in", f, "-parse_seqids","-dbtype","prot"])
-    Threads = {}
-    JobsTotal = 0
+                    subprocess.call([parameters.HOME + "/bin/makeblastdb", "-in", f, "-parse_seqids", "-dbtype", "prot"])
     Database.start()
     config = Configurator(renderer_globals_factory=RendererGlobals)
     #Routes: give each URL a name
@@ -1132,7 +1150,7 @@ def main(*args, **kwargs):
     config.add_route("spectrum", "/spectrum")
     config.add_route("lc", "/lc")
     config.add_route("tooltip", "/tooltip/{type}")
-    config.add_route("gpmdb_peptide","/gpmdb_peptide")
+    config.add_route("gpmdb_peptide", "/gpmdb_peptide")
     #Views: now associate a function with each route name
     #config.add_view(SearchHit, route_name="search_hit")
     config.add_view(Index, route_name="index")
@@ -1148,9 +1166,9 @@ def main(*args, **kwargs):
     config.add_view(Spectrum, route_name="spectrum")
     config.add_view(SpectumLC, route_name="lc")
     config.add_view(Tooltip, route_name="tooltip")
-    config.add_view(GPMDB.GetObservationsForPeptide,route_name="gpmdb_peptide",renderer="json")
+    config.add_view(GPMDB.GetObservationsForPeptide, route_name="gpmdb_peptide", renderer="json")
     #these views provide content which does not change, such as images and javascript
-    config.add_static_view("/favicon.ico", parameters.HOME + "/res/favicon.ico", cache_max_age=3600*24*7)
-    config.add_static_view("res", parameters.HOME + "/res", cache_max_age=3600*24*7)
+    config.add_static_view("/favicon.ico", parameters.HOME + "/res/favicon.ico", cache_max_age=3600 * 24 * 7)
+    config.add_static_view("res", parameters.HOME + "/res", cache_max_age=3600 * 24 * 7)
     config.add_static_view("test", parameters.HOME + "/test", cache_max_age=0)
     return config.make_wsgi_app()
