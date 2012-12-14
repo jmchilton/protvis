@@ -1,3 +1,4 @@
+from wsgiref.simple_server import make_server  # required though unused
 from pyramid.config import Configurator
 from pyramid.response import Response
 from pyramid.renderers import render, render_to_response
@@ -18,6 +19,7 @@ import time
 import subprocess
 import parameters
 import platform
+from urllib import urlretrieve
 try:
     import sqlite3
 except:
@@ -42,67 +44,100 @@ def AjaxError(msg, req):
     return Response('<script>DetailsDialog.attr("title", "Error Loading Data").attr("style", "width: 300px;").attr("content", "' + msg + '");DetailsDialog.show();</script>', request=req)
 
 
-#Keeps track of all the uploads while they are going through the initial processing stage, both from galaxy and the web interface
-class JobManager:
-    #This class takes care of the referencing stage of the processing
-    class ReferenceThread(Thread):
-        def __init__(self, job, f, data, ref, lock, stream, cleanup):
-            Thread.__init__(self)
-            self.job = job
-            self.file = f
-            self.data = data
-            self.ref = ref
-            self.lock = lock
-            self.stream = stream
-            self.cleanup = cleanup
+#This class takes care of the referencing stage of the processing
+class ReferenceThread(Thread):
+    def __init__(self, job, f, data, ref, lock, stream, cleanup):
+        """
+        job --
+        f -- List of file names and file objects(?)
+        data --
+        ref --
+        lock -- JobManager.ThreadsLock
+        stream --
+        cleanup -- Lifetime of cache.
+        """
+        Thread.__init__(self)
+        self.job = job
+        self.file = f
+        self.data = data
+        self.ref = ref
+        self.lock = lock
+        self.stream = stream
+        self.cleanup = cleanup
 
-        def run(self):
-            files = self.ref(self.file)
-            threads = range(len(files))
-            links = {}
-            for i in threads:
-                links[files[i].Name] = i
-            #Now generate all the data files
-            for i in threads:
-                f = files[i]
-                if f.Type & Reference.FileType.MISSING:
+    def run(self):
+        files = self.ref(self.file)
+        threads = range(len(files))
+        links = {}
+        for i in threads:
+            links[files[i].Name] = i
+        #Now generate all the data files
+        for i in threads:
+            f = files[i]
+            if f.Type & Reference.FileType.MISSING:
+                threads[i] = None
+            else:
+                p = Reference.GetTypeParser(f.Type)
+                if p == None:
                     threads[i] = None
                 else:
-                    p = Reference.GetTypeParser(f.Type)
-                    if p == None:
-                        threads[i] = None
+                    if self.stream:
+                        t = Converter(p, f.Stream, self.data.name + "_" + str(i), f.Name)
                     else:
-                        if self.stream:
-                            t = Converter(p, f.Stream, self.data.name + "_" + str(i), f.Name)
-                        else:
-                            t = Converter(p, f.Name, self.data.name + "_" + str(i), f.Name)
-                        t.start()
-                        threads[i] = t
-            f = self.data.name[len(converted):]
-            Database.insert(f, True, self.cleanup)
-            self.lock.acquire()
-            self.job["files"] = [[threads[i], files[i]] for i in xrange(len(threads))]
-            self.lock.release()
+                        t = Converter(p, f.Name, self.data.name + "_" + str(i), f.Name)
+                    t.start()
+                    threads[i] = t
+        f = self.data.name[len(converted):]
+        Database.insert(f, True, self.cleanup)
+        self.lock.acquire()
+        self.job["files"] = [[threads[i], files[i]] for i in xrange(len(threads))]
+        self.lock.release()
+
+
+class UrlReferenceThread(ReferenceThread):
+    def __init__(self, job, url, data, ref, lock, stream, cleanup):
+        super(UrlReferenceThread, self).__init__(job, None, data, ref, lock, stream, cleanup)
+        self.url = url
+
+    def run(self):
+        destination = tempfile.NamedTemporaryFile(delete=False)
+        self.file = destination.name
+        urlretrieve(self.url, self.file)
+        super(UrlReferenceThread, self).run()
+
+
+#Keeps track of all the uploads while they are going through the initial processing stage, both from galaxy and the web interface
+class JobManager:
 
     def __init__(self):
         self.Jobs = {}
         self.NextJobID = 0
         self.ThreadsLock = Lock()
 
-    def add_job(self, job_type, f, data, fs, cleanup, ref=None):
+    def add_job(self, job_type, fs, cleanup, ref=Reference.LoadChainGroup):
+        data = tempfile.NamedTemporaryFile(dir=".", prefix=converted, delete=False)
+        f = data.name[len(converted):]
         self.ThreadsLock.acquire()
         jobid = self.NextJobID
         self.NextJobID += 1
         self.Jobs[jobid] = {"index": data, "file": f}
+        thread_class = ReferenceThread
         if job_type == "remote":
             #add a job from the web interface uploader
-            self.Jobs[jobid]["ref"] = JobManager.ReferenceThread(self.Jobs[jobid], [[f.filename, f.file] for f in fs], data, Reference.LoadChainGroup, self.ThreadsLock, True, cleanup)
+            stream = True
+            file_data = [[upload.filename, upload.file] for upload in fs]
         elif job_type == "local":
             #add a job from galaxy
-            self.Jobs[jobid]["ref"] = JobManager.ReferenceThread(self.Jobs[jobid], fs, data, ref, self.ThreadsLock, False, cleanup)
+            stream = False
+            file_data = fs
+        elif job_type == "url":
+            stream = False
+            file_data = fs
+            thread_class = UrlReferenceThread
+        self.Jobs[jobid]["ref"] = thread_class(self.Jobs[jobid], file_data, data, ref, self.ThreadsLock, stream, cleanup)
         self.Jobs[jobid]["ref"].start()
         self.ThreadsLock.release()
-        return jobid
+        return (jobid, f)
 
     #check the status of a job to see if it has finished, or how many tasks are remaining
     #if the job has finished, it updates the index file for the dataset with the correct information
@@ -417,14 +452,31 @@ def Upload(req):
     #Build the index file
     if not os.path.exists(converted):
         os.makedirs(converted)
-    data = tempfile.NamedTemporaryFile(dir=".", prefix=converted, delete=False)
-    f = data.name[len(converted):]
     try:
         cleanup = req.POST["delete"]
     except:
         cleanup = 7
-    jobid = Jobs.add_job("remote", f, data, fs, cleanup * 24 * 60 * 60)
-    resp = Response('{"file":"' + f + '","jobid":' + str(jobid) + '}\r\n')
+    (jobid, f) = Jobs.add_job("remote", fs, cleanup * 24 * 60 * 60)
+    json_response = '{"file":"' + f + '","jobid":' + str(jobid) + '}\r\n'
+    resp = Response(json_response)
+    resp.cache_expires(0)
+    return resp
+
+
+def ConvertUrl(req):
+    try:
+        url = req.GET["url"]
+    except:
+        return HTTPBadRequest_Param("url")
+    try:
+        ref = Referencers[req.GET["type"]]
+    except:
+        return HTTPBadRequest_Param("type")
+    #Build the index file
+    if not os.path.exists(converted):
+        os.makedirs(converted)
+    (jobid, f) = Jobs.add_job("url", str(url), 7 * 24 * 60 * 60, ref=ref)
+    resp = render_to_response(templates + "upload.pt", {"file": f, "jobid": str(jobid)}, request=req)
     resp.cache_expires(0)
     return resp
 
@@ -444,9 +496,7 @@ def Convert(req):
     #Build the index file
     if not os.path.exists(converted):
         os.makedirs(converted)
-    data = tempfile.NamedTemporaryFile(dir=".", prefix=converted, delete=False)
-    f = data.name[len(converted):]
-    jobid = Jobs.add_job("local", f, data, ref, fs, 7 * 24 * 60 * 60)
+    (jobid, f) = Jobs.add_job("local", fs, 7 * 24 * 60 * 60, ref=ref)
     resp = render_to_response(templates + "upload.pt", {"file": f, "jobid": str(jobid)}, request=req)
     resp.cache_expires(0)
     return resp
@@ -1133,6 +1183,7 @@ def main(*args, **kwargs):
     config.add_route("index", "/")
     config.add_route("upload", "/init")
     config.add_route("convert", "/init_local")
+    config.add_route("convert_url", "/init_url")
     config.add_route("query_init", "/query_init")
     config.add_route("add", "/add")
     config.add_route("merge", "/merge")
@@ -1149,6 +1200,7 @@ def main(*args, **kwargs):
     config.add_view(Index, route_name="index")
     config.add_view(Upload, route_name="upload")
     config.add_view(Convert, route_name="convert")
+    config.add_view(ConvertUrl, route_name="convert_url")
     config.add_view(QueryInitStatus, route_name="query_init")
     config.add_view(AddFile, route_name="add")
     config.add_view(MergeFile, route_name="merge")

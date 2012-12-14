@@ -12,7 +12,7 @@ GALAXY_ROOT = "/var/www/galaxy"
 #Any directories that the remote user is allowed to read from.
 #This would be any directories where useful files such as protien databases would lie
 #If using with galaxy, you should also include GALAXY_ROOT+"/database/files/"
-PATH_WHITELIST = [GALAXY_ROOT + "/database/files/"]
+PATH_WHITELIST = [GALAXY_ROOT + "/database/files/", "/tmp"]
 
 #Regex to match against your decoys.
 #Only used for changing display colours.
