@@ -18,11 +18,11 @@ def uniprot_map_protein_id(from_type,to_type,query_id):
     response = urllib2.urlopen(request)
     response_string = response.read(200000)
     id_list=str(response_string).split()
-    
+
 def proteins_for_peptide_sequence(seq):
     urlrequest = urllib2.urlopen("http://gpmdb.thegpm.org/1/peptide/accessions/seq=%s" % seq)
     return json.loads(urlrequest.read())
-    
+
 def total_peptide_count(pep_seq):
     urlrequest=urllib2.urlopen("http://gpmdb.thegpm.org/1/peptide/count/seq=%s" % pep_seq)
     return json.loads(urlrequest.read())
@@ -57,7 +57,7 @@ def detailed_counts_for_peptide(peptide_seq):
 #HTTP: Get all proteins observed for a peptide and then for each protein, get its relative frequency of occurrence in that protein
 # This is done using the gpmdb REST api and returns a json formatted result
 #The full API is described here http://wiki.thegpm.org/wiki/GPMDB_REST
-def GetObservationsForPeptide(req):    
+def GetObservationsForPeptide(req):
     try:
         peptide_seq = req.GET["peptideseq"]
     except:
@@ -68,5 +68,3 @@ def GetObservationsForPeptide(req):
         return HTTPNotFound()
 
     return Response(str(pep_count[0]))
-
-
