@@ -89,24 +89,17 @@ class JobManager:
         self.NextJobID = 0
         self.ThreadsLock = Lock()
 
-    #add a job from the web interface uploader
-    def AddRemote(self, f, data, fs, cleanup):
+    def add_job(self, job_type, f, data, fs, cleanup, ref=None):
         self.ThreadsLock.acquire()
         jobid = self.NextJobID
         self.NextJobID += 1
         self.Jobs[jobid] = {"index": data, "file": f}
-        self.Jobs[jobid]["ref"] = JobManager.ReferenceThread(self.Jobs[jobid], [[f.filename, f.file] for f in fs], data, Reference.LoadChainGroup, self.ThreadsLock, True, cleanup)
-        self.Jobs[jobid]["ref"].start()
-        self.ThreadsLock.release()
-        return jobid
-
-    #add a job from galaxy
-    def AddLocal(self, f, data, ref, fs, cleanup):
-        self.ThreadsLock.acquire()
-        jobid = self.NextJobID
-        self.NextJobID += 1
-        self.Jobs[jobid] = {"index": data, "file": f}
-        self.Jobs[jobid]["ref"] = JobManager.ReferenceThread(self.Jobs[jobid], fs, data, ref, self.ThreadsLock, False, cleanup)
+        if job_type == "remote":
+            #add a job from the web interface uploader
+            self.Jobs[jobid]["ref"] = JobManager.ReferenceThread(self.Jobs[jobid], [[f.filename, f.file] for f in fs], data, Reference.LoadChainGroup, self.ThreadsLock, True, cleanup)
+        elif job_type == "local":
+            #add a job from galaxy
+            self.Jobs[jobid]["ref"] = JobManager.ReferenceThread(self.Jobs[jobid], fs, data, ref, self.ThreadsLock, False, cleanup)
         self.Jobs[jobid]["ref"].start()
         self.ThreadsLock.release()
         return jobid
@@ -430,7 +423,7 @@ def Upload(req):
         cleanup = req.POST["delete"]
     except:
         cleanup = 7
-    jobid = Jobs.AddRemote(f, data, fs, cleanup * 24 * 60 * 60)
+    jobid = Jobs.add_job("remote", f, data, fs, cleanup * 24 * 60 * 60)
     resp = Response('{"file":"' + f + '","jobid":' + str(jobid) + '}\r\n')
     resp.cache_expires(0)
     return resp
@@ -453,7 +446,7 @@ def Convert(req):
         os.makedirs(converted)
     data = tempfile.NamedTemporaryFile(dir=".", prefix=converted, delete=False)
     f = data.name[len(converted):]
-    jobid = Jobs.AddLocal(f, data, ref, fs, 7 * 24 * 60 * 60)
+    jobid = Jobs.add_job("local", f, data, ref, fs, 7 * 24 * 60 * 60)
     resp = render_to_response(templates + "upload.pt", {"file": f, "jobid": str(jobid)}, request=req)
     resp.cache_expires(0)
     return resp
