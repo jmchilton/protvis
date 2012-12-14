@@ -1,5 +1,6 @@
 from wsgiref.simple_server import make_server  # required though unused
 from pyramid.config import Configurator
+from pyramid.session import UnencryptedCookieSessionFactoryConfig
 from pyramid.response import Response
 from pyramid.renderers import render, render_to_response
 import binascii
@@ -464,6 +465,16 @@ def Upload(req):
 
 
 def ConvertUrl(req):
+    try:
+        req_peptide = req.GET["peptide"]
+        req.session["peptides"] = [{"peptide": req_peptide,
+                                    "modification_info": None,
+                                    "protein": "Input",
+                                    "sort": "peptide",
+                                    "expect": -1.0,
+                                    "masstol": 0}]
+    except KeyError:
+        pass
     try:
         url = req.GET["url"]
     except:
@@ -1091,7 +1102,13 @@ def Spectrum(req):
             if p != None:
                 peptide["peptides"] += p
         i += 1
+    if not peptide["peptides"]:
+        try:
+            peptide["peptides"] = req.session["peptides"]
+        except KeyError:
+            pass
     peptide["peptides"] = sorted([PeptideInfo(p) for p in peptide["peptides"]], key=lambda key: key["sort"])
+
     for r in peptide["peptides"]:
         try:
             r["style"] = DecodeDecoy(r["protein"])
@@ -1178,7 +1195,9 @@ def main(*args, **kwargs):
                 if p.wait() != 0:
                     subprocess.call([parameters.HOME + "/bin/makeblastdb", "-in", f, "-parse_seqids", "-dbtype", "prot"])
     Database.start()
-    config = Configurator(renderer_globals_factory=RendererGlobals)
+
+    session_factory = UnencryptedCookieSessionFactoryConfig(parameters.SECRET_KEY)
+    config = Configurator(renderer_globals_factory=RendererGlobals, session_factory=session_factory)
     #Routes: give each URL a name
     config.add_route("index", "/")
     config.add_route("upload", "/init")

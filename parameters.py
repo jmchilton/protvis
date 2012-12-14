@@ -27,6 +27,9 @@ SPECTRUM_REGEX = r"(.+?)(\.mzML)?\.[0-9]+\.[0-9]+\.[0-9]+"
 #For performance you should place the most likely database to match a protein first
 PROTEIN_DATABASES = []
 
+# Used to create pyramid sessions (replace in production environments)
+SECRET_KEY = 'abcdefghijklmnop'
+
 import os
 HOME = os.path.realpath(os.path.dirname(__file__))
 
