@@ -25,7 +25,7 @@
 							}
 							if (left == 0) {
 								ShowMessage("done");
-								window.location = "view?file=${file}";
+								window.location = "view?file=${file}${default_hash or ''}";
 							} else if (left < 0) {
 								ShowMessage("ref");
 								setTimeout("Update();", 1000);

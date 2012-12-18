@@ -215,6 +215,17 @@ inline PyObject *Run::PointsMS2Chunks(FILE *pFile, DWORD nChunks, float nMinTime
 	return Spectrum::PointsMS2ChunksAll(pFile, nChunks, nMinTime, nMaxTime, nMinMz, nMaxMz, header._0);
 }
 
+inline PyObject *MzML::GetSpectrumFromScan(FILE *pFile, DWORD nScan) {
+	fseek(pFile, 4 * sizeof(DWORD) + 5 * sizeof(float), SEEK_SET);
+	WORD nLength;
+	char *szName = DecodeStringFromFileBuffer(pFile, 21, nLength);
+	if (szName != NULL) {
+		free(szName);
+	}
+	PyObject *pInfo = Run::GetSpectrum(pFile, nScan);		
+	return pInfo;
+}
+
 inline PyObject *MzML::GetSpectrum(FILE *pFile, const char *szSpectrumName) {
 	fseek(pFile, 4 * sizeof(DWORD) + 5 * sizeof(float), SEEK_SET);
 	DWORD nScan, nEndScan, nCharge;

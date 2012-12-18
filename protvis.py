@@ -464,7 +464,10 @@ def Upload(req):
     return resp
 
 
-def ConvertUrl(req):
+def _read_shortcut_params(req):
+    """
+    Params to jump to render specific peptide or jump to specific spectrum.
+    """
     try:
         req_peptide = req.GET["peptide"]
         req.session["peptides"] = [{"peptide": req_peptide,
@@ -475,6 +478,17 @@ def ConvertUrl(req):
                                     "masstol": 0}]
     except KeyError:
         pass
+
+
+def ConvertUrl(req):
+    _read_shortcut_params(req)
+    default_hash = ""
+    try:
+        req_scan = req.GET["scan"]
+        default_hash = "#S0;None;%s" % req_scan
+    except KeyError:
+        pass
+
     try:
         url = req.GET["url"]
     except:
@@ -487,7 +501,7 @@ def ConvertUrl(req):
     if not os.path.exists(converted):
         os.makedirs(converted)
     (jobid, f) = Jobs.add_job("url", str(url), 7 * 24 * 60 * 60, ref=ref)
-    resp = render_to_response(templates + "upload.pt", {"file": f, "jobid": str(jobid)}, request=req)
+    resp = render_to_response(templates + "upload.pt", {"file": f, "jobid": str(jobid), "default_hash": default_hash}, request=req)
     resp.cache_expires(0)
     return resp
 
@@ -1014,6 +1028,8 @@ def Spectrum(req):
     spectrum = TryGet(req.GET, "spectrum")
     datafile = TryGet(req.GET, "n")
     offset = TryGet(req.GET, "off")
+    if offset == "None":
+        offset = None
     filetype = None
     pep_datafile = None
     init_pep = 0
@@ -1115,10 +1131,18 @@ def Spectrum(req):
         except:
             r["style"] = "row"
     parser = Parsers[Reference.FileType.NameBasic(filetype)]
+    if datafile == None:
+        raise HTTPBadRequest_Param("n")
+    if spectrum and spectrum.isdigit():
+        scan = int(spectrum)
+        spectrum_info = parser.GetSpectrumFromScan(fname + "_" + str(datafile), scan)
+        spectrum = "input.%d.%d.%d" % (scan, scan, spectrum_info["charge"])
+        if offset == None or offset < 0:
+            offset = spectrum_info["offset"]
     if offset == None and datafile != None:
         offset = parser.GetOffsetFromSpectrum(fname + "_" + str(datafile), spectrum)
-    if offset == None or offset < -1 or datafile == None:
-        raise HTTPBadRequest_Param("n")
+    if offset == None or offset < 0:
+        raise HTTPBadRequest_Param("offset")
     if spectrum != None:
         spec = spectrum.split(".")
         spectrum = {"file": Literal(".".join(spec[:-3]).replace("\\", "\\\\").replace("\"", "\\\"")), "scan": int(spec[-3]), "charge": int(spec[-1]), "offset": str(offset), "ions": parser.GetSpectrumFromOffset(fname + "_" + str(datafile), int(offset))}

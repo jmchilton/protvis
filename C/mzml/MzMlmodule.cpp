@@ -22,6 +22,23 @@ static PyObject *ToBinary(PyObject *self, PyObject *args) {
 	return Py_BuildValue("i", FILETYPE_MZML);
 }
 
+static PyObject *GetSpectrumFromScan(PyObject *self, PyObject *args) {
+	const char *szFileName;
+	DWORD nScan;
+	if (!PyArg_ParseTuple(args, "si", &szFileName, &nScan)) {
+		return NULL;
+	}
+	FILE *pFile = fopen(szFileName, "r");
+	if (pFile != NULL) {
+		PyObject *pRet = MzML::GetSpectrumFromScan(pFile, nScan);
+		fclose(pFile);
+		return pRet;
+	}
+	return Py_BuildValue("");
+}
+
+
+
 static PyObject *GetSpectrum(PyObject *self, PyObject *args) {
 	const char *szFileName, *szSpectrumName;
 	if (!PyArg_ParseTuple(args, "ss", &szFileName, &szSpectrumName)) {
@@ -192,6 +209,7 @@ static PyObject *Version(PyObject *self, PyObject *args) {
 static PyMethodDef Methods[] = {
     {"ToBinary", ToBinary, METH_VARARGS, ""},
     {"GetSpectrum", GetSpectrum, METH_VARARGS, ""},
+    {"GetSpectrumFromScan", GetSpectrumFromScan, METH_VARARGS, ""},
     {"GetSpectrumFromOffset", GetSpectrumFromOffset, METH_VARARGS, ""},
     {"GetOffsetFromSpectrum", GetOffsetFromSpectrum, METH_VARARGS, ""},
     {"Search", Search, METH_VARARGS, ""},
