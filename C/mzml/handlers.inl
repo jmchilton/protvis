@@ -19,8 +19,8 @@ inline bool DecodeSpectrum(const char *szName, DWORD &nStartScan, DWORD &nEndSca
 										}
 									}
 								}
-								return true;
 							}
+							return true;
 						}
 					}
 				}
@@ -236,7 +236,7 @@ inline DWORD MzML::GetSpectrumOffset(FILE *pFile, const char *szSpectrumName, bo
 	fseek(pFile, 4 * sizeof(DWORD) + 5 * sizeof(float), SEEK_SET);
 	DWORD nScan, nEndScan, nCharge;
 	char *szName = DecodeStringFromFile(pFile);
-	if (!DecodeSpectrum(szSpectrumName, nScan, nEndScan, nCharge, bForce ? NULL : szName)) {
+	if (!DecodeSpectrum(szSpectrumName, nScan, nEndScan, nCharge, bForce ? NULL : szName)) {  // Force => Not validating name? Seems variable name is wrong. -John
 		return (DWORD)-1;
 	}
 	if (szName != NULL) {
