@@ -43,6 +43,8 @@ def read_peptide_info(peptide_string,
     peptide_mod_strings = peptide_parts[1:]
     mods = []
     for peptide_mod_string in peptide_mod_strings:
+        if not peptide_mod_string:
+            continue
         (mod, site) = peptide_mod_string.rsplit("@", 1)
         if not mod or not site:
             continue
