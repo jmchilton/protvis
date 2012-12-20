@@ -46,7 +46,7 @@ GOTO :parse_args
 	SET pvis_cmdmode=
 
 IF %pvis_daemon% EQU% 0 (
-	env\Scripts\python.exe Server.py %pvis_addr% %pvis_port% %pvis_pass%
+	env\Scripts\python.exe protvis\Server.py %pvis_addr% %pvis_port% %pvis_pass%
 ) ELSE (
 	env\Scripts\pserve.exe production.ini start --pid-file=daemon.pid http_port=%pvis_port% http_address=%pvis_addr% %pvis_pass%
 )

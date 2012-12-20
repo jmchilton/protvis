@@ -31,7 +31,7 @@ PROTEIN_DATABASES = []
 SECRET_KEY = 'abcdefghijklmnop'
 
 import os
-HOME = os.path.realpath(os.path.dirname(__file__))
+HOME = os.path.realpath(os.path.join(os.path.dirname(__file__), ".."))
 
 #Location of cached files
 CONVERTED_FILES = HOME + "/ConvertedFiles/"
