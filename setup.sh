@@ -304,6 +304,9 @@ bin/easy_install pyramid >>$log
 bin/easy_install PasteScript >>$log
 bin/easy_install WebError >>$log
 bin/pip install cherrypy >>$log
+bin/pip install lxml >>$log
+bin/pip install numpy >>$log
+bin/pip install pyteomics >>$log
 cd ..
 
 echo "The environment has been set up" | tee -a $log

@@ -36,6 +36,8 @@ HOME = os.path.realpath(os.path.dirname(__file__))
 #Location of cached files
 CONVERTED_FILES = HOME + "/ConvertedFiles/"
 
+UNIMOD_FILE = os.path.join(HOME, "unimod.xml")
+
 
 ### There are no options beyond this point ###
 import subprocess

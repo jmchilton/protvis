@@ -15,6 +15,7 @@ import Reference
 import struct
 from Common import *
 from FileTypes import *
+from peptide import read_peptide_info
 import GPMDB
 import time
 import subprocess
@@ -470,12 +471,8 @@ def _read_shortcut_params(req):
     """
     try:
         req_peptide = req.GET["peptide"]
-        req.session["peptides"] = [{"peptide": req_peptide,
-                                    "modification_info": None,
-                                    "protein": "Input",
-                                    "sort": "peptide",
-                                    "expect": -1.0,
-                                    "masstol": 0}]
+        peptide_info = read_peptide_info(req_peptide)
+        req.session["peptides"] = [peptide_info]
     except KeyError:
         pass
 
@@ -1004,10 +1001,10 @@ def Spectrum(req):
                     if nterm != None:
                         nterm_mod = nterm
                 if cterm_mod != None:
-                    cterm = TryGet(mi, "mod_nterm_mass")
+                    cterm = TryGet(mi, "mod_cterm_mass")
                     if cterm != None:
                         cterm_mod = cterm
-                mods += [{"index": m[0], "mass": m[1], "aa": pep["peptide"][m[0]]} for m in mi["mod_aminoacid_mass"]]
+                mods += [{"index": m[0], "mass": m[1], "aa": pep["peptide"][m[0]]} for m in mi.get("mod_aminoacid_mass", [])]
             peptide["mods"] = mods
             peptide["nterm"] = nterm_mod
             peptide["cterm"] = cterm_mod
