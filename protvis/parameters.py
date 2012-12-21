@@ -60,3 +60,8 @@ except:
 
 if GALAXY_ROOT != "" and not os.path.exists(GALAXY_ROOT + "/database"):
     print " * Galaxy could not be found or accessed at " + GALAXY_ROOT + ". Galaxy integration will not work."
+
+converted = CONVERTED_FILES
+if not converted.endswith("/"):
+    converted = converted + "/"  # Must end in / or it justs creates files in parent directory.
+converted = os.path.normpath(converted)

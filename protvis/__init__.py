@@ -27,13 +27,10 @@ try:
 except:
     print " * Failed to load sqlite3. Uploaded files will not be deleted automatically"
 
+converted = parameters.converted
 templates = parameters.HOME + "/templates/"
 decoy_regex = re.compile(parameters.DECOY_REGEX)
 spectrum_regex = re.compile(parameters.SPECTRUM_REGEX)
-converted = parameters.CONVERTED_FILES
-if not converted.endswith("/"):
-    converted = converted + "/"  # Must end in / or it justs creates files in parent directory.
-converted = os.path.normpath(converted)
 
 Parsers = {"mzml": MzML, "mgf": MGF, "pep": PepXML, "prot": ProtXML}
 Referencers = {"protxml": Reference.LoadChainProt, "pepxml": Reference.LoadChainPep, "mgf": Reference.LoadChainMgf, "mzml": Reference.LoadChainMzml}
