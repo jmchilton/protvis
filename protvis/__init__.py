@@ -31,7 +31,6 @@ spectrum_regex = re.compile(parameters.SPECTRUM_REGEX)
 
 Parsers = {"mzml": MzML, "mgf": MGF, "pep": PepXML, "prot": ProtXML}
 Referencers = {"protxml": Reference.LoadChainProt, "pepxml": Reference.LoadChainPep, "mgf": Reference.LoadChainMgf, "mzml": Reference.LoadChainMzml}
-Database = None
 
 
 #returns an script which will display an error message and retry button when an error occurs during an ajax call
@@ -42,7 +41,7 @@ def AjaxError(msg, req):
 
 #This class takes care of the referencing stage of the processing
 class ReferenceThread(Thread):
-    def __init__(self, job, f, data, ref, lock, stream, cleanup):
+    def __init__(self, job_manager, job, f, data, ref, lock, stream, cleanup):
         """
         job --
         f -- List of file names and file objects(?)
@@ -53,6 +52,7 @@ class ReferenceThread(Thread):
         cleanup -- Lifetime of cache.
         """
         Thread.__init__(self)
+        self.job_manager = job_manager
         self.job = job
         self.file = f
         self.data = data
@@ -84,15 +84,15 @@ class ReferenceThread(Thread):
                     t.start()
                     threads[i] = t
         f = self.data.name[len(converted):]
-        Database.insert(f, True, self.cleanup)
+        job_manager.database.insert(f, True, self.cleanup)
         self.lock.acquire()
         self.job["files"] = [[threads[i], files[i]] for i in xrange(len(threads))]
         self.lock.release()
 
 
 class UrlReferenceThread(ReferenceThread):
-    def __init__(self, job, url, data, ref, lock, stream, cleanup):
-        super(UrlReferenceThread, self).__init__(job, None, data, ref, lock, stream, cleanup)
+    def __init__(self, job_manager, job, url, data, ref, lock, stream, cleanup):
+        super(UrlReferenceThread, self).__init__(job_manager, job, None, data, ref, lock, stream, cleanup)
         self.url = url
 
     def run(self):
@@ -106,6 +106,7 @@ class UrlReferenceThread(ReferenceThread):
 class JobManager:
 
     def __init__(self):
+        self.database_manager = DatabaseManager(converted + "sets.db")
         self.Jobs = {}
         self.NextJobID = 0
         self.ThreadsLock = Lock()
@@ -130,10 +131,13 @@ class JobManager:
             stream = False
             file_data = fs
             thread_class = UrlReferenceThread
-        self.Jobs[jobid]["ref"] = thread_class(self.Jobs[jobid], file_data, data, ref, self.ThreadsLock, stream, cleanup)
+        self.Jobs[jobid]["ref"] = thread_class(self, self.Jobs[jobid], file_data, data, ref, self.ThreadsLock, stream, cleanup)
         self.Jobs[jobid]["ref"].start()
         self.ThreadsLock.release()
         return (jobid, f)
+
+    def start(self):
+        self.database_manager.start()
 
     #check the status of a job to see if it has finished, or how many tasks are remaining
     #if the job has finished, it updates the index file for the dataset with the correct information
@@ -185,7 +189,6 @@ class JobManager:
 
 
 Jobs = JobManager()
-Database = DatabaseManager(converted + "sets.db")
 
 
 #Defines a set of global variables which will be automatically defined in every template file
@@ -1049,7 +1052,7 @@ def main(*args, **kwargs):
                 p.stdout.close()
                 if p.wait() != 0:
                     subprocess.call([parameters.HOME + "/bin/makeblastdb", "-in", f, "-parse_seqids", "-dbtype", "prot"])
-    Database.start()
+    Jobs.start()
 
     session_factory = UnencryptedCookieSessionFactoryConfig(parameters.SECRET_KEY)
     config = Configurator(renderer_globals_factory=RendererGlobals, session_factory=session_factory)
