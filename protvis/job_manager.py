@@ -10,6 +10,94 @@ from parameters import converted
 from Common import test, EncodeStringToFile
 
 
+#Keeps track of all the uploads while they are going through the initial processing stage, both from galaxy and the web interface
+class JobManager:
+
+    def __init__(self):
+        self.database_manager = DatabaseManager(converted + "sets.db")
+        self.Jobs = {}
+        self.NextJobID = 0
+        self.ThreadsLock = Lock()
+
+    def add_job(self, job_type, fs, cleanup, ref=Reference.LoadChainGroup):
+        data = tempfile.NamedTemporaryFile(dir=".", prefix=converted, delete=False)
+        f = data.name[len(converted):]
+        self.ThreadsLock.acquire()
+        try:
+            jobid = self.NextJobID
+            self.NextJobID += 1
+            self.Jobs[jobid] = {"index": data, "file": f}
+            thread_class = ReferenceThread
+            if job_type == "remote":
+                #add a job from the web interface uploader
+                stream = True
+                file_data = [[upload.filename, upload.file] for upload in fs]
+            elif job_type == "local":
+                #add a job from galaxy
+                stream = False
+                file_data = fs
+            elif job_type == "url":
+                stream = False
+                file_data = fs
+                thread_class = UrlReferenceThread
+            self.Jobs[jobid]["ref"] = thread_class(self, self.Jobs[jobid], file_data, data, ref, self.ThreadsLock, stream, cleanup)
+            self.Jobs[jobid]["ref"].start()
+            return (jobid, f)
+        finally:
+            self.ThreadsLock.release()
+
+    def start(self):
+        self.database_manager.start()
+
+    #check the status of a job to see if it has finished, or how many tasks are remaining
+    #if the job has finished, it updates the index file for the dataset with the correct information
+    def QueryStatus(self, f, jobid):
+        self.ThreadsLock.acquire()
+        try:
+            job = self.Jobs[jobid]
+        except:
+            self.ThreadsLock.release()
+            raise
+        if job["file"] != f:
+            raise ValueError()
+        if "files" in job:  # converting files
+            alive = 0
+            for t, _ in job["files"]:
+                if t != None:
+                    if not t.started() or t.is_alive():
+                        alive += 1
+            if alive == 0:
+                #write the index file
+                data = job["index"]
+                fs = 0
+                dbs = 0
+                files = job["files"]
+                for t, f in files:
+                    if t != None and t.Type() > f.Type:
+                        f.Type = t.Type()
+                    if (f.Type & ~Reference.FileType.MISSING) == Reference.FileType.DATABASE:
+                        dbs += 1
+                    else:
+                        fs += 1
+                data.write(struct.pack("=II", fs, dbs))
+                for t, f in files:
+                    if (f.Type & ~Reference.FileType.MISSING) != Reference.FileType.DATABASE:
+                        data.write(struct.pack("=BH", f.Type, len(f.Depends)))
+                        for d in f.Depends:
+                            data.write(struct.pack("=H", test(d < 0, 0xFFFF, d)))
+                        EncodeStringToFile(data, f.Name)
+                for t, f in files:
+                    if (f.Type & ~Reference.FileType.MISSING) == Reference.FileType.DATABASE:
+                        EncodeStringToFile(data, f.Name)
+                data.close()
+                del self.Jobs[jobid]
+            self.ThreadsLock.release()
+            return alive
+        else:  # still loading up the links
+            self.ThreadsLock.release()
+            return -1
+
+
 #This class takes care of the referencing stage of the processing
 class ReferenceThread(Thread):
     def __init__(self, job_manager, job, f, data, ref, lock, stream, cleanup):
@@ -72,90 +160,5 @@ class UrlReferenceThread(ReferenceThread):
         urlretrieve(self.url, self.file)
         super(UrlReferenceThread, self).run()
 
-
-#Keeps track of all the uploads while they are going through the initial processing stage, both from galaxy and the web interface
-class JobManager:
-
-    def __init__(self):
-        self.database_manager = DatabaseManager(converted + "sets.db")
-        self.Jobs = {}
-        self.NextJobID = 0
-        self.ThreadsLock = Lock()
-
-    def add_job(self, job_type, fs, cleanup, ref=Reference.LoadChainGroup):
-        data = tempfile.NamedTemporaryFile(dir=".", prefix=converted, delete=False)
-        f = data.name[len(converted):]
-        self.ThreadsLock.acquire()
-        jobid = self.NextJobID
-        self.NextJobID += 1
-        self.Jobs[jobid] = {"index": data, "file": f}
-        thread_class = ReferenceThread
-        if job_type == "remote":
-            #add a job from the web interface uploader
-            stream = True
-            file_data = [[upload.filename, upload.file] for upload in fs]
-        elif job_type == "local":
-            #add a job from galaxy
-            stream = False
-            file_data = fs
-        elif job_type == "url":
-            stream = False
-            file_data = fs
-            thread_class = UrlReferenceThread
-        self.Jobs[jobid]["ref"] = thread_class(self, self.Jobs[jobid], file_data, data, ref, self.ThreadsLock, stream, cleanup)
-        self.Jobs[jobid]["ref"].start()
-        self.ThreadsLock.release()
-        return (jobid, f)
-
-    def start(self):
-        self.database_manager.start()
-
-    #check the status of a job to see if it has finished, or how many tasks are remaining
-    #if the job has finished, it updates the index file for the dataset with the correct information
-    def QueryStatus(self, f, jobid):
-        self.ThreadsLock.acquire()
-        try:
-            job = self.Jobs[jobid]
-        except:
-            self.ThreadsLock.release()
-            raise
-        if job["file"] != f:
-            raise ValueError()
-        if "files" in job:  # converting files
-            alive = 0
-            for t, _ in job["files"]:
-                if t != None:
-                    if not t.started() or t.is_alive():
-                        alive += 1
-            if alive == 0:
-                #write the index file
-                data = job["index"]
-                fs = 0
-                dbs = 0
-                files = job["files"]
-                for t, f in files:
-                    if t != None and t.Type() > f.Type:
-                        f.Type = t.Type()
-                    if (f.Type & ~Reference.FileType.MISSING) == Reference.FileType.DATABASE:
-                        dbs += 1
-                    else:
-                        fs += 1
-                data.write(struct.pack("=II", fs, dbs))
-                for t, f in files:
-                    if (f.Type & ~Reference.FileType.MISSING) != Reference.FileType.DATABASE:
-                        data.write(struct.pack("=BH", f.Type, len(f.Depends)))
-                        for d in f.Depends:
-                            data.write(struct.pack("=H", test(d < 0, 0xFFFF, d)))
-                        EncodeStringToFile(data, f.Name)
-                for t, f in files:
-                    if (f.Type & ~Reference.FileType.MISSING) == Reference.FileType.DATABASE:
-                        EncodeStringToFile(data, f.Name)
-                data.close()
-                del self.Jobs[jobid]
-            self.ThreadsLock.release()
-            return alive
-        else:  # still loading up the links
-            self.ThreadsLock.release()
-            return -1
 
 Jobs = JobManager()
