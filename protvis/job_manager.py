@@ -54,48 +54,49 @@ class JobManager:
     def QueryStatus(self, f, jobid):
         self.ThreadsLock.acquire()
         try:
-            job = self.Jobs[jobid]
-        except:
+            try:
+                job = self.Jobs[jobid]
+            except:
+                raise
+            if job["file"] != f:
+                raise ValueError()
+            if "files" in job:  # converting files
+                alive = 0
+                for t, _ in job["files"]:
+                    if t != None:
+                        if not t.started() or t.is_alive():
+                            alive += 1
+                if alive == 0:
+                    #write the index file
+                    data = job["index"]
+                    fs = 0
+                    dbs = 0
+                    files = job["files"]
+                    for t, f in files:
+                        if t != None and t.Type() > f.Type:
+                            f.Type = t.Type()
+                        if (f.Type & ~Reference.FileType.MISSING) == Reference.FileType.DATABASE:
+                            dbs += 1
+                        else:
+                            fs += 1
+                    data.write(struct.pack("=II", fs, dbs))
+                    for t, f in files:
+                        if (f.Type & ~Reference.FileType.MISSING) != Reference.FileType.DATABASE:
+                            data.write(struct.pack("=BH", f.Type, len(f.Depends)))
+                            for d in f.Depends:
+                                data.write(struct.pack("=H", test(d < 0, 0xFFFF, d)))
+                            EncodeStringToFile(data, f.Name)
+                    for t, f in files:
+                        if (f.Type & ~Reference.FileType.MISSING) == Reference.FileType.DATABASE:
+                            EncodeStringToFile(data, f.Name)
+                    data.close()
+                    del self.Jobs[jobid]
+                return alive
+            else:  # still loading up the links
+                return -1
+        finally:
             self.ThreadsLock.release()
-            raise
-        if job["file"] != f:
-            raise ValueError()
-        if "files" in job:  # converting files
-            alive = 0
-            for t, _ in job["files"]:
-                if t != None:
-                    if not t.started() or t.is_alive():
-                        alive += 1
-            if alive == 0:
-                #write the index file
-                data = job["index"]
-                fs = 0
-                dbs = 0
-                files = job["files"]
-                for t, f in files:
-                    if t != None and t.Type() > f.Type:
-                        f.Type = t.Type()
-                    if (f.Type & ~Reference.FileType.MISSING) == Reference.FileType.DATABASE:
-                        dbs += 1
-                    else:
-                        fs += 1
-                data.write(struct.pack("=II", fs, dbs))
-                for t, f in files:
-                    if (f.Type & ~Reference.FileType.MISSING) != Reference.FileType.DATABASE:
-                        data.write(struct.pack("=BH", f.Type, len(f.Depends)))
-                        for d in f.Depends:
-                            data.write(struct.pack("=H", test(d < 0, 0xFFFF, d)))
-                        EncodeStringToFile(data, f.Name)
-                for t, f in files:
-                    if (f.Type & ~Reference.FileType.MISSING) == Reference.FileType.DATABASE:
-                        EncodeStringToFile(data, f.Name)
-                data.close()
-                del self.Jobs[jobid]
-            self.ThreadsLock.release()
-            return alive
-        else:  # still loading up the links
-            self.ThreadsLock.release()
-            return -1
+
 
 
 #This class takes care of the referencing stage of the processing
