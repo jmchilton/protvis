@@ -5,6 +5,7 @@ import xml.parsers.expat
 import parameters
 import struct
 from Common import *
+from parameters import converted
 import ProtXML, PepXML, MGF
 import subprocess
 try:
@@ -15,6 +16,8 @@ except:
 #Checks to make sure the specified file is in an allowed location
 def EnsureWhitelistFile(fname):
     fname = os.path.abspath(fname)
+    if fname.startswith(converted):
+        return True
     for d in parameters.PATH_WHITELIST:
         if fname.startswith(os.path.normpath(d)):
             return True

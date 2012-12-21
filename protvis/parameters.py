@@ -12,7 +12,7 @@ GALAXY_ROOT = "/var/www/galaxy"
 #Any directories that the remote user is allowed to read from.
 #This would be any directories where useful files such as protien databases would lie
 #If using with galaxy, you should also include GALAXY_ROOT+"/database/files/"
-PATH_WHITELIST = [GALAXY_ROOT + "/database/files/", "/tmp"]
+PATH_WHITELIST = [GALAXY_ROOT + "/database/files/"]
 
 #Regex to match against your decoys.
 #Only used for changing display colours.
@@ -62,6 +62,6 @@ if GALAXY_ROOT != "" and not os.path.exists(GALAXY_ROOT + "/database"):
     print " * Galaxy could not be found or accessed at " + GALAXY_ROOT + ". Galaxy integration will not work."
 
 converted = CONVERTED_FILES
+converted = os.path.normpath(converted)
 if not converted.endswith("/"):
     converted = converted + "/"  # Must end in / or it justs creates files in parent directory.
-converted = os.path.normpath(converted)
