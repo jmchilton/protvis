@@ -6,7 +6,6 @@ from pyramid.renderers import render, render_to_response
 import binascii
 import os
 from threading import Thread, Lock
-from multiprocessing import Process, Queue
 from pyramid.httpexceptions import *
 import tempfile
 import urllib
@@ -16,16 +15,14 @@ import struct
 from Common import *
 from FileTypes import *
 from peptide import read_peptide_info
+from database_manager import DatabaseManager
+from conversion import Converter
 import GPMDB
 import time
 import subprocess
 import parameters
 import platform
 from urllib import urlretrieve
-try:
-    import sqlite3
-except:
-    print " * Failed to load sqlite3. Uploaded files will not be deleted automatically"
 
 converted = parameters.converted
 templates = parameters.HOME + "/templates/"
@@ -187,90 +184,6 @@ class JobManager:
             return -1
 
 
-#Keeps track of every group of files uploaded, and deletes them after a set amount of time to free some space
-#it also checks periodically to see if there has been any new jobs and adds them to its database
-#this relies on the sqlite3 module. if it is not abaliable then the files wont be deleted automatically
-class DatabaseManager(Thread):
-    def __init__(self, name):
-        Thread.__init__(self)
-        try:
-            sqlite3
-        except:
-            self.new = None
-            return
-        self.daemon = True
-        self.name = name
-        self.inserts = Lock()
-        self.new = []
-
-    def start(self):
-        if self.new != None:
-            Thread.start(self)
-
-    #The monitoring thread
-    def run(self):
-        conn = sqlite3.connect(self.name)
-        c = conn.cursor()
-        c.execute("CREATE TABLE IF NOT EXISTS Uploads (file TEXT, date UNSIGNED BIG INT, expires INT, galaxy BOOLEAN, deleted BOOLEAN)")
-        conn.commit()
-        c.close()
-        while True:
-            for i in xrange(24 * 60):
-                time.sleep(60)
-                c = conn.cursor()
-                self.inserts.acquire()
-                for ins in self.new:
-                    c.execute("INSERT INTO Uploads VALUES ('" + ins["name"] + "'," + ins["time"] + "," + ins["expires"] + "," + ins["galaxy"] + ",0)")
-                self.new = []
-                self.inserts.release()
-                conn.commit()
-                c.close()
-            print "Performing daily cleanup..."
-            if DatabaseManager._cleanup(conn) == 0:
-                print "Nothing to clean up"
-        conn.close()
-
-    def insert(self, name, galaxy, expires=7 * 24 * 60 * 60):
-        if self.new != None:
-            self.inserts.acquire()
-            self.new.append({"name": name, "time": str(int(time.mktime(time.gmtime()))), "expires": str(expires), "galaxy": str(test(galaxy, 1, 0))})
-            self.inserts.release()
-
-    @staticmethod
-    #this is for use directly from the commandline
-    def cleanup(name):
-        try:
-            sqlite3
-        except:
-            return
-        conn = sqlite3.connect(name)
-        if DatabaseManager._cleanup(conn) == 0:
-            print "Nothing to clean up"
-        conn.close()
-
-    @staticmethod
-    def _cleanup(conn):
-        c = conn.cursor()
-        c.execute("SELECT rowid, file FROM Uploads WHERE deleted=0 AND expires>0 AND date+expires<=" + str(int(time.mktime(time.gmtime()))))
-        removed = 0
-        for rowid, name in c:
-            print "Removing " + name
-            removed += 1
-            fname = converted + name
-            subsets = len(Reference.FileLinks(fname).Links)
-            os.remove(fname)
-            for i in xrange(subsets):
-                try:
-                    os.remove(fname + "_" + str(i))
-                except:
-                    if os.path.exists(fname + "_" + str(i)):
-                        print "Failed to delete " + name + "_" + str(i)
-            c.execute("UPDATE Uploads SET deleted=1 WHERE rowid=" + str(rowid))
-        conn.commit()
-        c.close()
-        return removed
-
-
 Jobs = JobManager()
 Database = DatabaseManager(converted + "sets.db")
 
@@ -300,82 +213,6 @@ def RendererGlobals(system):
         return abs(hash(time.gmtime()))
 
     return {"test": test, "Literal": Literal, "render_peptide": render_peptide, "try_get": TryGet, "urlencode": urllib.quote, "unique_dataset": unique_dataset}
-
-
-#The top level function for converting files
-def Converter(mod, src, dst, name):
-    if platform.system() == "Windows":
-        #windows cannot handle the seperate processes, and so we must use seperate threads
-        #this is much slower, but the only way
-        return ConverterThread(mod, src, dst, name)
-    else:
-        #linux/OSX can have a sperate process for each task, and can perform many tasks at once
-        return SpawnConvertProcess(mod, src, dst, name)
-
-
-#the converter for windows
-#uses the threading module, which can only perform 1 task at a time
-class ConverterThread(Thread):
-    def __init__(self, mod, src, dst, name):
-        Thread.__init__(self)
-        self.Source = src
-        self.Dest = dst
-        self.Module = mod
-        self.Name = name
-        self.Type = Reference.FileType.UNKNOWN
-
-    def started(self):
-        return self.ident != None
-
-    def run(self):
-        close = False
-        if type(self.Source) != file:
-            self.Source = open(self.Source, "r")
-            close = True
-        else:
-            self.Source.seek(0)
-        self.Type = self.Module.ToBinary(self.Source, self.Dest, self.Name)
-        if close:
-            self.Source.close()
-
-
-#the converter for unix
-#uses the processing module, which can process any number of tasks at a time
-def SpawnConvertProcess(mod, src, dst, name):
-    class _ConvertProcess(Process):
-        def __init__(self, *args, **kwargs):
-            self.q = Queue()
-            kwargs["args"] += (self.q,)
-            Process.__init__(self, *args, **kwargs)
-            self._type = None
-            #self.Type = Reference.FileType.UNKNOWN
-
-        def started(self):
-            return self.pid != None
-
-        def run(self):
-            Process.run(self)
-            #self.Type = self.q.get()
-
-        def Type(self):
-            if self._type == None:
-                self._type = self.q.get()
-            return self._type
-
-    return _ConvertProcess(target=ConvertProcess, args=(mod, src, dst, name))
-
-
-#The entry point function for processes created with the above class
-def ConvertProcess(mod, src, dst, name, q):
-    close = False
-    if type(src) != file:
-        src = open(src, "r")
-        close = True
-    else:
-        src.seek(0)
-    q.put(mod.ToBinary(src, dst, name))
-    if close:
-        src.close()
 
 
 #Extracts the name of the file that the HTTP request was for, and checks that it does not try to get a file from another folder
