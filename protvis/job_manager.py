@@ -25,7 +25,7 @@ class JobManager:
     def add_job(self, job_type, fs, cleanup, ref=Reference.LoadChainGroup):
         if job_type == "url":
             f = os.path.basename("%s_i" % self.download_manager.get_location(fs))
-            data = open(f, "w")
+            data = open(os.path.join(converted, f), "w")
         else:
             data = tempfile.NamedTemporaryFile(dir=".", prefix=converted, delete=False)
             f = data.name[len(converted):]
