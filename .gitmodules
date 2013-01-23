@@ -1,0 +1,3 @@
+[submodule "res/lorikeet"]
+	path = res/lorikeet
+	url = git://github.com/jmchilton/lorikeet.git

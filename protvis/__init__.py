@@ -151,10 +151,16 @@ def _read_shortcut_params(req):
     """
     try:
         req_peptide = req.GET["peptide"]
-        peptide_info = read_peptide_info(req_peptide)
-        req.session["peptides"] = [peptide_info]
+        if req_peptide:
+            peptide_info = read_peptide_info(req_peptide)
+            req.session["peptides"] = [peptide_info]
+        else:
+            del req.session["peptides"]
     except KeyError:
         pass
+
+    use_lorikeet = req.GET.get('use_lorikeet', False)
+    req.session["use_lorikeet"] = use_lorikeet
 
 
 def ConvertUrl(req):
@@ -655,6 +661,13 @@ def SpectumLC(req):
         return HTTPBadRequest_Param("level")
 
 
+def specview_template(req):
+    if req.session.get("use_lorikeet", False):
+        return templates + "lorikeet_specview.pt"
+    else:
+        return templates + "specview.pt"
+
+
 #HTTP: Retreives a spectrum viewer for the selected spectrum
 def Spectrum(req):
     def PeptideInfo(pep):
@@ -825,7 +838,7 @@ def Spectrum(req):
         spectrum = {"file": Literal(".".join(spec[:-3]).replace("\\", "\\\\").replace("\"", "\\\"")), "scan": int(spec[-3]), "charge": int(spec[-1]), "offset": str(offset), "ions": parser.GetSpectrumFromOffset(fname + "_" + str(datafile), int(offset))}
     else:
         spectrum = {"file": None, "scan": 1, "charge": 1, "offset": str(offset), "ions": parser.GetSpectrumFromOffset(fname + "_" + str(datafile), int(offset))}
-    return render_to_response(templates + "specview.pt", {"query": req.GET, "datafile": str(datafile), "spectrum": spectrum, "peptide": peptide, "init_pep": init_pep, "score": score, "render_peptide_lorikeet": render_peptide_lorikeet}, request=req)
+    return render_to_response(specview_template(req), {"query": req.GET, "datafile": str(datafile), "spectrum": spectrum, "peptide": peptide, "init_pep": init_pep, "score": score, "render_peptide_lorikeet": render_peptide_lorikeet}, request=req)
 
 
 #HTTP: Retreives the contents of a dynamic tooltip
