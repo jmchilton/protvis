@@ -31,15 +31,12 @@ class ConverterThread(Thread):
         return self.ident != None
 
     def run(self):
-        close = False
-        if type(self.Source) != file:
-            self.Source = open(self.Source, "r")
-            close = True
-        else:
-            self.Source.seek(0)
-        self.Type = self.Module.ToBinary(self.Source, self.Dest, self.Name)
-        if close:
-            self.Source.close()
+        (self.Source, close) = _ready_source_file(self.Source, self.Dest, self.Module)
+        try:
+            self.Type = self.Module.ToBinary(self.Source, self.Dest, self.Name)
+        finally:
+            if close:
+                self.Source.close()
 
 
 #the converter for unix
@@ -70,12 +67,21 @@ def SpawnConvertProcess(mod, src, dst, name):
 
 #The entry point function for processes created with the above class
 def ConvertProcess(mod, src, dst, name, q):
+    (src, close) = _ready_source_file(src, dst, mod)
+    try:
+        q.put(mod.ToBinary(src, dst, name))
+    finally:
+        if close:
+            src.close()
+
+
+def _ready_source_file(source, destination, module):
+    convert = getattr(module, "DO_CONVERT", True)
     close = False
-    if type(src) != file:
-        src = open(src, "r")
-        close = True
-    else:
-        src.seek(0)
-    q.put(mod.ToBinary(src, dst, name))
-    if close:
-        src.close()
+    if convert:
+        if type(source) != file:
+            source = open(source, "r")
+            close = True
+        else:
+            source.seek(0)
+    return (source, close)
