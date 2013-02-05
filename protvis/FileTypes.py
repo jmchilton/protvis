@@ -1,5 +1,5 @@
 import sys
-import MGF, PepXML, ProtXML #import python only modules
+import MGF, PepXML, ProtXML, MZ5 #import python only modules
 
 class Compiled:
     def __init__(self, name, version):
