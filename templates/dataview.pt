@@ -25,6 +25,7 @@
 		<script type="text/javascript" src="res/lorikeet/js/peptide.js"></script>
 		<script type="text/javascript" src="res/lorikeet/js/aminoacid.js"></script>
 		<script type="text/javascript" src="res/lorikeet/js/ion.js"></script>
+		<script type="text/javascript" src="res/lorikeet/js/internal.js"></script>
 		</tal:if>
 
 		<script type="text/javascript">

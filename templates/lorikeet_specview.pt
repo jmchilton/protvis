@@ -20,6 +20,7 @@
             scanNum: ${spectrum.scan},
             charge: ${spectrum.charge},
             fileName: "${spectrum.file}",
+            showInternalIonOption: true,
             peaks: ${spectrum.ions.ions}
             });
     </tal:if>
@@ -70,6 +71,7 @@
                 }
 
                 // TODO Reinstate...
+                alert("NEED TO UPDATE");
                 // UpdateList(${init_pep});
             </tal:if>
         </tal:if>
@@ -84,11 +86,12 @@
             precursorMz: ${peptide.precursor_neutral_mass},
             fileName: "${spectrum.file}",
             sequence: pep.peptide,
-            staticMods: pep.mods,
+            variableMods: pep.mods,
             ntermMod: pep.nterm,
             ctermMod: pep.cterm,
             peaks: peaks,
             ionTableDiv: $("ionTableDiv_${hash}"),
+            showInternalIonOption: true,
             massError: pep.masstol || 0.5
         });
         // TODO: Reinstate

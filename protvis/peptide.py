@@ -4,7 +4,7 @@ import re
 
 UNIMOD = Unimod(url="file://%s" % UNIMOD_FILE)
 
-
+# Run test with 'env/bin/python -m doctest -v protvis/peptide.py'
 def read_peptide_info(peptide_string,
                       protein="Input",
                       sort="peptide",
@@ -58,17 +58,18 @@ def read_peptide_info(peptide_string,
                 continue
             mass = float(unimod_entry["mono_mass"])
         if site.isdigit():  # single amino acid
-            mods.append({"mod_aminoacid_mass": (int(site), mass)})
+            mods.append({"mod_aminoacid_mass": [(int(site), mass)]})
         elif site.lower()[0] == "n":
             mods.append({"mod_nterm_mass": mass})
         elif site.lower()[0] == "c":
             mods.append({"mod_cterm_mass": mass})
-    return {"peptide": peptide_sequence,
+    info = {"peptide": peptide_sequence,
             "modification_info": mods or None,
             "protein": protein,
             "sort": sort,
             "expect": expect,
             "masstol": masstol}
+    return info
 
 
 def _find_unimod_entry(label):
