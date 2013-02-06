@@ -173,7 +173,7 @@
 			precursorMz: ${peptide.precursor_neutral_mass},
 			fileName: "${spectrum.file}",
 			sequence: pep.peptide,
-			staticMods: pep.mods,
+			variableMods: pep.mods,
 			ntermMod: pep.nterm,
 			ctermMod: pep.cterm,
 			peaks: peaks,
