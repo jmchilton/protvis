@@ -27,16 +27,29 @@ def read_peptide_info(peptide_string,
     144.102063
     >>> info = read_peptide_info("ABCDE;iTRAQ4plex@1")
     >>> mod_info = info["modification_info"]
-    >>> mod_info[0]["mod_aminoacid_mass"][0]
+    >>> mod_info[0]["mod_aminoacid_mass"][0][0]
     1
-    >>> mod_info[0]["mod_aminoacid_mass"][1]
+    >>> mod_info[0]["mod_aminoacid_mass"][0][1]
     144.102063
     >>> info = read_peptide_info("ABCDE; iTRAQ4plex (A) @1")
     >>> mod_info = info["modification_info"]
-    >>> mod_info[0]["mod_aminoacid_mass"][0]
+    >>> mod_info[0]["mod_aminoacid_mass"][0][0]
     1
-    >>> mod_info[0]["mod_aminoacid_mass"][1]
+    >>> mod_info[0]["mod_aminoacid_mass"][0][1]
     144.102063
+    >>> info = read_peptide_info("ABCDE; iTRAQ4plex(A)@1")
+    >>> mod_info = info["modification_info"]
+    >>> mod_info[0]["mod_aminoacid_mass"][0][0]
+    1
+    >>> mod_info[0]["mod_aminoacid_mass"][0][1]
+    144.102063
+    >>> from urllib2 import unquote
+    >>> info = read_peptide_info(unquote("EPSLGLRNLR%3B%20Deamidated%28N%29%408%0A"))
+    >>> mod_info = info["modification_info"]
+    >>> mod_info[0]["mod_aminoacid_mass"][0][0]
+    8
+    >>> mod_info[0]["mod_aminoacid_mass"][0][1]
+    0.984016
     """
     peptide_parts = [part.strip() for part in peptide_string.split(";")]
     peptide_sequence = peptide_parts[0]
@@ -56,6 +69,7 @@ def read_peptide_info(peptide_string,
             unimod_entry = _find_unimod_entry(mod)
             if not unimod_entry:
                 continue
+            ## TODO: Support avg_mass as well
             mass = float(unimod_entry["mono_mass"])
         if site.isdigit():  # single amino acid
             mods.append({"mod_aminoacid_mass": [(int(site), mass)]})
@@ -78,13 +92,12 @@ def _find_unimod_entry(label):
         return entry
 
     # No an exact entry, maybe contains amino acid listed at the end
-    entryWithAAMatch = re.match(r'^(.*) \([a-zA-Z]\)$', label)
+    entryWithAAMatch = re.match(r'^(.*)\s*\([a-zA-Z]\)\s*$', label)
     if entryWithAAMatch:
-        possibleName = entryWithAAMatch.group(1)
+        possibleName = entryWithAAMatch.group(1).strip()
         entry = _find_unimod_entry_exact(possibleName)
         if entry:
             return entry
-
     return None
 
 
