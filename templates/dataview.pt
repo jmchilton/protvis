@@ -17,8 +17,8 @@
 		<script type="text/javascript" src="res/scripts/graph.js"></script>
 		<script type="text/javascript" src="res/scripts/gpmdb.js"></script>
 		<tal:if condition="python: request.session.get('use_lorikeet', False)">
-		<script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.4.2/jquery.min.js"></script>
-		<script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jqueryui/1.8.4/jquery-ui.min.js"></script>
+		<script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/1.4.2/jquery.min.js"></script>
+		<script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jqueryui/1.8.4/jquery-ui.min.js"></script>
 		<script type="text/javascript" src="res/lorikeet/js/jquery.flot.js"></script>
 		<script type="text/javascript" src="res/lorikeet/js/jquery.flot.selection.js"></script>
 		<script type="text/javascript" src="res/lorikeet/js/specview.js"></script>
