@@ -300,6 +300,7 @@ fi
 
 echo "Installing pyramid into the virtual environment" | tee -a $log
 cd env
+bin/easy_install Chameleon >> $log
 bin/easy_install pyramid >>$log
 bin/easy_install PasteScript >>$log
 bin/easy_install WebError >>$log
