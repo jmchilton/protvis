@@ -20,6 +20,7 @@
             scanNum: ${spectrum.scan},
             charge: ${spectrum.charge},
             fileName: "${spectrum.file}",
+            showMHIonOption: true,
             showInternalIonOption: true,
             peaks: ${spectrum.ions.ions}
             });
@@ -91,6 +92,7 @@
             ctermMod: pep.cterm,
             peaks: peaks,
             ionTableDiv: $("ionTableDiv_${hash}"),
+            showMHIonOption: true,
             showInternalIonOption: true,
             massError: pep.masstol || 0.5
         });
