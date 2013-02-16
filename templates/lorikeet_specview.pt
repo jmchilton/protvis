@@ -22,6 +22,7 @@
             fileName: "${spectrum.file}",
             showMHIonOption: true,
             showInternalIonOption: true,
+            showAllTable: true,
             peaks: ${spectrum.ions.ions}
             });
     </tal:if>
@@ -42,10 +43,6 @@
                 <tal:else condition="python: len(peptide['peptides']) == 1">
                     dojo.byId("peptide_${hash}").innerHTML = "<tal:echo content="peptide['peptides'][0]['peptide']" />";
                 </tal:else>
-                /*
-                dojo.byId("neutralMass_${hash}").innerHTML = (neutralMass + Ion.MASS_PROTON).toFixed(4);
-                dojo.byId("mz_${hash}").innerHTML = Ion.getMz(neutralMass, ${spectrum.charge}).toFixed(4);
-                */
             }
             
             <tal:if condition="python: len(peptide['peptides']) > 1">
@@ -71,9 +68,6 @@
                     SetPeptide(idx);
                 }
 
-                // TODO Reinstate...
-                alert("NEED TO UPDATE");
-                // UpdateList(${init_pep});
             </tal:if>
         </tal:if>
         <tal:else condition="python: try_get(peptide, 'peptide') != None">
@@ -94,16 +88,8 @@
             ionTableDiv: $("ionTableDiv_${hash}"),
             showMHIonOption: true,
             showInternalIonOption: true,
+            showAllTable: true, 
             massError: pep.masstol || 0.5
         });
-        // TODO: Reinstate
-        /*
-        if (pep.masstol) {
-            dojo.byId("massError_${hash}").value = pep.masstol;
-        }
-        */
-        
-        //SetPeptide(${init_pep});
-
     </tal:else>
 </script>
