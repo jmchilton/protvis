@@ -1,3 +1,6 @@
+/**
+ * Read start scan, end scan, and charge for TPP/DTA style naming: run.startScan.endScan.charge.
+ */
 inline bool DecodeSpectrum(const char *szName, DWORD &nStartScan, DWORD &nEndScan, DWORD &nCharge, const char *szValidateName = NULL) {
 	const char *szStartPtr = NULL, *szEndPtr = NULL, *szChargePtr = NULL, *szPtr = szName;
 	for (;;) {
@@ -182,10 +185,14 @@ inline PyObject *Run::GetSpectrum(FILE *pFile, DWORD nScan) {
 
 inline DWORD Run::GetSpectrumOffset(FILE *pFile, DWORD nScan) {
 	READ_STRUCTURE(pFile, header, 2, (DWORD, DWORD));
+	// header._0 is number of scans
+	// header._1 byte offset to indices
 	fseek(pFile, header._1, SEEK_CUR);
+	// Read first half of indices in
 	DWORD nSize = (header._0 + 1) / 2;
 	Index *pIndex = (Index *)malloc(nSize * sizeof(Index));
 	fread(pIndex, 1, nSize * sizeof(Index), pFile);
+	// If not in there, read remaining.
 	if (pIndex[(header._0 - 1) / 2].scanId < nScan) {
 		if (header._0 & 0x01) {
 			--nSize;
