@@ -244,16 +244,21 @@ inline PyObject *MzML::GetSpectrum(FILE *pFile, const char *szSpectrumName) {
 }
 
 inline DWORD MzML::GetSpectrumOffset(FILE *pFile, const char *szSpectrumName, bool bForce) {
-	fseek(pFile, 4 * sizeof(DWORD) + 5 * sizeof(float), SEEK_SET);
+	DWORD header_size = 4 * sizeof(DWORD) + 5 * sizeof(float);
+	fseek(pFile, header_size, SEEK_SET);
 	DWORD nScan, nEndScan, nCharge;
 	char *szName = DecodeStringFromFile(pFile);
+	DWORD toReturn = 0;
 	if (!DecodeSpectrum(szSpectrumName, nScan, nEndScan, nCharge, bForce ? NULL : szName)) {  // Force => Not validating name? Seems variable name is wrong. -John
-		return (DWORD)-1;
+		toReturn = -1;
 	}
 	if (szName != NULL) {
 		free(szName);
 	}
-	return Run::GetSpectrumOffset(pFile, nScan);
+	if(toReturn != -1) {
+		toReturn = Run::GetSpectrumOffset(pFile, nScan);
+	}
+	return toReturn;
 }
 
 inline void MzML::SearchSpectrums(FILE *pFile, SearchStatus &stat) {
