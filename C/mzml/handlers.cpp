@@ -373,8 +373,12 @@ bool Run::Begin(State *pState, const XML_Char **pszAttrs) {
 
 void Run::End() {
 	off_t offEndPos = m_pStream->Tell();
+	// Two DWORDs were allocated at the beginning, skip back
+	// to them and write length of m_arrSpectrums and offset
+	// to where m_arrSpectrums is written.
 	m_pStream->Seek(m_offStartPos);
-	WRITE_STRUCTURE(m_pStream, 2, (DWORD, DWORD), (m_arrSpectrums.GetLength(), offEndPos - m_offStartPos));
+	off_t indexOffset = offEndPos - m_offStartPos - 2 * sizeof(DWORD);
+	WRITE_STRUCTURE(m_pStream, 2, (DWORD, DWORD), (m_arrSpectrums.GetLength(), indexOffset));
 	m_pStream->Seek(offEndPos);
 	m_pStream->WriteBuffered(m_arrSpectrums.GetBuffer(), m_arrSpectrums.GetLength() * sizeof(Index));
 	ParamGroup::EndChild();
