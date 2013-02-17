@@ -184,6 +184,9 @@ inline PyObject *Run::GetSpectrum(FILE *pFile, DWORD nScan) {
 }
 
 inline DWORD Run::GetSpectrumOffset(FILE *pFile, DWORD nScan) {
+	DWORD scanId, spectrumOffset;
+	// Have read in 4 * sizeof(DWORD) + 5 * sizeof(float) bytes, next
+	// two DWORDs have index information
 	READ_STRUCTURE(pFile, header, 2, (DWORD, DWORD));
 	// header._0 is number of scans
 	// header._1 byte offset to indices
@@ -201,9 +204,11 @@ inline DWORD Run::GetSpectrumOffset(FILE *pFile, DWORD nScan) {
 	}
 	//FIXME: binary search for small performance gain
 	for (DWORD i = 0; i < nSize; ++i) {
+		scanId = pIndex[i].scanId;
+		spectrumOffset = pIndex[i].spectrum__offset;
 		if (pIndex[i].scanId == nScan) {
 			free(pIndex);
-			return pIndex[i].spectrum__offset;
+			return spectrumOffset;
 		} else if (pIndex[i].scanId > nScan) {
 			free(pIndex);
 			return (DWORD)-1;
