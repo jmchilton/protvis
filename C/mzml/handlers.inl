@@ -104,25 +104,6 @@ inline PyObject *Spectrum::GetInfo(FILE *pFile) {
 	return Py_BuildValue("{s:O,s:O,s:O}", "pepmass", nPepMass > 0 ? PyFloat_FromDouble(nPepMass) : Py_BuildValue(""), "intensity", pIntensity, "ions", pList);
 }
 
-inline PyObject *Spectrum::PointsMS2All(FILE *pFile, DWORD nCount) {
-	PyObject *pList = PyList_New(nCount);
-	if (pList == NULL) {
-		return NULL;
-	}
-	for (DWORD i = 0; i < nCount; ++i) {
-		off_t offPos = ftell(pFile);
-		READ_STRUCTURE(pFile, spectrum, 5, (DWORD, DWORD, DWORD, float, float));
-		PyObject *pValue = Py_BuildValue("[f,f,k,k]", spectrum._3, spectrum._4, spectrum._2, offPos);
-		if (!pValue) {
-			Py_DECREF(pList);
-			return NULL;
-		}
-		fseek(pFile, spectrum._0 * (2 * sizeof(float)) + spectrum._1 * sizeof(float), SEEK_CUR);
-		PyList_SET_ITEM(pList, i, pValue);
-	}
-	return pList;
-}
-
 inline PyObject *Spectrum::PointsMS2ChunksAll(FILE *pFile, DWORD nChunks, float nMinTime, float nMaxTime, float nMinMz, float nMaxMz, DWORD nCount) {
 	PyObject *pLstY, *pLstX, *pList = PyList_New(nChunks);
 	if (pList == NULL) {
@@ -221,11 +202,6 @@ inline DWORD Run::GetSpectrumOffset(FILE *pFile, DWORD nScan) {
 	return (DWORD)-1;
 }
 
-inline PyObject *Run::PointsMS2(FILE *pFile) {
-	READ_STRUCTURE(pFile, header, 2, (DWORD, DWORD));
-	return Spectrum::PointsMS2All(pFile, header._0);
-}
-
 inline PyObject *Run::PointsMS2Chunks(FILE *pFile, DWORD nChunks, float nMinTime, float nMaxTime, float nMinMz, float nMaxMz) {
 	READ_STRUCTURE(pFile, header, 2, (DWORD, DWORD));
 	return Spectrum::PointsMS2ChunksAll(pFile, nChunks, nMinTime, nMaxTime, nMinMz, nMaxMz, header._0);
@@ -304,11 +280,6 @@ inline void MzML::Info(FILE *pFile, float &nMinTime, float &nMaxTime, float &nMi
 	nMaxMz = info._4;
 	nMaxIntensity = info._0;
 	szName = DecodeStringFromFile(pFile);
-}
-
-inline PyObject *MzML::PointsMS2(FILE *pFile) {
-	SkipHeaders(pFile);
-	return Run::PointsMS2(pFile);
 }
 
 inline PyObject *MzML::PointsMS2Chunks(FILE *pFile, DWORD nChunks) {
