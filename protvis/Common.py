@@ -235,6 +235,7 @@ def EncodeTermsAdvanced(terms_dict):
     terms = {}
     for k, v in terms_dict.items():
         terms[k] = SplitPhrase(v.upper())
+    return terms
 
 #XML Helpers
 class NullStream:
