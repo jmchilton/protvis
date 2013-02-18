@@ -60,6 +60,7 @@ inline void Spectrum::SetStartTime(float nTime) {
 
 inline void Spectrum::EatAll(FILE *pFile, DWORD nCount) {
 	for (DWORD i = 0; i < nCount; ++i) {
+		CHECK_MS2_MARKER(pFile);
 		READ_STRUCTURE(pFile, header, 2, (DWORD, DWORD));
 		fseek(pFile, sizeof(DWORD) + 2 * sizeof(float) + header._0 * (sizeof(float) * 2) + header._1 * sizeof(float), SEEK_CUR);
 	}
@@ -67,11 +68,12 @@ inline void Spectrum::EatAll(FILE *pFile, DWORD nCount) {
 
 inline void Spectrum::SearchAll(FILE *pFile, SearchStatus &stat, DWORD nCount) {
 	for (DWORD i = 0; i < nCount; ++i) {
+		CHECK_MS2_MARKER(pFile);
 		READ_STRUCTURE(pFile, header, 5, (DWORD, DWORD, DWORD, float, float));
 		stat.Match("time", header._3);
 		stat.Match("pepmass", header._4);
 		if (stat.IsMatched()) {
-			fseek(pFile, -(long)(2 * sizeof(DWORD) + 2 * sizeof(float)), SEEK_CUR);
+			fseek(pFile, -(long)(3 * sizeof(DWORD) + 2 * sizeof(float)), SEEK_CUR); // Failed to figure out how to test this. -John
 			stat.AddResult(GetInfo(pFile));
 		} else {
 			fseek(pFile, header._0 * (sizeof(float) * 2) + header._1 * sizeof(float), SEEK_CUR);
@@ -80,6 +82,7 @@ inline void Spectrum::SearchAll(FILE *pFile, SearchStatus &stat, DWORD nCount) {
 }
 
 inline PyObject *Spectrum::GetInfo(FILE *pFile) {
+	CHECK_MS2_MARKER_RET_NULL(pFile);
 	READ_STRUCTURE(pFile, header, 5, (DWORD, DWORD, DWORD, float, float));
 	PyObject *pList = PyList_New(header._0);
 	if (pList == NULL) {
@@ -142,6 +145,7 @@ inline PyObject *Spectrum::PointsMS2ChunksAll(FILE *pFile, DWORD nChunks, float 
 		PyList_SET_ITEM(pList, i, pLstY);
 	}
 	for (DWORD i = 0; i < nCount; ++i) {
+		CHECK_MS2_MARKER_RET_NULL(pFile)
 		off_t offPos = ftell(pFile);
 		READ_STRUCTURE(pFile, spectrum, 5, (DWORD, DWORD, DWORD, float, float));
 		PyObject *pValue = Py_BuildValue("[f,f,k,k]", spectrum._3, spectrum._4, spectrum._2, offPos);

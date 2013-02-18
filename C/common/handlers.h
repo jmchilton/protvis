@@ -143,4 +143,28 @@
 	bool Transcode(const char *szXmlFile, BaseState *pState);
 	bool Transcode(int fd, BaseState *pState);
 
+	// Byte to verify at beginning of spectrum
+	#define MS2_SPECTRUM_MARKER 0xFF00FF00;
+
+	#define WRITE_MS2_MARKER(pStream) \
+		DWORD markerVariable = MS2_SPECTRUM_MARKER; \
+		pStream->WriteBuffered(&markerVariable, sizeof(DWORD));
+
+	#define CHECK_MS2_MARKER(pStream) \
+		DWORD markerRead; \
+		fread(&markerRead, 1, sizeof(DWORD), pStream); \
+		DWORD equal = markerRead & MS2_SPECTRUM_MARKER;\
+		if(!equal) { \ 
+			return; \ 
+		}
+
+	#define CHECK_MS2_MARKER_RET_NULL(pStream) \
+		DWORD markerRead; \
+		fread(&markerRead, 1, sizeof(DWORD), pStream); \
+		DWORD equal = markerRead & MS2_SPECTRUM_MARKER;\
+		if(!equal) { \ 
+			return NULL; \ 
+		}
+
+
 #endif

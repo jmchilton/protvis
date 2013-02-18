@@ -307,6 +307,7 @@ void Spectrum::End() {
 		m_pRun->AddSpectrumN(m_nIndex);
 		DWORD nIonCount = m_pMz == NULL || m_pIntensity == NULL || m_pMz->GetLength() != m_pIntensity->GetLength() ? 0 : m_pMz->GetLength() / sizeof(float);
 		DWORD nPrecursorCount = m_pPrecursorList == NULL ? 0 : m_pPrecursorList->GetLength() / sizeof(float);
+		WRITE_MS2_MARKER(m_pStream);
 		if (nIonCount > 0) {
 			WRITE_STRUCTURE(m_pStream, 5, (DWORD, DWORD, DWORD, float, float), (nIonCount, nPrecursorCount, m_nIndex, m_nStartTime, m_pPrecursorList == NULL ? -1.0f : *(float *)m_pPrecursorList->GetBuffer()));
 			const float *pMz = (const float *)m_pMz->GetBuffer();
