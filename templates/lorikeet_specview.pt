@@ -85,6 +85,7 @@
             ntermMod: pep.nterm,
             ctermMod: pep.cterm,
             peaks: peaks,
+            residueSpecificNeutralLosses: true,
             ionTableDiv: $("ionTableDiv_${hash}"),
             showMHIonOption: true,
             showInternalIonOption: true,
