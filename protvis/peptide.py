@@ -2,7 +2,7 @@ from parameters import UNIMOD_FILE
 from pyteomics.mass import Unimod
 import re
 
-UNIMOD = Unimod(url="file://%s" % UNIMOD_FILE)
+UNIMOD = Unimod("file://%s" % UNIMOD_FILE)
 
 
 def read_peptide_info(peptide_string,
