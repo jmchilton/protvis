@@ -1,4 +1,3 @@
-import binascii
 import os
 import xml.sax
 import xml.parsers.expat
@@ -6,12 +5,16 @@ import parameters
 import struct
 from Common import *
 from parameters import converted
-import ProtXML, PepXML, MGF
+import ProtXML
+import PepXML
+import MGF
 import subprocess
+
 try:
     import MzML
 except:
     MzML = None
+
 
 #Checks to make sure the specified file is in an allowed location
 def EnsureWhitelistFile(fname):
@@ -22,6 +25,7 @@ def EnsureWhitelistFile(fname):
         if fname.startswith(os.path.normpath(d)):
             return True
     return False
+
 
 #describes a file which has been referenced
 class IncludedFile:
@@ -40,15 +44,15 @@ class IncludedFile:
                 return True
             return False
 
-    def __init__(self, fname = None, ftype = None, stream = None):
+    def __init__(self, fname=None, ftype=None, stream=None):
         if fname != None and ftype != None:
-            self.Files = { unicode(fname): IncludedFile.FileInfo(ftype, 0, 0, stream) }
+            self.Files = {unicode(fname): IncludedFile.FileInfo(ftype, 0, 0, stream)}
         else:
             self.Files = {}
         self.Counter = 1
         self.Level = 0
 
-    def Add(self, fname, ftype, stream = None):
+    def Add(self, fname, ftype, stream=None):
         self.Files[unicode(fname)] = IncludedFile.FileInfo(ftype, self.Counter, self.Level, stream)
         self.Counter += 1
 
@@ -95,7 +99,7 @@ class IncludedFile:
             if (fi.Type & ~FileType.MISSING) == FileType.DATABASE:
                 dbs.append([f, fi])
             else:
-                files.append([f, fi]);
+                files.append([f, fi])
         files = sorted(files, key=lambda flist: flist[1].Index, reverse=True) + dbs
         return [IncludedFile(f, fi.Type, list(set([IndexOf(files, unicode(d)) for d in fi.Depends])), fi.Stream) for f, fi in files]
 
@@ -108,6 +112,7 @@ class IncludedFile:
             self.Counter += 1
         for d in f.Depends:
             self.TouchDeps(d)
+
 
 #This is the base handler for the XML parser, which tests the <tagname> against a list and calls a function if it matches
 class SaxHandler(xml.sax.ContentHandler):
@@ -124,6 +129,7 @@ class SaxHandler(xml.sax.ContentHandler):
 
     def endElement(self, name):
         return
+
 
 #The main function for searching an xml file for references
 def SearchXml(fname, elems, handler):
@@ -148,10 +154,11 @@ def SearchXml(fname, elems, handler):
         close(f)
         raise
 
+
 #Assigns a number to each type of file for better compression and easier searching
 class FileType:
     #higher numbers are more specific than lower numbers. e.g. PEPXML_INTERPROPHET > PEPXML_COMPARE > PEPXML > UNKNOWN
-    MISSING = 0x80 #any types with 0x80 set are missing
+    MISSING = 0x80  # any types with 0x80 set are missing
     UNKNOWN = 0
     MZML = 1
     MGF = 2
@@ -222,6 +229,7 @@ class FileType:
             return FileType.DATABASE
         return FileType.UNKNOWN
 
+
 #Handler for the main index file of each dataset that is saved into the ConvertedFiles directory
 class FileLinks:
     """
@@ -239,7 +247,7 @@ class FileLinks:
     }
     """
     class Link:
-        def __init__(self, f = None):
+        def __init__(self, f=None):
             if f:
                 [self.Type, deps] = struct.unpack("=BH", f.read(1 + 2))
                 self.Depends = [struct.unpack("=H", f.read(2))[0] for i in xrange(deps)]
@@ -250,7 +258,6 @@ class FileLinks:
             for d in self.Depends:
                 f.write(struct.pack("=H", d))
             EncodeStringToFile(f, self.Name)
-
 
     def __init__(self, IndexFile):
         try:
@@ -310,11 +317,11 @@ class FileLinks:
                 maxval = len(nodes[i])
                 maxi = i
         l = self.Links[maxi]
-        return { "name": l.Name, "type": l.Type, "index": maxi }
+        return {"name": l.Name, "type": l.Type, "index": maxi}
 
     def GetInfo(self, index):
         l = self.Links[index]
-        return { "name": l.Name, "type": l.Type, "index": index }
+        return {"name": l.Name, "type": l.Type, "index": index}
 
     def Get(self, index):
         return self.Links[index]
@@ -354,6 +361,7 @@ class FileLinks:
             EncodeStringToFile(f, db)
         f.close()
 
+
 #Gets the module which can parse the given file type, from FileType.*
 def GetTypeParser(datatype):
     modules = {
@@ -367,6 +375,7 @@ def GetTypeParser(datatype):
     except:
         return None
 
+
 #Describes a file reference found
 class ValidFile:
     def __init__(self, Name, Type, Exists):
@@ -374,10 +383,11 @@ class ValidFile:
         self.Type = Type
         self.Exists = Exists
 
+
 #A validator for local filenames
 #used when converting files from a local galaxy instance
 #also tries removing file extensions to correct broken links
-def ValidateFilename(IncludedFiles, fname, exts = None):
+def ValidateFilename(IncludedFiles, fname, exts=None):
     if not EnsureWhitelistFile(fname):
         raise ValueError(fname)
     ext = []
@@ -410,6 +420,7 @@ def ValidateFilename(IncludedFiles, fname, exts = None):
                 else:
                     raise IOError(fname)
 
+
 #upon referencing a protein database file, ensures that there is a blast+ index for it
 def DbReferences(fname, IncludedFiles, Validator):
     def TestIndex(db):
@@ -432,11 +443,13 @@ def DbReferences(fname, IncludedFiles, Validator):
             subprocess.call([parameters.HOME + "/bin/makeblastdb", "-in", link, "-parse_seqids"])
     IncludedFiles.StepOut()
 
+
 #Searches for files referenced by mzML files
 #nothing to do
 def MzmlReferences(fname, IncludedFiles, Validator):
     IncludedFiles.StepIn()
     IncludedFiles.StepOut()
+
 
 #Searches for files referenced by MGF files
 #nothing to do
@@ -477,10 +490,12 @@ def MgfReferences(fname, IncludedFiles, Validator):
     IncludedFiles.SetDepends(fname, deps)"""
     IncludedFiles.StepOut()
 
+
 #Searches for files referenced by pepXML files
 def PepReferences(fname, IncludedFiles, Validator):
     IncludedFiles.StepIn()
     files = []
+
     def _HandlePepFind(name, attr):
         if name == "msms_run_summary":
             t = attr["raw_data_type"]
@@ -557,13 +572,15 @@ def PepReferences(fname, IncludedFiles, Validator):
     IncludedFiles.SetDepends(fname, deps)
     IncludedFiles.StepOut()
 
+
 #Searches for files referenced by protXML files
 def ProtReferences(fname, IncludedFiles, Validator):
     IncludedFiles.StepIn()
     files = []
+
     def _HandleProtFind(name, attr):
-        files.append(attr["source_files"]) #FIXME: this is a plural, how are the names seperated?
-        files.append(attr["source_files_alt"]) #FIXME: this is a plural, how are the names seperated?
+        files.append(attr["source_files"])  # FIXME: this is a plural, how are the names seperated?
+        files.append(attr["source_files_alt"])  # FIXME: this is a plural, how are the names seperated?
         raise StopIteration()
     SearchXml(fname, ["protein_summary_header"], _HandleProtFind)
     deps = range(len(files))
@@ -597,6 +614,7 @@ def ProtReferences(fname, IncludedFiles, Validator):
     IncludedFiles.SetDepends(fname, deps)
     IncludedFiles.StepOut()
 
+
 #Searches for files referenced by a file given its type at runtime
 def _References(t, fname, IncludedFiles, Validator):
     switch = {
@@ -627,6 +645,7 @@ def LoadChainT(fname, t):
     _References(t, fname, IncludedFiles, ValidateFilename)
     return IncludedFiles.Items()
 
+
 #External interface for searching for files referenced by protXML files
 def LoadChainProt(fname):
     if not EnsureWhitelistFile(fname):
@@ -634,6 +653,7 @@ def LoadChainProt(fname):
     IncludedFiles = IncludedFile(fname, FileType.PROTXML)
     ProtReferences(fname, IncludedFiles, ValidateFilename)
     return IncludedFiles.Items()
+
 
 #External interface for searching for files referenced by pepXML files
 def LoadChainPep(fname):
@@ -643,6 +663,7 @@ def LoadChainPep(fname):
     PepReferences(fname, IncludedFiles, ValidateFilename)
     return IncludedFiles.Items()
 
+
 #External interface for searching for files referenced by MGF files
 def LoadChainMgf(fname):
     if not EnsureWhitelistFile(fname):
@@ -650,6 +671,7 @@ def LoadChainMgf(fname):
     IncludedFiles = IncludedFile(fname, FileType.MGF)
     MgfReferences(fname, IncludedFiles, ValidateFilename)
     return IncludedFiles.Items()
+
 
 #External interface for searching for files referenced by mzML files
 def LoadChainMzml(fname):
@@ -659,10 +681,11 @@ def LoadChainMzml(fname):
     MzmlReferences(fname, IncludedFiles, ValidateFilename)
     return IncludedFiles.Items()
 
+
 #A validator for filenames from uploaded datasets
 #used when uploading files from the web interface
 #also tries removing file extensions to correct broken links
-def LoadChainGroup(files, force_t = FileType.UNKNOWN):
+def LoadChainGroup(files, force_t=FileType.UNKNOWN):
     class OpenFile:
         def __init__(self, f, s):
             self.Name = f
@@ -684,7 +707,7 @@ def LoadChainGroup(files, force_t = FileType.UNKNOWN):
 
     files = [AvaliableFile(f) for f in files]
 
-    def NameValidator(IncludedFiles, fname, exts = None):
+    def NameValidator(IncludedFiles, fname, exts=None):
         fname = os.path.split(fname)[1]
         ext = []
         while True:
@@ -730,6 +753,7 @@ def LoadChainGroup(files, force_t = FileType.UNKNOWN):
             if t != FileType.UNKNOWN:
                 _References(t, f, IncludedFiles, NameValidator)
     return IncludedFiles.Items()
+
 
 #Sniffer to guess the type of an unknown file
 def GuessType(f):
