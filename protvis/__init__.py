@@ -697,7 +697,7 @@ def Spectrum(req):
                     cterm = TryGet(mi, "mod_cterm_mass")
                     if cterm != None:
                         cterm_mod = cterm
-                mods += [{"index": m[0], "mass": m[1], "aa": pep["peptide"][m[0]]} for m in mi.get("mod_aminoacid_mass", [])]
+                mods += [{"index": m[0], "mass": m[1], "aa": pep["peptide"][m[0] - 1]} for m in mi.get("mod_aminoacid_mass", [])]
             peptide["mods"] = mods
             peptide["nterm"] = nterm_mod
             peptide["cterm"] = cterm_mod
