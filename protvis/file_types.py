@@ -1,16 +1,20 @@
 import sys
-import MGF, PepXML, ProtXML #import python only modules
+#import python only modules
+import MGF
+import PepXML
+import ProtXML
+
 
 class Compiled:
     def __init__(self, name, version):
         self.name = name
         self.version = version
 
-Compiled = [ Compiled("MzML", 0.8) ] #import C/python modules
+compiled = [Compiled("MzML", 0.8)]  # import C/python modules
 
 
 module = sys.modules[__name__]
-for mod in Compiled:
+for mod in compiled:
     try:
         m = __import__(mod.name)
         if m.version() != mod.version:

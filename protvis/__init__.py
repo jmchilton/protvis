@@ -10,7 +10,7 @@ import urllib
 import re
 import Reference
 from Common import *
-from FileTypes import *
+from file_types import *
 from peptide import read_peptide_info
 from job_manager import Jobs
 import GPMDB
