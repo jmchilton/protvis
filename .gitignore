@@ -32,3 +32,5 @@ protvis.conf
 *.so
 *.log
 *.pid
+.coverage
+coverage_html_report/
