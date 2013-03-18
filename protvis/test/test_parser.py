@@ -1,8 +1,11 @@
 from unittest import TestCase
 
 from protvis.conversion import _ready_source_file
+from protvis.FileTypes import MGF
 from protvis.FileTypes import MzML
 from os.path import basename
+from os import remove
+
 
 KEEP_OUTPUT = True
 
@@ -25,8 +28,20 @@ class ParserTest(TestCase):
             #print spectrum_info
         finally:
             if not KEEP_OUTPUT:
-                os.remove(dest)
+                remove(dest)
 
     def test_mzml(self):
         self._test_module(MzML, 'test_data/test.mzML')
 
+    def test_mgf(self):
+        source = 'test_data/test.mgf'
+        dest = 'dest_%s' % basename(source)
+        try:
+            (src, close) = _ready_source_file(source, dest, MGF)
+            name = 'moocow'
+            MGF.ToBinary(src, dest, name)
+            offset = MGF.GetOffsetFromSpectrum(dest, "test.2.2.2")
+            assert offset > 0
+        finally:
+            if not KEEP_OUTPUT:
+                remove(dest)
