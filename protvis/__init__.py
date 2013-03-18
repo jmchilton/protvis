@@ -1,4 +1,4 @@
-from wsgiref.simple_server import make_server  # required though unused
+# required though unused
 from pyramid.config import Configurator
 from pyramid.session import UnencryptedCookieSessionFactoryConfig
 from pyramid.response import Response
