@@ -23,6 +23,7 @@
             showMHIonOption: true,
             showInternalIonOption: true,
             showAllTable: true,
+            useCookies: true,
             peaks: ${spectrum.ions.ions}
             });
     </tal:if>
@@ -90,6 +91,7 @@
             showMHIonOption: true,
             showInternalIonOption: true,
             showAllTable: true, 
+            useCookies: true,
             massError: pep.masstol || 0.5
         });
     </tal:else>
