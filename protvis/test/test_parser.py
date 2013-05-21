@@ -5,6 +5,13 @@ from protvis.FileTypes import MzML
 
 class ParserTest(TestCase):
 
+    def test_incorrect_mzml(self):
+        src = open('test_data/failed_download.mzML', 'r')
+        dest = 'failed'
+        name = 'moocow'
+        MzML.ToBinary(src, dest, name)
+        spectrum_info = MzML.GetSpectrumFromScan(dest, 2)
+
     def test_1(self):
         src = open('test_data/test.mzML', 'r')
         dest = 'test123'

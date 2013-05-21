@@ -82,7 +82,7 @@ inline void Spectrum::SearchAll(FILE *pFile, SearchStatus &stat, DWORD nCount) {
 }
 
 inline PyObject *Spectrum::GetInfo(FILE *pFile) {
-	CHECK_MS2_MARKER_RET_NULL(pFile);
+	CHECK_MS2_MARKER_RET_NULL(pFile)
 	READ_STRUCTURE(pFile, header, 5, (DWORD, DWORD, DWORD, float, float));
 	PyObject *pList = PyList_New(header._0);
 	if (pList == NULL) {
@@ -161,10 +161,15 @@ inline void Run::Search(FILE *pFile, SearchStatus &stat) {
 
 inline PyObject *Run::GetSpectrum(FILE *pFile, DWORD nScan) {
 	DWORD nOffset = GetSpectrumOffset(pFile, nScan);
+	if(nOffset < 0) {
+		return Py_BuildValue("");
+	}
 	fseek(pFile, nOffset, SEEK_SET);
 	PyObject *pInfo = Spectrum::GetInfo(pFile);
-	PyDict_SetItemString(pInfo, "charge", PyInt_FromLong(0));
-	PyDict_SetItemString(pInfo, "offset", PyInt_FromLong(nOffset));
+	if(pInfo != NULL) {
+		PyDict_SetItemString(pInfo, "charge", PyInt_FromLong(0));
+		PyDict_SetItemString(pInfo, "offset", PyInt_FromLong(nOffset));
+	}
 	return pInfo;
 }
 
