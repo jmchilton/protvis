@@ -101,7 +101,7 @@ GOTO :end
 	"%PYDIR%\Scripts\virtualenv.exe" env 2>&1 >>setup.log
 	ECHO Configuring the virtual environment
 	ECHO Configuring the virtual environment >>setup.log
-	env\Scripts\easy_install.exe pyramid 2>&1 >>setup.log
+	env\Scripts\easy_install.exe https://github.com/Pylons/pyramid/archive/1.4.5.tar.gz 2>&1 >>setup.log
 	env\Scripts\easy_install.exe PasteScript 2>&1 >>setup.log
 	env\Scripts\easy_install.exe WebError 2>&1 >>setup.log
 	env\Scripts\pip.exe install cherrypy 2>&1 >>setup.log

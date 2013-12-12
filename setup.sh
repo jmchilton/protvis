@@ -300,7 +300,9 @@ fi
 
 echo "Installing pyramid into the virtual environment" | tee -a $log
 cd env
-bin/easy_install pyramid >>$log
+# Get pyramid version 1.4.5 until protvis/__init__.py is updated to remove deprecated "renderer_globals_factory" 
+# bin/easy_install pyramid >>$log
+bin/easy_install https://github.com/Pylons/pyramid/archive/1.4.5.tar.gz >>$log
 bin/easy_install PasteScript >>$log
 bin/easy_install WebError >>$log
 bin/pip install cherrypy >>$log
